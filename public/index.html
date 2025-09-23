@@ -3948,49 +3948,57 @@
                 row.className = 'clickable-row';
                 row.onclick = () => showPropertyDetail(index);
                 
+                // Build the row HTML first
+                let rowHTML = '';
+                
                 // Location section with refresh icon
-                const addressCell = document.createElement('td');
-                addressCell.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span>${prop.address}</span>
-                        <span class="refresh-icon" onclick="event.stopPropagation(); refreshSingleProperty(${index})" 
-                              style="cursor: pointer; font-size: 14px; opacity: 0.7; transition: opacity 0.2s;" 
-                              title="Refresh real-time data for this property">🔄</span>
-                    </div>
+                rowHTML += `
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>${prop.address}</span>
+                            <span class="refresh-icon" onclick="event.stopPropagation(); refreshSingleProperty(${index})" 
+                                  style="cursor: pointer; font-size: 14px; opacity: 0.7; transition: opacity 0.2s;" 
+                                  title="Refresh real-time data for this property">🔄</span>
+                        </div>
+                    </td>
                 `;
-                row.appendChild(addressCell);
-                row.innerHTML += `<td>${prop.city}</td>`;
-                row.innerHTML += `<td>${prop.state}</td>`;
-                row.innerHTML += `<td>${prop.zip}</td>`;
+                
+                // Location continued
+                rowHTML += `<td>${prop.city}</td>`;
+                rowHTML += `<td>${prop.state}</td>`;
+                rowHTML += `<td>${prop.zip}</td>`;
                 
                 // Property section
-                row.innerHTML += `<td>${prop.beds}</td>`;
-                row.innerHTML += `<td>${prop.baths}</td>`;
-                row.innerHTML += `<td>${prop.sqft.toLocaleString()}</td>`;
-                row.innerHTML += `<td>${prop.year}</td>`;
-                row.innerHTML += createEditableCell(prop.price, index, 'price', false, true).outerHTML;
-                row.innerHTML += createEditableCell(prop.downPercent, index, 'downPercent', true, false).outerHTML;
+                rowHTML += `<td>${prop.beds}</td>`;
+                rowHTML += `<td>${prop.baths}</td>`;
+                rowHTML += `<td>${prop.sqft.toLocaleString()}</td>`;
+                rowHTML += `<td>${prop.year}</td>`;
+                rowHTML += createEditableCell(prop.price, index, 'price', false, true).outerHTML;
+                rowHTML += createEditableCell(prop.downPercent, index, 'downPercent', true, false).outerHTML;
                 
                 // Financials section
-                row.innerHTML += createEditableCell(prop.rent, index, 'rent', false, true).outerHTML;
-                row.innerHTML += `<td class="${prop.monthlyCF >= 0 ? 'positive-cf' : 'negative-cf'}">
+                rowHTML += createEditableCell(prop.rent, index, 'rent', false, true).outerHTML;
+                rowHTML += `<td class="${prop.monthlyCF >= 0 ? 'positive-cf' : 'negative-cf'}">
                                     $${prop.monthlyCF.toLocaleString()}
                                  </td>`;
-                row.innerHTML += `<td class="${prop.annualCF >= 0 ? 'positive-cf' : 'negative-cf'}">
+                rowHTML += `<td class="${prop.annualCF >= 0 ? 'positive-cf' : 'negative-cf'}">
                                     $${prop.annualCF.toLocaleString()}
                                  </td>`;
-                row.innerHTML += `<td class="${prop.coc >= 8 ? 'good-metric' : prop.coc >= 5 ? 'fair-metric' : 'poor-metric'}">
+                rowHTML += `<td class="${prop.coc >= 8 ? 'good-metric' : prop.coc >= 5 ? 'fair-metric' : 'poor-metric'}">
                                     ${prop.coc}%
                                  </td>`;
-                row.innerHTML += `<td>${prop.capRate}%</td>`;
-                row.innerHTML += `<td class="${prop.dscr >= 1.25 ? 'good-metric' : prop.dscr >= 1 ? 'fair-metric' : 'poor-metric'}">
+                rowHTML += `<td>${prop.capRate}%</td>`;
+                rowHTML += `<td class="${prop.dscr >= 1.25 ? 'good-metric' : prop.dscr >= 1 ? 'fair-metric' : 'poor-metric'}">
                                     ${prop.dscr}
                                  </td>`;
                 
                 // Risk section
-                row.innerHTML += `<td class="risk-${prop.crimeRisk.toLowerCase()}">${prop.crimeRisk}</td>`;
-                row.innerHTML += `<td class="risk-${prop.floodRisk.toLowerCase()}">${prop.floodRisk}</td>`;
-                row.innerHTML += `<td class="risk-${prop.marketRisk.toLowerCase()}">${prop.marketRisk}</td>`;
+                rowHTML += `<td><span class="risk-${prop.crimeRisk.toLowerCase()}">${prop.crimeRisk}</span></td>`;
+                rowHTML += `<td><span class="risk-${prop.floodRisk.toLowerCase()}">${prop.floodRisk}</span></td>`;
+                rowHTML += `<td><span class="risk-${prop.marketRisk.toLowerCase()}">${prop.marketRisk}</span></td>`;
+                
+                // Set all HTML at once
+                row.innerHTML = rowHTML;
                 
                 tbody.appendChild(row);
             });
