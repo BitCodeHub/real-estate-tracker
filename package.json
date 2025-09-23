@@ -5,12 +5,19 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "build": "echo 'No build required for static files'"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   },
   "keywords": ["real-estate", "investment", "property", "tracker"],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "axios": "^1.4.0"
   }
 }

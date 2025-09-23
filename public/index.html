@@ -2486,15 +2486,15 @@
             console.log('=== Testing RentCast API ===');
             console.log('Test address:', address);
             
-            // Check API key
-            if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
-                console.error('❌ RentCast API key not configured!');
-                console.log('To set your API key, run in console:');
-                console.log('localStorage.setItem("RENTCAST_API_KEY", "your-actual-key-here")');
+            // Check API status
+            const status = await fetch('/api/status').then(r => r.json()).catch(() => ({ apiKeyConfigured: false }));
+            if (!status.apiKeyConfigured) {
+                console.error('❌ RentCast API key not configured on server!');
+                console.log('The API key needs to be set as an environment variable on the server.');
                 return;
             }
             
-            console.log('✅ API key is configured');
+            console.log('✅ API key is configured on server');
             
             // Parse address
             const addressComponents = parseAddressComponents(address);
@@ -2541,21 +2541,23 @@
             return 'just now';
         }
         
-        // RentCast API Configuration
-        // To use RentCast API:
-        // 1. Sign up at https://app.rentcast.io/app/api
-        // 2. Get your API key (50 free requests/month)
-        // 3. Replace 'YOUR_RENTCAST_API_KEY' below with your actual key
-        // SECURITY WARNING: Never commit API keys to public repositories!
-        // Option 1: Set as environment variable (for local testing)
-        const RENTCAST_API_KEY = localStorage.getItem('RENTCAST_API_KEY') || 'YOUR_RENTCAST_API_KEY';
+        // API Configuration
+        // The RentCast API key is now securely stored on the server
+        // No need to expose it in client-side code
         
-        // Check if API key needs to be set
-        if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
-            console.warn('RentCast API key not configured. Set it using: localStorage.setItem("RENTCAST_API_KEY", "your-key-here")');
+        // Check API status on page load
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                if (!status.apiKeyConfigured) {
+                    console.warn('RentCast API not configured on server. Real-time data features will not work.');
+                    console.warn(status.message);
+                }
+            } catch (error) {
+                console.error('Could not check API status:', error);
+            }
         }
-        // RentCast API base URL - updated to correct endpoint
-        const RENTCAST_API_BASE = 'https://api.rentcast.io/v1';
         
         // Fetch real property data from RentCast API
         async function fetchRealPropertyData(address) {
@@ -2663,19 +2665,12 @@
             };
         }
         
-        // Fetch data from RentCast API
+        // Fetch data from RentCast API (via server proxy)
         async function fetchRentCastData(addressComponents) {
             const { streetAddress, city, state, zip } = addressComponents;
             
-            // Skip if no API key is set
-            if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
-                console.log('RentCast API key not configured');
-                return { success: false };
-            }
-            
             try {
-                // RentCast property lookup by address
-                // Try different parameter combinations as RentCast might expect different formats
+                // Use server-side proxy endpoint to protect API key
                 const queryParams = new URLSearchParams({
                     address: streetAddress,
                     city: city,
@@ -2683,21 +2678,29 @@
                     zipcode: zip
                 });
                 
-                console.log('RentCast API URL:', `${RENTCAST_API_BASE}/properties?${queryParams}`);
+                console.log('Fetching property data via server proxy...');
                 
-                const response = await fetch(`${RENTCAST_API_BASE}/properties?${queryParams}`, {
+                const response = await fetch(`/api/rentcast/properties?${queryParams}`, {
                     method: 'GET',
                     headers: {
-                        'Accept': 'application/json',
-                        'X-Api-Key': RENTCAST_API_KEY
+                        'Accept': 'application/json'
                     }
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`RentCast API error: ${response.status}`);
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `API error: ${response.status}`);
                 }
                 
-                const data = await response.json();
+                const responseData = await response.json();
+                
+                // Check if server returned success
+                if (!responseData.success) {
+                    console.error('Server API Error:', responseData.error);
+                    return { success: false };
+                }
+                
+                const data = responseData.data;
                 
                 // Debug: Log the full RentCast response
                 console.log('RentCast API Response:', data);
