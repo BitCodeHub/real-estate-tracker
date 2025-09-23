@@ -985,6 +985,31 @@
             font-weight: 600;
             color: #1e293b;
         }
+        
+        @keyframes refresh {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        #refreshIcon.refreshing {
+            animation: refresh 1s linear infinite;
+        }
+        
+        .refresh-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .refresh-icon:hover {
+            background: #f3f4f6;
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body>
@@ -999,8 +1024,8 @@
                 <button class="btn-primary" onclick="exportData()">📊 Export Excel</button>
                 <button class="btn-success" onclick="openAddPropertyModal()">➕ Add Property</button>
                 <button class="btn-ai" onclick="runPortfolioAnalysis()">🤖 AI Portfolio Analysis</button>
-                <button class="refresh-all-btn" onclick="refreshAllProperties()" title="Refresh all properties with real-time data">
-                    <span id="refreshIcon">🔄</span> <span id="refreshText">Refresh Real-Time Data</span>
+                <button class="refresh-all-btn" onclick="refreshAllProperties()" title="Click on individual properties to refresh their data">
+                    <span id="refreshIcon">ℹ️</span> <span id="refreshText">API Info</span>
                 </button>
             </div>
             <div style="color: #4a5568; font-size: 14px;">
@@ -1252,15 +1277,24 @@
                 
                 // Add click handler for row (except when clicking editable cells)
                 row.onclick = function(e) {
-                    if (!e.target.classList.contains('editable-cell')) {
+                    if (!e.target.classList.contains('editable-cell') && !e.target.classList.contains('refresh-icon')) {
                         showPropertyDetail(index);
                     }
                 };
                 
-                // Address (not editable)
+                // Address (not editable) with refresh icon
                 const addressCell = document.createElement('td');
                 addressCell.className = 'address-cell';
-                addressCell.innerHTML = prop.address;
+                addressCell.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>${prop.address}</span>
+                        <span class="refresh-icon" onclick="event.stopPropagation(); refreshSingleProperty(${index})" 
+                              style="cursor: pointer; font-size: 14px; opacity: 0.7; transition: opacity 0.2s;" 
+                              title="Refresh real-time data for this property"
+                              onmouseover="this.style.opacity='1'" 
+                              onmouseout="this.style.opacity='0.7'">🔄</span>
+                    </div>
+                `;
                 
                 // Add badges for sold and real-time data
                 if (prop.isSold) {
@@ -1415,6 +1449,15 @@
             const modalContent = `
                 <div class="edit-hint">
                     💡 <strong>Tip:</strong> Click on any blue-highlighted value below to edit it. Changes will automatically recalculate all metrics.
+                </div>
+                
+                <div style="margin: 15px 0; text-align: center;">
+                    <button onclick="refreshSingleProperty(${index})" class="btn-primary" style="background: #10b981; padding: 10px 20px;">
+                        🔄 Refresh Real-Time Data for This Property
+                    </button>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">
+                        ${prop.lastUpdated ? `Last updated: ${getTimeAgo(new Date(prop.lastUpdated))}` : 'Never updated'}
+                    </div>
                 </div>
                 
                 <div class="summary-stats">
@@ -2639,8 +2682,105 @@
             }
         }
 
-        // Refresh all properties with real-time RentCast data
+        // Refresh a single property with real-time RentCast data
+        async function refreshSingleProperty(index) {
+            const prop = properties[index];
+            const fullAddress = `${prop.address}, ${prop.city}, ${prop.state} ${prop.zip}`;
+            
+            // Show loading state
+            const statusMsg = `Refreshing property data for ${prop.address}...`;
+            console.log(statusMsg);
+            
+            try {
+                // Parse address components
+                const addressComponents = parseAddress(fullAddress);
+                
+                // Fetch RentCast data
+                const rentCastResult = await fetchRentCastData(addressComponents);
+                
+                if (rentCastResult.success && rentCastResult.data) {
+                    const data = rentCastResult.data;
+                    
+                    console.log(`RentCast data received for ${fullAddress}:`, data);
+                    
+                    // Update property with real-time data
+                    properties[index].realTimeData = true;
+                    properties[index].lastUpdated = new Date().toISOString();
+                    
+                    // Update property details
+                    if (data.beds) properties[index].beds = data.beds;
+                    if (data.baths) properties[index].baths = data.baths;
+                    if (data.sqft) properties[index].sqft = data.sqft;
+                    if (data.year) properties[index].year = data.year;
+                    if (data.lotSize) properties[index].lotSize = data.lotSize;
+                    
+                    // Store raw data
+                    properties[index]._rawRentCastData = data._rawData;
+                    
+                    // Check if property is sold
+                    if (data.lastSaleDate) {
+                        const saleDate = new Date(data.lastSaleDate);
+                        const daysSinceSale = (new Date() - saleDate) / (1000 * 60 * 60 * 24);
+                        
+                        if (daysSinceSale < 180 && data.lastSalePrice && 
+                            Math.abs(data.lastSalePrice - properties[index].price) / properties[index].price > 0.05) {
+                            properties[index].isSold = true;
+                            properties[index].soldDate = data.lastSaleDate;
+                            properties[index].soldPrice = data.lastSalePrice;
+                        }
+                    }
+                    
+                    // Update financial data
+                    if (data.price && data.price !== properties[index].price) {
+                        properties[index].currentMarketValue = data.price;
+                    }
+                    if (data.rentEstimate) {
+                        properties[index].currentMarketRent = data.rentEstimate;
+                    }
+                    if (data.taxRate) {
+                        properties[index].taxRate = parseFloat(data.taxRate);
+                    }
+                    if (data.hoaMonthly) {
+                        properties[index].hoaMonthly = data.hoaMonthly;
+                    }
+                    
+                    // Additional data
+                    properties[index].ownerName = data.ownerName || '';
+                    properties[index].propertyType = data.propertyType || 'Single Family';
+                    
+                    // Recalculate metrics
+                    properties[index] = calculateMetrics(properties[index]);
+                    
+                    // Update display
+                    renderTable();
+                    updatePortfolioStats();
+                    
+                    // If modal is open, refresh it
+                    if (document.getElementById('propertyModal').style.display === 'block') {
+                        showPropertyDetail(index);
+                    }
+                    
+                    alert(`✅ Successfully updated real-time data for ${prop.address}`);
+                    return true;
+                } else {
+                    alert(`❌ Could not fetch real-time data for ${prop.address}. The property may not be in the RentCast database.`);
+                    return false;
+                }
+            } catch (error) {
+                console.error(`Error refreshing property ${fullAddress}:`, error);
+                alert(`❌ Error refreshing property: ${error.message}`);
+                return false;
+            }
+        }
+        
+        // Note: Bulk refresh disabled to save API calls
+        // Use individual property refresh instead
         async function refreshAllProperties() {
+            alert('💡 To save API calls, please refresh individual properties by clicking on them and using the "Refresh Data" button.\n\nThis helps preserve your RentCast API quota (50 calls/month on free tier).');
+            return;
+            
+            // Original bulk refresh code commented out
+            /*
             const refreshBtn = document.querySelector('.refresh-all-btn');
             const refreshIcon = document.getElementById('refreshIcon');
             const refreshText = document.getElementById('refreshText');
@@ -2764,21 +2904,8 @@
             renderTable();
             updatePortfolioStats();
             
-            // Re-enable button and show results
-            refreshBtn.disabled = false;
-            refreshIcon.classList.remove('refreshing');
-            refreshText.textContent = 'Refresh Real-Time Data';
-            
-            // Show results notification
-            const resultMsg = `Refresh complete! ✅ ${successCount} updated, ${soldCount} sold properties detected${failCount > 0 ? `, ❌ ${failCount} failed` : ''}`;
-            alert(resultMsg);
-            
-            // Set up auto-refresh if not already running
-            if (!autoRefreshInterval) {
-                autoRefreshInterval = setInterval(() => {
-                    refreshAllProperties();
-                }, AUTO_REFRESH_MINUTES * 60 * 1000);
-            }
+            // Original bulk refresh code ends here
+            */
         }
 
         // Parse address into components
@@ -2938,12 +3065,14 @@
             document.getElementById('analysisResults').style.display = 'none';
             
             try {
-                // Fetch real property data
+                // Fetch real property data - This calls RentCast API when adding new property
                 const propertyData = await fetchRealPropertyData(address);
                 
                 if (propertyData.success) {
+                    console.log('RentCast data fetched for new property:', propertyData.data);
                     generateEnhancedPropertyAnalysis(address, propertyData.data);
                 } else {
+                    console.log('RentCast data not available, using estimates');
                     // Fallback to original parsing
                     generatePropertyAnalysis(address);
                 }
@@ -3006,7 +3135,7 @@
                         ${propertyData.ownerName ? `<div><strong>Owner:</strong> ${propertyData.ownerName}</div>` : ''}
                         <div style="margin-top: 5px; font-size: 12px;">
                             ${propertyData.source === 'RentCast API' ? 
-                                '<strong style="color: #0066cc;">✅ Live data from RentCast API</strong>' : 
+                                '<strong style="color: #0066cc;">✅ Live data from RentCast API (1 API call used)</strong>' : 
                                 'Note: Using estimated data. Configure RentCast API key for accurate data.'}
                         </div>
                     </div>
