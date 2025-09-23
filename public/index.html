@@ -2357,6 +2357,39 @@
         let autoRefreshInterval = null;
         const AUTO_REFRESH_MINUTES = 30; // Refresh every 30 minutes
         
+        // Test RentCast API with a single address (for debugging)
+        async function testRentCastAPI(address) {
+            console.log('=== Testing RentCast API ===');
+            console.log('Test address:', address);
+            
+            // Check API key
+            if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
+                console.error('❌ RentCast API key not configured!');
+                console.log('To set your API key, run in console:');
+                console.log('localStorage.setItem("RENTCAST_API_KEY", "your-actual-key-here")');
+                return;
+            }
+            
+            console.log('✅ API key is configured');
+            
+            // Parse address
+            const addressComponents = parseAddressComponents(address);
+            console.log('Parsed address components:', addressComponents);
+            
+            // Call RentCast API
+            const result = await fetchRentCastData(addressComponents);
+            
+            if (result.success) {
+                console.log('✅ RentCast API call successful!');
+                console.log('Property data:', result.data);
+                console.log('Raw API response:', result.data._rawData);
+            } else {
+                console.log('❌ RentCast API call failed');
+            }
+            
+            return result;
+        }
+        
         // Helper function to get time ago string
         function getTimeAgo(date) {
             const seconds = Math.floor((new Date() - date) / 1000);
@@ -2397,6 +2430,7 @@
         if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
             console.warn('RentCast API key not configured. Set it using: localStorage.setItem("RENTCAST_API_KEY", "your-key-here")');
         }
+        // RentCast API base URL - updated to correct endpoint
         const RENTCAST_API_BASE = 'https://api.rentcast.io/v1';
         
         // Fetch real property data from RentCast API
@@ -2517,12 +2551,15 @@
             
             try {
                 // RentCast property lookup by address
+                // Try different parameter combinations as RentCast might expect different formats
                 const queryParams = new URLSearchParams({
                     address: streetAddress,
                     city: city,
                     state: state,
                     zipcode: zip
                 });
+                
+                console.log('RentCast API URL:', `${RENTCAST_API_BASE}/properties?${queryParams}`);
                 
                 const response = await fetch(`${RENTCAST_API_BASE}/properties?${queryParams}`, {
                     method: 'GET',
@@ -2538,46 +2575,61 @@
                 
                 const data = await response.json();
                 
+                // Debug: Log the full RentCast response
+                console.log('RentCast API Response:', data);
+                console.log('Query params:', {
+                    address: streetAddress,
+                    city: city,
+                    state: state,
+                    zipcode: zip
+                });
+                
                 // Process RentCast response
                 if (data && data.length > 0) {
                     const property = data[0]; // Take the first match
+                    console.log('First property match:', property);
                     
                     return {
                         success: true,
                         data: {
                             // Address info
-                            streetAddress: property.addressLine1 || streetAddress,
+                            streetAddress: property.addressLine1 || property.address || streetAddress,
                             city: property.city || city,
                             state: property.state || state,
-                            zip: property.zipCode || zip,
+                            zip: property.zipCode || property.zipcode || zip,
                             lat: property.latitude || 0,
                             lon: property.longitude || 0,
                             
-                            // Property details from RentCast
-                            beds: property.bedrooms || 3,
-                            baths: property.bathrooms || 2,
-                            sqft: property.squareFeet || 1500,
-                            year: property.yearBuilt || 2000,
-                            propertyType: property.propertyType || 'Single Family',
-                            lotSize: property.lotSize || 0,
+                            // Property details from RentCast - Check all possible field names
+                            beds: property.bedrooms || property.beds || property.bedroom_count || 3,
+                            baths: property.bathrooms || property.baths || property.bathroom_count || 2,
+                            sqft: property.squareFeet || property.sqft || property.building_size || property.living_area || 1500,
+                            year: property.yearBuilt || property.year_built || property.year || 2000,
+                            propertyType: property.propertyType || property.property_type || property.type || 'Single Family',
+                            lotSize: property.lotSize || property.lot_size || property.lot_area || 0,
                             
-                            // Financial data
-                            price: property.price || property.lastSalePrice || 400000,
-                            rentEstimate: property.rentEstimate || property.rent || 2500,
-                            taxAssessment: property.taxAssessment || 0,
+                            // Financial data - Check all possible field names
+                            price: property.price || property.value || property.lastSalePrice || property.last_sale_price || property.sale_price || property.listing_price || 400000,
+                            rentEstimate: property.rentEstimate || property.rent_estimate || property.rent || property.monthly_rent || property.rental_estimate || 2500,
+                            taxAssessment: property.taxAssessment || property.tax_assessment || property.assessed_value || 0,
                             
                             // Additional RentCast data
-                            lastSaleDate: property.lastSaleDate || null,
-                            lastSalePrice: property.lastSalePrice || 0,
-                            ownerName: property.ownerName || '',
+                            lastSaleDate: property.lastSaleDate || property.last_sale_date || property.sale_date || null,
+                            lastSalePrice: property.lastSalePrice || property.last_sale_price || property.sale_price || 0,
+                            ownerName: property.ownerName || property.owner_name || property.owner || '',
                             
                             // Calculate rates
                             taxRate: property.taxAssessment && property.price ? 
                                 (property.taxAssessment / property.price * 100).toFixed(2) : 1.2,
                             insuranceRate: 0.35,
-                            hoaMonthly: property.hoaFee || 0
+                            hoaMonthly: property.hoaFee || property.hoa_fee || property.hoa || 0,
+                            
+                            // Store raw data for debugging
+                            _rawData: property
                         }
                     };
+                } else {
+                    console.log('No properties found in RentCast response');
                 }
                 
                 return { success: false };
@@ -2617,16 +2669,44 @@
                     if (rentCastResult.success && rentCastResult.data) {
                         const data = rentCastResult.data;
                         
+                        console.log(`Updating property ${i+1}: ${fullAddress}`);
+                        console.log('RentCast data received:', data);
+                        
                         // Update property with real-time data
                         properties[i].realTimeData = true;
                         properties[i].lastUpdated = new Date().toISOString();
                         
+                        // Track what was updated
+                        let updates = [];
+                        
                         // Update property details with real data
-                        if (data.beds) properties[i].beds = data.beds;
-                        if (data.baths) properties[i].baths = data.baths;
-                        if (data.sqft) properties[i].sqft = data.sqft;
-                        if (data.year) properties[i].year = data.year;
-                        if (data.lotSize) properties[i].lotSize = data.lotSize;
+                        if (data.beds && data.beds !== properties[i].beds) {
+                            console.log(`Updating beds: ${properties[i].beds} -> ${data.beds}`);
+                            properties[i].beds = data.beds;
+                            updates.push('beds');
+                        }
+                        if (data.baths && data.baths !== properties[i].baths) {
+                            console.log(`Updating baths: ${properties[i].baths} -> ${data.baths}`);
+                            properties[i].baths = data.baths;
+                            updates.push('baths');
+                        }
+                        if (data.sqft && data.sqft !== properties[i].sqft) {
+                            console.log(`Updating sqft: ${properties[i].sqft} -> ${data.sqft}`);
+                            properties[i].sqft = data.sqft;
+                            updates.push('sqft');
+                        }
+                        if (data.year && data.year !== properties[i].year) {
+                            console.log(`Updating year: ${properties[i].year} -> ${data.year}`);
+                            properties[i].year = data.year;
+                            updates.push('year');
+                        }
+                        if (data.lotSize) {
+                            properties[i].lotSize = data.lotSize;
+                            updates.push('lotSize');
+                        }
+                        
+                        // Store raw data for reference
+                        properties[i]._rawRentCastData = data._rawData;
                         
                         // Check if property is sold
                         if (data.lastSaleDate) {
