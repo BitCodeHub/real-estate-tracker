@@ -2187,7 +2187,15 @@
             document.getElementById('addPropertyModal').style.display = 'none';
         }
 
-        // Fetch real property data from multiple sources
+        // RentCast API Configuration
+        // To use RentCast API:
+        // 1. Sign up at https://app.rentcast.io/app/api
+        // 2. Get your API key (50 free requests/month)
+        // 3. Replace 'YOUR_RENTCAST_API_KEY' below with your actual key
+        const RENTCAST_API_KEY = 'YOUR_RENTCAST_API_KEY'; // Replace with your actual API key
+        const RENTCAST_API_BASE = 'https://api.rentcast.io/v1';
+        
+        // Fetch real property data from RentCast API
         async function fetchRealPropertyData(address) {
             const results = {
                 success: false,
@@ -2196,38 +2204,183 @@
             };
 
             try {
-                // First try OpenStreetMap Nominatim for geocoding
-                const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&addressdetails=1`;
-                const geoResponse = await fetch(geocodeUrl);
-                const geoData = await geoResponse.json();
+                // First, parse the address to get components
+                const parsedAddress = parseAddressComponents(address);
                 
-                if (geoData && geoData[0]) {
-                    const location = geoData[0];
-                    const addressDetails = location.address || {};
-                    
-                    results.data = {
-                        lat: location.lat,
-                        lon: location.lon,
-                        streetNumber: addressDetails.house_number || '',
-                        streetName: addressDetails.road || '',
-                        city: addressDetails.city || addressDetails.town || addressDetails.village || '',
-                        state: addressDetails.state || '',
-                        zip: addressDetails.postcode || '',
-                        country: addressDetails.country || 'USA',
-                        formattedAddress: location.display_name
-                    };
-                    
-                    // Now fetch property details from RentBerry or similar
-                    const propertyDetails = await fetchPropertyDetails(results.data);
-                    results.data = { ...results.data, ...propertyDetails };
+                // Try RentCast API first
+                const rentcastData = await fetchRentCastData(parsedAddress);
+                
+                if (rentcastData && rentcastData.success) {
+                    results.data = rentcastData.data;
                     results.success = true;
-                    results.source = 'OpenStreetMap + Estimates';
+                    results.source = 'RentCast API';
+                } else {
+                    // Fallback to OpenStreetMap Nominatim for geocoding
+                    const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&addressdetails=1`;
+                    const geoResponse = await fetch(geocodeUrl);
+                    const geoData = await geoResponse.json();
+                    
+                    if (geoData && geoData[0]) {
+                        const location = geoData[0];
+                        const addressDetails = location.address || {};
+                        
+                        results.data = {
+                            lat: location.lat,
+                            lon: location.lon,
+                            streetNumber: addressDetails.house_number || '',
+                            streetName: addressDetails.road || '',
+                            city: addressDetails.city || addressDetails.town || addressDetails.village || '',
+                            state: addressDetails.state || '',
+                            zip: addressDetails.postcode || '',
+                            country: addressDetails.country || 'USA',
+                            formattedAddress: location.display_name
+                        };
+                        
+                        // Get estimates based on location
+                        const propertyDetails = await fetchPropertyDetails(results.data);
+                        results.data = { ...results.data, ...propertyDetails };
+                        results.success = true;
+                        results.source = 'OpenStreetMap + Estimates';
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching property data:', error);
             }
             
             return results;
+        }
+        
+        // Parse address into components for API calls
+        function parseAddressComponents(address) {
+            // Remove extra spaces and normalize
+            address = address.replace(/\s+/g, ' ').trim();
+            
+            // Try to parse standard format: "123 Main St, City, State ZIP"
+            const parts = address.split(',').map(p => p.trim());
+            
+            let streetAddress = '';
+            let city = '';
+            let state = '';
+            let zip = '';
+            
+            if (parts.length >= 3) {
+                streetAddress = parts[0];
+                city = parts[1];
+                const stateZip = parts[2];
+                const stateZipMatch = stateZip.match(/([A-Z]{2})\s+(\d{5}(-\d{4})?)/i);
+                if (stateZipMatch) {
+                    state = stateZipMatch[1];
+                    zip = stateZipMatch[2].split('-')[0];
+                } else {
+                    // Try to extract state and zip separately
+                    const words = stateZip.split(' ');
+                    state = words[0];
+                    zip = words[1] || '';
+                }
+            } else if (parts.length === 2) {
+                // Try "123 Main St City, State ZIP" format
+                const firstPart = parts[0];
+                const secondPart = parts[1];
+                const stateZipMatch = secondPart.match(/([A-Z]{2})\s+(\d{5})/i);
+                if (stateZipMatch) {
+                    state = stateZipMatch[1];
+                    zip = stateZipMatch[2];
+                    // Extract city from end of first part
+                    const words = firstPart.split(' ');
+                    city = words[words.length - 1];
+                    streetAddress = words.slice(0, -1).join(' ');
+                }
+            }
+            
+            return {
+                streetAddress,
+                city,
+                state,
+                zip,
+                fullAddress: address
+            };
+        }
+        
+        // Fetch data from RentCast API
+        async function fetchRentCastData(addressComponents) {
+            const { streetAddress, city, state, zip } = addressComponents;
+            
+            // Skip if no API key is set
+            if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
+                console.log('RentCast API key not configured');
+                return { success: false };
+            }
+            
+            try {
+                // RentCast property lookup by address
+                const queryParams = new URLSearchParams({
+                    address: streetAddress,
+                    city: city,
+                    state: state,
+                    zipcode: zip
+                });
+                
+                const response = await fetch(`${RENTCAST_API_BASE}/properties?${queryParams}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Api-Key': RENTCAST_API_KEY
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`RentCast API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Process RentCast response
+                if (data && data.length > 0) {
+                    const property = data[0]; // Take the first match
+                    
+                    return {
+                        success: true,
+                        data: {
+                            // Address info
+                            streetAddress: property.addressLine1 || streetAddress,
+                            city: property.city || city,
+                            state: property.state || state,
+                            zip: property.zipCode || zip,
+                            lat: property.latitude || 0,
+                            lon: property.longitude || 0,
+                            
+                            // Property details from RentCast
+                            beds: property.bedrooms || 3,
+                            baths: property.bathrooms || 2,
+                            sqft: property.squareFeet || 1500,
+                            year: property.yearBuilt || 2000,
+                            propertyType: property.propertyType || 'Single Family',
+                            lotSize: property.lotSize || 0,
+                            
+                            // Financial data
+                            price: property.price || property.lastSalePrice || 400000,
+                            rentEstimate: property.rentEstimate || property.rent || 2500,
+                            taxAssessment: property.taxAssessment || 0,
+                            
+                            // Additional RentCast data
+                            lastSaleDate: property.lastSaleDate || null,
+                            lastSalePrice: property.lastSalePrice || 0,
+                            ownerName: property.ownerName || '',
+                            
+                            // Calculate rates
+                            taxRate: property.taxAssessment && property.price ? 
+                                (property.taxAssessment / property.price * 100).toFixed(2) : 1.2,
+                            insuranceRate: 0.35,
+                            hoaMonthly: property.hoaFee || 0
+                        }
+                    };
+                }
+                
+                return { success: false };
+            } catch (error) {
+                console.error('RentCast API Error:', error);
+                return { success: false };
+            }
         }
 
         // Fetch detailed property information
@@ -2413,15 +2566,21 @@
             
             // Build enhanced report
             const analysisHTML = `
-                <div class="analysis-section" style="background: #e8f5e9; border: 2px solid #4caf50; margin-bottom: 20px;">
-                    <div class="analysis-title" style="color: #2e7d32;">
-                        ✅ Real Property Data Retrieved
+                <div class="analysis-section" style="background: ${propertyData.source === 'RentCast API' ? '#e8f5e9' : '#fff3cd'}; border: 2px solid ${propertyData.source === 'RentCast API' ? '#4caf50' : '#ffc107'}; margin-bottom: 20px;">
+                    <div class="analysis-title" style="color: ${propertyData.source === 'RentCast API' ? '#2e7d32' : '#856404'};">
+                        ${propertyData.source === 'RentCast API' ? '✅ Real Property Data from RentCast' : '🔍 Property Data Estimated'}
                     </div>
                     <div style="font-size: 13px; padding: 10px; color: #1b5e20;">
-                        <div><strong>Data Source:</strong> OpenStreetMap Geocoding + Market Estimates</div>
+                        <div><strong>Data Source:</strong> ${propertyData.source === 'RentCast API' ? 'RentCast Property Database' : 'OpenStreetMap Geocoding + Market Estimates'}</div>
                         <div><strong>Address Verified:</strong> ${formattedAddress || address}</div>
                         <div><strong>GPS Coordinates:</strong> ${lat ? parseFloat(lat).toFixed(6) : 'N/A'}, ${lon ? parseFloat(lon).toFixed(6) : 'N/A'}</div>
-                        <div style="margin-top: 5px; font-size: 12px;">Note: Property details are estimated. For accurate data, integrate with MLS or Zillow API.</div>
+                        ${propertyData.lastSaleDate ? `<div><strong>Last Sale:</strong> $${(propertyData.lastSalePrice || 0).toLocaleString()} on ${propertyData.lastSaleDate}</div>` : ''}
+                        ${propertyData.ownerName ? `<div><strong>Owner:</strong> ${propertyData.ownerName}</div>` : ''}
+                        <div style="margin-top: 5px; font-size: 12px;">
+                            ${propertyData.source === 'RentCast API' ? 
+                                '<strong style="color: #0066cc;">✅ Live data from RentCast API</strong>' : 
+                                'Note: Using estimated data. Configure RentCast API key for accurate data.'}
+                        </div>
                     </div>
                 </div>
                 
@@ -2538,19 +2697,23 @@
                     </button>
                 </div>
                 
-                <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; font-size: 13px; color: #856404;">
-                    <strong>💡 Tip:</strong> For the most accurate property data, consider these premium APIs:
+                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border: 1px solid #1976d2; border-radius: 8px; font-size: 13px; color: #0d47a1;">
+                    <strong>🌐 RentCast API Integration:</strong>
+                    <div style="margin-top: 10px;">
+                        ${propertyData.source === 'RentCast API' ? 
+                            '<span style="color: #2e7d32;">✅ Successfully retrieved property data from RentCast</span>' :
+                            '<span style="color: #f57c00;">⚠️ To get accurate property data, add your RentCast API key to the code</span>'
+                        }
+                    </div>
                     <ul style="margin: 10px 0 0 20px;">
-                        <li><strong>Zillow API:</strong> Comprehensive property details, Zestimate values</li>
-                        <li><strong>Redfin API:</strong> MLS data, recent sales, market trends</li>
-                        <li><strong>Rentometer API:</strong> Accurate rental comparables</li>
-                        <li><strong>RentBerry API:</strong> Rental market analysis</li>
-                        <li><strong>Estated API:</strong> Property characteristics, ownership info</li>
+                        <li><strong>Data Available:</strong> Beds, baths, sqft, year built, property type, owner info, tax assessments</li>
+                        <li><strong>Free Tier:</strong> 50 API calls/month</li>
+                        <li><strong>Setup:</strong> Replace 'YOUR_RENTCAST_API_KEY' in the code with your actual key</li>
                     </ul>
                     <div style="margin-top: 10px;">
-                        <a href="https://www.zillow.com/howto/api/APIOverview.htm" target="_blank" style="color: #0066cc;">Zillow API Docs</a> | 
-                        <a href="https://www.rentometer.com/api" target="_blank" style="color: #0066cc;">Rentometer API</a> | 
-                        <a href="https://estated.com/api" target="_blank" style="color: #0066cc;">Estated API</a>
+                        <a href="https://developers.rentcast.io" target="_blank" style="color: #0066cc;">RentCast API Docs</a> | 
+                        <a href="https://app.rentcast.io/app/api" target="_blank" style="color: #0066cc;">Get API Key</a> | 
+                        <a href="https://developers.rentcast.io/reference/property-records" target="_blank" style="color: #0066cc;">Property Endpoints</a>
                     </div>
                 </div>
             `;
