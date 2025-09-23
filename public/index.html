@@ -2593,9 +2593,10 @@
                             lon: location.lon,
                             streetNumber: addressDetails.house_number || '',
                             streetName: addressDetails.road || '',
-                            city: addressDetails.city || addressDetails.town || addressDetails.village || '',
-                            state: addressDetails.state || '',
-                            zip: addressDetails.postcode || '',
+                            address: parsedAddress.streetAddress || address.split(',')[0].trim(),
+                            city: addressDetails.city || addressDetails.town || addressDetails.village || parsedAddress.city || '',
+                            state: addressDetails.state || parsedAddress.state || '',
+                            zip: addressDetails.postcode || parsedAddress.zip || '',
                             country: addressDetails.country || 'USA',
                             formattedAddress: location.display_name
                         };
@@ -2616,8 +2617,8 @@
         
         // Parse address into components for API calls
         function parseAddressComponents(address) {
-            // Remove extra spaces and normalize
-            address = address.replace(/\s+/g, ' ').trim();
+            // Remove newlines and extra spaces and normalize
+            address = address.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
             
             // Try to parse standard format: "123 Main St, City, State ZIP"
             const parts = address.split(',').map(p => p.trim());
@@ -2721,6 +2722,7 @@
                         data: {
                             // Address info
                             streetAddress: property.addressLine1 || property.address || streetAddress,
+                            address: property.addressLine1 || property.address || streetAddress,
                             city: property.city || city,
                             state: property.state || state,
                             zip: property.zipCode || property.zipcode || zip,
@@ -3200,7 +3202,11 @@
                 lat, lon, formattedAddress
             } = propertyData;
             
-            const streetAddress = `${streetNumber} ${streetName}`.trim();
+            // Use the address field from propertyData if available, otherwise parse from input
+            const streetAddress = propertyData.address || (streetNumber && streetName ? `${streetNumber} ${streetName}`.trim() : address.split(',')[0].trim());
+            
+            console.log('generateEnhancedPropertyAnalysis - streetAddress:', streetAddress);
+            console.log('propertyData:', propertyData);
             
             // Financial calculations
             const downPercent = 20;
@@ -3255,7 +3261,7 @@
                     <div class="metric-grid">
                         <div class="metric-card">
                             <div class="metric-card-label">Address</div>
-                            <div class="metric-card-value" style="font-size: 14px;">${streetAddress || 'Not Available'}</div>
+                            <div class="metric-card-value" style="font-size: 14px;">${streetAddress || propertyData.address || address.split(',')[0].trim()}</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-card-label">City</div>
@@ -3342,7 +3348,7 @@
                 
                 <div class="action-buttons" style="margin-top: 30px; text-align: center;">
                     <button class="btn-primary" style="padding: 12px 24px; font-size: 16px;" onclick="addPropertyFromAnalysis(${JSON.stringify({
-                        address: streetAddress || address,
+                        address: streetAddress || propertyData.address || address.split(',')[0].trim(),
                         city: city,
                         state: state,
                         zip: zip,
@@ -3391,11 +3397,13 @@
         }
         
         function generatePropertyAnalysis(address) {
+            console.log('generatePropertyAnalysis called with address:', address);
+            
             // Parse address components - handle various formats
             let streetAddress, city, state, zip;
             
-            // Clean the input address
-            const originalAddress = address.trim();
+            // Clean the input address - remove any newlines and extra spaces
+            const originalAddress = address.trim().replace(/\n/g, ', ').replace(/\s+/g, ' ');
             
             // First try comma-separated format
             if (originalAddress.includes(',')) {
@@ -3408,7 +3416,7 @@
                     const secondPart = addressParts[1];
                     
                     // Extract state and zip from second part
-                    const stateZipMatch = secondPart.match(/^([A-Z]{2})\s+(\d{5}(-\d{4})?)$/);
+                    const stateZipMatch = secondPart.match(/([A-Z]{2})\s+(\d{5}(-\d{4})?)/);
                     if (stateZipMatch) {
                         state = stateZipMatch[1];
                         zip = stateZipMatch[2].split('-')[0];
@@ -3576,7 +3584,7 @@
             }
             
             // Set defaults if not found
-            streetAddress = streetAddress || '123 Main St';
+            streetAddress = streetAddress || originalAddress || '123 Main St';
             city = city || 'Las Vegas';
             state = state || 'NV';
             zip = zip || '89146'; // Changed default to 89146 based on common Las Vegas zip
@@ -3903,7 +3911,7 @@
                     </p>
                 </div>
 
-                <button class="add-to-portfolio-btn" onclick="addAnalyzedProperty('${streetAddress.replace(/'/g, "\\'")}', '${city.replace(/'/g, "\\'")}', '${state}', '${zip}', ${beds}, ${baths}, ${sqft}, ${year}, ${price}, ${monthlyRent})">
+                <button class="add-to-portfolio-btn" onclick="addAnalyzedProperty('${(streetAddress || originalAddress).replace(/'/g, "\\'")}', '${city.replace(/'/g, "\\'")}', '${state}', '${zip}', ${beds}, ${baths}, ${sqft}, ${year}, ${price}, ${monthlyRent})">
                     ➕ Add to Portfolio for Tracking
                 </button>
             `;
