@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Sold Property Display</title>
+</head>
+<body>
+    <h1>Test Sold Property Feature</h1>
+    <p>Open the main application and run these commands in the browser console to test:</p>
+    
+    <h2>Test Commands:</h2>
+    <pre style="background: #f4f4f4; padding: 20px; border-radius: 8px;">
+// 1. Mark first property as sold
+properties[0].isSold = true;
+properties[0].soldDate = new Date('2025-01-15').toISOString();
+properties[0].soldPrice = 485000;
+renderTable();
+
+// 2. Mark second property as sold with different price
+properties[1].isSold = true;
+properties[1].soldDate = new Date('2025-01-10').toISOString();
+properties[1].soldPrice = 350000;  // Less than asking
+renderTable();
+
+// 3. Test the modal for sold property
+showPropertyDetail(0);
+
+// 4. Reset properties (remove sold status)
+properties[0].isSold = false;
+properties[1].isSold = false;
+renderTable();
+    </pre>
+    
+    <h2>What to Look For:</h2>
+    <ul>
+        <li>Red strikethrough text on sold property addresses</li>
+        <li>Red "SOLD" badge next to addresses</li>
+        <li>Pink/red background on entire row</li>
+        <li>Sale date and price shown below address</li>
+        <li>Financial metrics showing as "N/A"</li>
+        <li>Special sold property analysis in modal</li>
+    </ul>
+    
+    <h2>RentCast API Detection:</h2>
+    <p>When you click the refresh button (🔄) on any property, if RentCast returns:</p>
+    <ul>
+        <li>lastSaleDate within 365 days</li>
+        <li>lastSalePrice that differs >3% from listing</li>
+        <li>propertyStatus = "SOLD"</li>
+    </ul>
+    <p>The property will automatically be marked as sold!</p>
+    
+    <br>
+    <a href="public/index.html" target="_blank">
+        <button style="background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">
+            Open Real Estate Tracker
+        </button>
+    </a>
+</body>
+</html>

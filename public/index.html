@@ -1017,6 +1017,44 @@
             background: #f3f4f6;
             transform: rotate(180deg);
         }
+        
+        /* Sold property styles */
+        .property-sold {
+            background-color: #fee !important;
+        }
+        
+        .property-sold td {
+            color: #dc3545;
+            opacity: 0.8;
+        }
+        
+        .property-sold .address-sold {
+            color: #dc3545 !important;
+            text-decoration: line-through;
+            font-weight: 600;
+        }
+        
+        .sold-badge {
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+        
+        .sold-notice {
+            background: #fee;
+            border: 1px solid #dc3545;
+            color: #dc3545;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-top: 4px;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -1403,7 +1441,28 @@
             
             // Generate AI analysis
             let aiAnalysis = '';
-            if (prop.monthlyCF < 0) {
+            
+            // Special analysis for sold properties
+            if (prop.isSold) {
+                aiAnalysis = `
+                    <div style="background: #fee; border: 2px solid #dc3545; padding: 20px; border-radius: 12px;">
+                        <h3 style="color: #dc3545; margin-bottom: 15px;">🏷️ Property Sold - Analysis Complete</h3>
+                        <p><strong>Status:</strong> This property has been sold and is no longer available for investment.</p>
+                        
+                        <p><strong>Sale Details:</strong></p>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Sold Date: ${prop.soldDate ? new Date(prop.soldDate).toLocaleDateString() : 'Unknown'}</li>
+                            <li>Sale Price: $${prop.soldPrice ? prop.soldPrice.toLocaleString() : 'Unknown'}</li>
+                            <li>Price Difference: ${prop.soldPrice && prop.price ? 
+                                '$' + (prop.soldPrice - prop.price).toLocaleString() + ' (' + 
+                                ((prop.soldPrice - prop.price) / prop.price * 100).toFixed(1) + '%)' : 
+                                'N/A'}</li>
+                        </ul>
+                        
+                        <p><strong>Recommendation:</strong> Remove this property from your watchlist and focus on available opportunities.</p>
+                    </div>
+                `;
+            } else if (prop.monthlyCF < 0) {
                 aiAnalysis = `
                     <div style="background: #fff5f5; border: 2px solid #fc8181; padding: 20px; border-radius: 12px;">
                         <h3 style="color: #dc3545; margin-bottom: 15px;">🚫 AI Investment Warning</h3>
@@ -2739,16 +2798,37 @@
                     // Store raw data
                     properties[index]._rawRentCastData = data._rawData;
                     
-                    // Check if property is sold
+                    // Check if property is sold - enhanced detection
                     if (data.lastSaleDate) {
                         const saleDate = new Date(data.lastSaleDate);
                         const daysSinceSale = (new Date() - saleDate) / (1000 * 60 * 60 * 24);
                         
-                        if (daysSinceSale < 180 && data.lastSalePrice && 
-                            Math.abs(data.lastSalePrice - properties[index].price) / properties[index].price > 0.05) {
+                        // Property is considered sold if:
+                        // 1. Sale happened within last 365 days (increased from 180)
+                        // 2. Sale price differs from listing by more than 3% (reduced from 5%)
+                        // 3. OR if RentCast indicates property status as sold
+                        if ((daysSinceSale < 365 && data.lastSalePrice && 
+                            Math.abs(data.lastSalePrice - properties[index].price) / properties[index].price > 0.03) ||
+                            data.propertyStatus === 'SOLD' || 
+                            data.listingStatus === 'SOLD' ||
+                            data.status === 'SOLD') {
                             properties[index].isSold = true;
                             properties[index].soldDate = data.lastSaleDate;
                             properties[index].soldPrice = data.lastSalePrice;
+                            console.log(`Property marked as SOLD: ${properties[index].address}`);
+                            console.log(`Sold on: ${data.lastSaleDate} for $${data.lastSalePrice}`);
+                        }
+                    }
+                    
+                    // Also check for any sold-related fields in the raw data
+                    if (data._rawData && (data._rawData.sold || data._rawData.isSold || 
+                        data._rawData.status === 'sold' || data._rawData.listingStatus === 'sold')) {
+                        properties[index].isSold = true;
+                        if (!properties[index].soldDate && data._rawData.soldDate) {
+                            properties[index].soldDate = data._rawData.soldDate;
+                        }
+                        if (!properties[index].soldPrice && data._rawData.soldPrice) {
+                            properties[index].soldPrice = data._rawData.soldPrice;
                         }
                     }
                     
@@ -2782,7 +2862,11 @@
                         showPropertyDetail(index);
                     }
                     
-                    alert(`✅ Successfully updated real-time data for ${prop.address}`);
+                    if (properties[index].isSold) {
+                        alert(`🏷️ Property SOLD!\n\n${prop.address} has been sold.\nSold on: ${new Date(properties[index].soldDate).toLocaleDateString()}\nSale Price: $${(properties[index].soldPrice || 0).toLocaleString()}\n\nNo further research needed for this property.`);
+                    } else {
+                        alert(`✅ Successfully updated real-time data for ${prop.address}`);
+                    }
                     return true;
                 } else {
                     alert(`❌ Could not fetch real-time data for ${prop.address}. The property may not be in the RentCast database.`);
@@ -3946,20 +4030,29 @@
             properties.forEach((prop, index) => {
                 const row = document.createElement('tr');
                 
+                // Check if property is sold and add appropriate class
+                if (prop.isSold) {
+                    row.className = 'property-sold';
+                }
+                
                 // Build the row HTML first
                 let rowHTML = '';
                 
                 // Location section with refresh icon
                 rowHTML += `
                     <td>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span onclick="showPropertyDetail(${index})" 
-                                  style="cursor: pointer; color: #667eea; text-decoration: underline;"
-                                  title="Click to view property details">${prop.address}</span>
+                                  class="${prop.isSold ? 'address-sold' : ''}"
+                                  style="cursor: pointer; ${prop.isSold ? '' : 'color: #667eea; text-decoration: underline;'}"
+                                  title="${prop.isSold ? 'Property SOLD - Click for details' : 'Click to view property details'}">${prop.address}</span>
+                            ${prop.isSold ? '<span class="sold-badge">SOLD</span>' : ''}
+                            ${prop.realTimeData ? '<span class="real-time-badge" style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">LIVE</span>' : ''}
                             <span class="refresh-icon" onclick="refreshSingleProperty(${index})" 
                                   style="cursor: pointer; font-size: 14px; opacity: 0.7; transition: opacity 0.2s;" 
                                   title="Refresh real-time data for this property">🔄</span>
                         </div>
+                        ${prop.isSold && prop.soldDate ? `<div class="sold-notice">Sold on ${new Date(prop.soldDate).toLocaleDateString()} for $${(prop.soldPrice || 0).toLocaleString()}</div>` : ''}
                     </td>
                 `;
                 
@@ -3978,19 +4071,28 @@
                 
                 // Financials section
                 rowHTML += createEditableCell(prop.rent, index, 'rent', false, true).outerHTML;
-                rowHTML += `<td class="${prop.monthlyCF >= 0 ? 'positive-cf' : 'negative-cf'}">
-                                    $${prop.monthlyCF.toLocaleString()}
-                                 </td>`;
-                rowHTML += `<td class="${prop.annualCF >= 0 ? 'positive-cf' : 'negative-cf'}">
-                                    $${prop.annualCF.toLocaleString()}
-                                 </td>`;
-                rowHTML += `<td class="${prop.coc >= 8 ? 'good-metric' : prop.coc >= 5 ? 'fair-metric' : 'poor-metric'}">
-                                    ${prop.coc}%
-                                 </td>`;
-                rowHTML += `<td>${prop.capRate}%</td>`;
-                rowHTML += `<td class="${prop.dscr >= 1.25 ? 'good-metric' : prop.dscr >= 1 ? 'fair-metric' : 'poor-metric'}">
-                                    ${prop.dscr}
-                                 </td>`;
+                // Show N/A for financial metrics if sold
+                if (prop.isSold) {
+                    rowHTML += `<td style="color: #999;">N/A</td>`;
+                    rowHTML += `<td style="color: #999;">N/A</td>`;
+                    rowHTML += `<td style="color: #999;">N/A</td>`;
+                    rowHTML += `<td style="color: #999;">N/A</td>`;
+                    rowHTML += `<td style="color: #999;">N/A</td>`;
+                } else {
+                    rowHTML += `<td class="${prop.monthlyCF >= 0 ? 'positive-cf' : 'negative-cf'}">
+                                        $${prop.monthlyCF.toLocaleString()}
+                                     </td>`;
+                    rowHTML += `<td class="${prop.annualCF >= 0 ? 'positive-cf' : 'negative-cf'}">
+                                        $${prop.annualCF.toLocaleString()}
+                                     </td>`;
+                    rowHTML += `<td class="${prop.coc >= 8 ? 'good-metric' : prop.coc >= 5 ? 'fair-metric' : 'poor-metric'}">
+                                        ${prop.coc}%
+                                     </td>`;
+                    rowHTML += `<td>${prop.capRate}%</td>`;
+                    rowHTML += `<td class="${prop.dscr >= 1.25 ? 'good-metric' : prop.dscr >= 1 ? 'fair-metric' : 'poor-metric'}">
+                                        ${prop.dscr}
+                                     </td>`;
+                }
                 
                 // Risk section
                 rowHTML += `<td><span class="risk-${prop.crimeRisk.toLowerCase()}">${prop.crimeRisk}</span></td>`;
