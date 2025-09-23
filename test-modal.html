@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Property Modal</title>
+</head>
+<body>
+    <h1>Test Property Modal</h1>
+    <button onclick="testShowProperty()">Click to Test Property Modal</button>
+    
+    <div id="testResult"></div>
+    
+    <script>
+        // Load the main index.html
+        function testShowProperty() {
+            // Open the main application in a new window
+            window.open('public/index.html', '_blank');
+            
+            document.getElementById('testResult').innerHTML = `
+                <h2>Instructions:</h2>
+                <ol>
+                    <li>Click on any property row in the table</li>
+                    <li>Look for the green "🔄 Refresh Real-Time Data for This Property" button</li>
+                    <li>It should appear right below the tips section</li>
+                    <li>It shows when the property was last updated</li>
+                </ol>
+                
+                <h3>If you don't see the button:</h3>
+                <p>1. Check browser console for errors (F12)</p>
+                <p>2. Make sure you clicked on a property row (not the edit cells)</p>
+                <p>3. The modal should open with property details</p>
+                
+                <h3>Alternative ways to refresh:</h3>
+                <p>- Click the 🔄 icon next to any property address in the main table</p>
+                <p>- This refreshes that specific property's data</p>
+            `;
+        }
+    </script>
+</body>
+</html>

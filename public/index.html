@@ -1385,6 +1385,7 @@
 
         // Show property detail modal
         function showPropertyDetail(index) {
+            console.log('showPropertyDetail called for property index:', index);
             const prop = properties[index];
             const modal = document.getElementById('propertyModal');
             
@@ -1614,6 +1615,14 @@
             
             document.getElementById('modalBody').innerHTML = modalContent;
             modal.style.display = 'block';
+            
+            // Debug: Check if refresh button is in the modal
+            console.log('Modal opened. Checking for refresh button...');
+            const hasRefreshButton = modalContent.includes('refreshSingleProperty');
+            console.log('Refresh button present:', hasRefreshButton);
+            if (!hasRefreshButton) {
+                console.error('Refresh button HTML not found in modal content!');
+            }
         }
 
         // Update value from modal
@@ -4091,9 +4100,21 @@
             initializeProperties();
             renderTable();
             updatePortfolioStats();
+            
+            // Debug: Check if refresh button appears
+            console.log('App initialized. Click any property to test refresh button.');
         };
+        
+        // Debug function to test modal
+        function debugTestModal() {
+            console.log('Testing property modal...');
+            showPropertyDetail(0); // Show first property
+            setTimeout(() => {
+                const modalBody = document.getElementById('modalBody');
+                console.log('Modal body HTML:', modalBody.innerHTML.substring(0, 500));
+                console.log('Look for refresh button in modal');
+            }, 100);
+        }
     </script>
-</body>
-</html>
 </body>
 </html>
