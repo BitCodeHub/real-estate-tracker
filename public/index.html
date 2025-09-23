@@ -2192,7 +2192,14 @@
         // 1. Sign up at https://app.rentcast.io/app/api
         // 2. Get your API key (50 free requests/month)
         // 3. Replace 'YOUR_RENTCAST_API_KEY' below with your actual key
-        const RENTCAST_API_KEY = '42e42e7a08204cba9a397326d9d05415'; // RentCast API key configured
+        // SECURITY WARNING: Never commit API keys to public repositories!
+        // Option 1: Set as environment variable (for local testing)
+        const RENTCAST_API_KEY = localStorage.getItem('RENTCAST_API_KEY') || 'YOUR_RENTCAST_API_KEY';
+        
+        // Check if API key needs to be set
+        if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
+            console.warn('RentCast API key not configured. Set it using: localStorage.setItem("RENTCAST_API_KEY", "your-key-here")');
+        }
         const RENTCAST_API_BASE = 'https://api.rentcast.io/v1';
         
         // Fetch real property data from RentCast API

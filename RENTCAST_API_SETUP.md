@@ -10,17 +10,29 @@ This guide will help you set up the RentCast API to get accurate property data i
 3. **Get API Key**: After login, you'll see your API key in the dashboard
 4. **Free Tier**: 50 API requests per month (perfect for testing)
 
-## Step 2: Add Your API Key to the Code
+## Step 2: Add Your API Key Securely
 
-1. Open `public/index.html` in your text editor
-2. Find this line (around line 2190):
-   ```javascript
-   const RENTCAST_API_KEY = 'YOUR_RENTCAST_API_KEY'; // Replace with your actual API key
-   ```
-3. Replace `'YOUR_RENTCAST_API_KEY'` with your actual API key:
-   ```javascript
-   const RENTCAST_API_KEY = 'rc_api_abc123...'; // Your actual key
-   ```
+### ⚠️ SECURITY WARNING
+NEVER commit your API key to GitHub or any public repository!
+
+### Secure Setup Method:
+
+1. **Open the Setup Tool**: Open `setup-api-key.html` in your browser
+2. **Enter Your API Key**: Paste your RentCast API key
+3. **Click Save**: Your key is now stored securely in browser's local storage
+4. **Done!** The tracker will automatically use your saved key
+
+### Alternative: Manual Setup
+Open your browser's console (F12) and run:
+```javascript
+localStorage.setItem('RENTCAST_API_KEY', 'your-actual-api-key-here');
+```
+
+### Why This Method?
+- API key stays on your computer only
+- Never gets uploaded to GitHub
+- Each user sets their own key
+- No risk of exposing sensitive data
 
 ## Step 3: Understanding the Integration
 
