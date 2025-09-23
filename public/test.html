@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Real Estate Tracker</title>
+</head>
+<body>
+    <h1>Testing Real Estate Tracker</h1>
+    <p>Open the browser console to see the debug information.</p>
+    <button onclick="testApp()">Test Application</button>
+    <div id="result"></div>
+    
+    <script>
+        function testApp() {
+            // Open the main application in a new window
+            const appWindow = window.open('index.html', '_blank');
+            
+            // Wait for it to load then check
+            setTimeout(() => {
+                if (appWindow && !appWindow.closed) {
+                    try {
+                        const propCount = appWindow.document.getElementById('propertyCount').textContent;
+                        const tableRows = appWindow.document.querySelectorAll('#propertyTableBody tr').length;
+                        const result = `
+                            <h3>Test Results:</h3>
+                            <p>Property Count Display: ${propCount}</p>
+                            <p>Table Rows Found: ${tableRows}</p>
+                            <p>Properties Array Length: ${appWindow.properties ? appWindow.properties.length : 'undefined'}</p>
+                        `;
+                        document.getElementById('result').innerHTML = result;
+                    } catch (e) {
+                        document.getElementById('result').innerHTML = '<p>Error accessing application: ' + e.message + '</p>';
+                    }
+                } else {
+                    document.getElementById('result').innerHTML = '<p>Could not open application window</p>';
+                }
+            }, 2000);
+        }
+    </script>
+    
+    <h2>Direct Test</h2>
+    <p>Or open <a href="index.html" target="_blank">index.html</a> directly and check:</p>
+    <ol>
+        <li>Does it show "Properties: 17" in the top right?</li>
+        <li>Are there property rows in the table?</li>
+        <li>Open browser console (F12) and type: <code>properties.length</code></li>
+    </ol>
+</body>
+</html>

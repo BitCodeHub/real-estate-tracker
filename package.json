@@ -1,0 +1,16 @@
+{
+  "name": "real-estate-tracker",
+  "version": "1.0.0",
+  "description": "Real Estate Investment Property Tracker with AI Analysis",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["real-estate", "investment", "property", "tracker"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

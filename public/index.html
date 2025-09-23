@@ -2410,7 +2410,7 @@
                 lastSoldPrice: 0,
                 lastSoldDate: null,
                 zillowUrl: '',
-                redfin Url: ''
+                redfinUrl: ''
             };
             
             // Adjust estimates based on location
@@ -3366,6 +3366,176 @@
             }
         }
 
+        // Render table with all properties
+        function renderTable() {
+            const tbody = document.getElementById('propertyTableBody');
+            tbody.innerHTML = '';
+            
+            properties.forEach((prop, index) => {
+                const row = document.createElement('tr');
+                row.className = 'clickable-row';
+                row.onclick = () => showPropertyDetail(index);
+                
+                // Location section
+                row.innerHTML += `<td>${prop.address}</td>`;
+                row.innerHTML += `<td>${prop.city}</td>`;
+                row.innerHTML += `<td>${prop.state}</td>`;
+                row.innerHTML += `<td>${prop.zip}</td>`;
+                
+                // Property section
+                row.innerHTML += `<td>${prop.beds}</td>`;
+                row.innerHTML += `<td>${prop.baths}</td>`;
+                row.innerHTML += `<td>${prop.sqft.toLocaleString()}</td>`;
+                row.innerHTML += `<td>${prop.year}</td>`;
+                row.innerHTML += createEditableCell(prop.price, index, 'price', false, true).outerHTML;
+                row.innerHTML += createEditableCell(prop.downPercent, index, 'downPercent', true, false).outerHTML;
+                
+                // Financials section
+                row.innerHTML += createEditableCell(prop.rent, index, 'rent', false, true).outerHTML;
+                row.innerHTML += `<td class="${prop.monthlyCF >= 0 ? 'positive-cf' : 'negative-cf'}">
+                                    $${prop.monthlyCF.toLocaleString()}
+                                 </td>`;
+                row.innerHTML += `<td class="${prop.annualCF >= 0 ? 'positive-cf' : 'negative-cf'}">
+                                    $${prop.annualCF.toLocaleString()}
+                                 </td>`;
+                row.innerHTML += `<td class="${prop.coc >= 8 ? 'good-metric' : prop.coc >= 5 ? 'fair-metric' : 'poor-metric'}">
+                                    ${prop.coc}%
+                                 </td>`;
+                row.innerHTML += `<td>${prop.capRate}%</td>`;
+                row.innerHTML += `<td class="${prop.dscr >= 1.25 ? 'good-metric' : prop.dscr >= 1 ? 'fair-metric' : 'poor-metric'}">
+                                    ${prop.dscr}
+                                 </td>`;
+                
+                // Risk section
+                row.innerHTML += `<td class="risk-${prop.crimeRisk.toLowerCase()}">${prop.crimeRisk}</td>`;
+                row.innerHTML += `<td class="risk-${prop.floodRisk.toLowerCase()}">${prop.floodRisk}</td>`;
+                row.innerHTML += `<td class="risk-${prop.marketRisk.toLowerCase()}">${prop.marketRisk}</td>`;
+                
+                tbody.appendChild(row);
+            });
+            
+            // Re-attach edit handlers after innerHTML
+            tbody.querySelectorAll('.editable-cell').forEach(cell => {
+                const propIndex = parseInt(cell.getAttribute('data-prop-index'));
+                const field = cell.getAttribute('data-field');
+                const isPercent = cell.getAttribute('data-is-percent') === 'true';
+                const isCurrency = cell.getAttribute('data-is-currency') === 'true';
+                
+                cell.addEventListener('blur', function() {
+                    let newValue = this.textContent.replace(/[$,%,]/g, '').trim();
+                    newValue = parseFloat(newValue);
+                    
+                    if (!isNaN(newValue) && newValue !== properties[propIndex][field]) {
+                        properties[propIndex][field] = newValue;
+                        calculateMetrics(properties[propIndex]);
+                        renderTable();
+                        updatePortfolioStats();
+                    }
+                });
+                
+                cell.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+            });
+        }
+        
+        // Show property detail modal
+        function showPropertyDetail(index) {
+            const prop = properties[index];
+            document.getElementById('modalTitle').textContent = `${prop.address}, ${prop.city}, ${prop.state}`;
+            
+            const modalContent = `
+                <div class="modal-grid">
+                    <div>
+                        <h3>Property Details</h3>
+                        <div class="metric-row">
+                            <span class="metric-label">Configuration</span>
+                            <span class="metric-value">${prop.beds} bed / ${prop.baths} bath</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Size</span>
+                            <span class="metric-value">${prop.sqft.toLocaleString()} sqft</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Year Built</span>
+                            <span class="metric-value">${prop.year}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Purchase Price</span>
+                            <span class="metric-value editable-value" contenteditable="true"
+                                onblur="updateModalValue(${index}, 'price', this)">$${prop.price.toLocaleString()}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Down Payment (${prop.downPercent}%)</span>
+                            <span class="metric-value">$${prop.downPayment.toLocaleString()}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Loan Amount</span>
+                            <span class="metric-value">$${prop.loanAmount.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3>Monthly Income & Expenses</h3>
+                        <div class="metric-row">
+                            <span class="metric-label">Gross Rent</span>
+                            <span class="metric-value editable-value" contenteditable="true"
+                                onblur="updateModalValue(${index}, 'rent', this)">$${prop.rent.toLocaleString()}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Effective Rent (${100-prop.vacancyPercent}%)</span>
+                            <span class="metric-value">$${prop.effectiveRent}</span>
+                        </div>
+                        <div class="metric-row" style="margin-top: 20px; font-weight: 600;">
+                            <span class="metric-label">Mortgage P&I</span>
+                            <span class="metric-value">$${prop.monthlyPI}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Property Tax</span>
+                            <span class="metric-value">$${prop.taxMonthly}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Insurance</span>
+                            <span class="metric-value">$${prop.insuranceMonthly}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">HOA/mo</span>
+                            <span class="metric-value editable-value" contenteditable="true"
+                                onblur="updateModalValue(${index}, 'hoaMonthly', this)">$${prop.hoaMonthly}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Management (${prop.managementPercent}%)</span>
+                            <span class="metric-value">$${prop.managementFee}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Total OpEx/mo</span>
+                            <span class="metric-value" style="font-weight: 700;">$${prop.totalOpEx}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modalBody').innerHTML = modalContent;
+            document.getElementById('propertyModal').style.display = 'block';
+        }
+        
+        // Update value from modal
+        function updateModalValue(index, field, element) {
+            let newValue = element.textContent.replace(/[$,%,]/g, '');
+            newValue = parseFloat(newValue);
+            
+            if (!isNaN(newValue)) {
+                properties[index][field] = newValue;
+                calculateMetrics(properties[index]);
+                renderTable();
+                updatePortfolioStats();
+                showPropertyDetail(index); // Refresh modal
+            }
+        }
+        
         // Initialize on load
         window.onload = function() {
             initializeProperties();
@@ -3373,5 +3543,7 @@
             updatePortfolioStats();
         };
     </script>
+</body>
+</html>
 </body>
 </html>
