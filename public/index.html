@@ -269,6 +269,115 @@
             display: inline-block;
         }
         
+        .property-sold {
+            background: #fee !important;
+            opacity: 0.8;
+        }
+        
+        .property-sold td {
+            text-decoration: line-through;
+            color: #999;
+        }
+        
+        .property-sold .address-cell {
+            text-decoration: none;
+        }
+        
+        .sold-badge {
+            background: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .real-time-badge {
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .last-updated {
+            font-size: 10px;
+            color: #6c757d;
+            margin-left: 8px;
+        }
+        
+        .refresh-all-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .refresh-all-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .refresh-all-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .refreshing {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        
+        .sold-indicator {
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            margin-left: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .realtime-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 20px;
+            font-size: 14px;
+            color: #059669;
+            font-weight: normal;
+        }
+        
+        .realtime-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
         /* Modal Styles */
         .modal {
             display: none;
@@ -890,6 +999,9 @@
                 <button class="btn-primary" onclick="exportData()">📊 Export Excel</button>
                 <button class="btn-success" onclick="openAddPropertyModal()">➕ Add Property</button>
                 <button class="btn-ai" onclick="runPortfolioAnalysis()">🤖 AI Portfolio Analysis</button>
+                <button class="refresh-all-btn" onclick="refreshAllProperties()" title="Refresh all properties with real-time data">
+                    <span id="refreshIcon">🔄</span> <span id="refreshText">Refresh Real-Time Data</span>
+                </button>
             </div>
             <div style="color: #4a5568; font-size: 14px;">
                 <strong>Properties:</strong> <span id="propertyCount">17</span>
@@ -1124,11 +1236,18 @@
             properties.forEach((prop, index) => {
                 const row = document.createElement('tr');
                 
+                // Check if property is sold
+                if (prop.isSold) {
+                    row.className = 'property-sold';
+                }
+                
                 // Set row background based on cash flow
-                if (prop.monthlyCF < 0) {
-                    row.style.backgroundColor = '#ffebee';
-                } else {
-                    row.style.backgroundColor = '#e8f5e9';
+                if (!prop.isSold) {
+                    if (prop.monthlyCF < 0) {
+                        row.style.backgroundColor = '#ffebee';
+                    } else {
+                        row.style.backgroundColor = '#e8f5e9';
+                    }
                 }
                 
                 // Add click handler for row (except when clicking editable cells)
@@ -1141,7 +1260,21 @@
                 // Address (not editable)
                 const addressCell = document.createElement('td');
                 addressCell.className = 'address-cell';
-                addressCell.textContent = prop.address;
+                addressCell.innerHTML = prop.address;
+                
+                // Add badges for sold and real-time data
+                if (prop.isSold) {
+                    addressCell.innerHTML += '<span class="sold-badge">SOLD</span>';
+                }
+                if (prop.realTimeData) {
+                    addressCell.innerHTML += '<span class="real-time-badge" title="Real-time data from RentCast">LIVE</span>';
+                }
+                if (prop.lastUpdated) {
+                    const updatedDate = new Date(prop.lastUpdated);
+                    const timeAgo = getTimeAgo(updatedDate);
+                    addressCell.innerHTML += `<span class="last-updated" title="Last updated: ${updatedDate.toLocaleString()}">${timeAgo}</span>`;
+                }
+                
                 row.appendChild(addressCell);
                 
                 // City, State, ZIP (not editable)
@@ -1221,7 +1354,7 @@
             const prop = properties[index];
             const modal = document.getElementById('propertyModal');
             
-            document.getElementById('modalTitle').innerHTML = `📍 ${prop.address}, ${prop.city}, ${prop.state} - Property ${index + 1} of 16`;
+            document.getElementById('modalTitle').innerHTML = `📍 ${prop.address}, ${prop.city}, ${prop.state} - Property ${index + 1} of ${properties.length}${prop.isSold ? ' <span class="sold-badge">SOLD</span>' : ''}${prop.realTimeData ? ' <span class="real-time-badge">LIVE DATA</span>' : ''}`;
             
             // Generate AI analysis
             let aiAnalysis = '';
@@ -1341,6 +1474,26 @@
                                 onblur="updateModalValue(${index}, 'year', this)">${prop.year}</span>
                         </div>
                     </div>
+                    
+                    ${prop.isSold ? `
+                    <div class="analysis-card" style="background: #fee; border: 2px solid #dc3545;">
+                        <div class="card-title" style="color: #dc3545;">🏷️ PROPERTY SOLD</div>
+                        <div class="metric-row">
+                            <span class="metric-label">Sold Date</span>
+                            <span class="metric-value">${new Date(prop.soldDate).toLocaleDateString()}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Sale Price</span>
+                            <span class="metric-value">$${prop.soldPrice.toLocaleString()}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Profit/Loss</span>
+                            <span class="metric-value" style="color: ${prop.soldPrice - prop.price > 0 ? '#22863a' : '#dc3545'}">
+                                $${(prop.soldPrice - prop.price).toLocaleString()} (${((prop.soldPrice - prop.price) / prop.price * 100).toFixed(1)}%)
+                            </span>
+                        </div>
+                    </div>
+                    ` : ''}
                     
                     <div class="analysis-card">
                         <div class="card-title">💰 Purchase & Financing</div>
@@ -1479,13 +1632,26 @@
             const scoredProperties = properties.map((prop, index) => {
                 const enhancedProp = { ...prop, index };
                 
-                // Simulate real-time market data
-                enhancedProp.currentValue = prop.price * (1 + (Math.random() * 0.2 - 0.05)); // -5% to +15% value change
-                enhancedProp.marketRent = prop.rent * (1 + (Math.random() * 0.15 - 0.05)); // -5% to +10% rent change
+                // Use real-time data if available, otherwise simulate
+                if (prop.currentMarketValue) {
+                    enhancedProp.currentValue = prop.currentMarketValue;
+                } else {
+                    enhancedProp.currentValue = prop.price * (1 + (Math.random() * 0.2 - 0.05)); // -5% to +15% value change
+                }
+                
+                if (prop.currentMarketRent) {
+                    enhancedProp.marketRent = prop.currentMarketRent;
+                } else {
+                    enhancedProp.marketRent = prop.rent * (1 + (Math.random() * 0.15 - 0.05)); // -5% to +10% rent change
+                }
+                
                 enhancedProp.appreciation = ((enhancedProp.currentValue - prop.price) / prop.price * 100).toFixed(1);
                 enhancedProp.daysOnMarket = Math.floor(Math.random() * 90) + 10;
                 enhancedProp.neighborhood = getNeighborhoodGrade(prop.crimeRisk);
-                enhancedProp.isSold = Math.random() > 0.85; // 15% chance of being sold
+                
+                // Use actual sold status from property data
+                enhancedProp.isSold = prop.isSold || false;
+                enhancedProp.realTimeData = prop.realTimeData || false;
                 
                 // Calculate comprehensive score (0-100)
                 let score = 0;
@@ -2187,6 +2353,37 @@
             document.getElementById('addPropertyModal').style.display = 'none';
         }
 
+        // Auto-refresh configuration
+        let autoRefreshInterval = null;
+        const AUTO_REFRESH_MINUTES = 30; // Refresh every 30 minutes
+        
+        // Helper function to get time ago string
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            let interval = Math.floor(seconds / 31536000);
+            if (interval > 1) return interval + ' years ago';
+            if (interval === 1) return '1 year ago';
+            
+            interval = Math.floor(seconds / 2592000);
+            if (interval > 1) return interval + ' months ago';
+            if (interval === 1) return '1 month ago';
+            
+            interval = Math.floor(seconds / 86400);
+            if (interval > 1) return interval + ' days ago';
+            if (interval === 1) return '1 day ago';
+            
+            interval = Math.floor(seconds / 3600);
+            if (interval > 1) return interval + ' hours ago';
+            if (interval === 1) return '1 hour ago';
+            
+            interval = Math.floor(seconds / 60);
+            if (interval > 1) return interval + ' minutes ago';
+            if (interval === 1) return '1 minute ago';
+            
+            return 'just now';
+        }
+        
         // RentCast API Configuration
         // To use RentCast API:
         // 1. Sign up at https://app.rentcast.io/app/api
@@ -2388,6 +2585,150 @@
                 console.error('RentCast API Error:', error);
                 return { success: false };
             }
+        }
+
+        // Refresh all properties with real-time RentCast data
+        async function refreshAllProperties() {
+            const refreshBtn = document.querySelector('.refresh-all-btn');
+            const refreshIcon = document.getElementById('refreshIcon');
+            const refreshText = document.getElementById('refreshText');
+            
+            // Disable button and show loading state
+            refreshBtn.disabled = true;
+            refreshIcon.classList.add('refreshing');
+            refreshText.textContent = 'Refreshing...';
+            
+            let successCount = 0;
+            let failCount = 0;
+            let soldCount = 0;
+            
+            // Process each property
+            for (let i = 0; i < properties.length; i++) {
+                const prop = properties[i];
+                const fullAddress = `${prop.address}, ${prop.city}, ${prop.state} ${prop.zip}`;
+                
+                try {
+                    // Parse address components
+                    const addressComponents = parseAddress(fullAddress);
+                    
+                    // Fetch RentCast data
+                    const rentCastResult = await fetchRentCastData(addressComponents);
+                    
+                    if (rentCastResult.success && rentCastResult.data) {
+                        const data = rentCastResult.data;
+                        
+                        // Update property with real-time data
+                        properties[i].realTimeData = true;
+                        properties[i].lastUpdated = new Date().toISOString();
+                        
+                        // Update property details with real data
+                        if (data.beds) properties[i].beds = data.beds;
+                        if (data.baths) properties[i].baths = data.baths;
+                        if (data.sqft) properties[i].sqft = data.sqft;
+                        if (data.year) properties[i].year = data.year;
+                        if (data.lotSize) properties[i].lotSize = data.lotSize;
+                        
+                        // Check if property is sold
+                        if (data.lastSaleDate) {
+                            const saleDate = new Date(data.lastSaleDate);
+                            const daysSinceSale = (new Date() - saleDate) / (1000 * 60 * 60 * 24);
+                            
+                            // If sold within last 180 days and price changed significantly
+                            if (daysSinceSale < 180 && data.lastSalePrice && 
+                                Math.abs(data.lastSalePrice - properties[i].price) / properties[i].price > 0.05) {
+                                properties[i].isSold = true;
+                                properties[i].soldDate = data.lastSaleDate;
+                                properties[i].soldPrice = data.lastSalePrice;
+                                soldCount++;
+                            }
+                        }
+                        
+                        // Update financial data if available
+                        if (data.price && data.price !== properties[i].price) {
+                            properties[i].currentMarketValue = data.price;
+                        }
+                        if (data.rentEstimate) {
+                            properties[i].currentMarketRent = data.rentEstimate;
+                        }
+                        if (data.taxRate) {
+                            properties[i].taxRate = parseFloat(data.taxRate);
+                        }
+                        if (data.hoaMonthly) {
+                            properties[i].hoaMonthly = data.hoaMonthly;
+                        }
+                        
+                        // Additional data
+                        properties[i].ownerName = data.ownerName || '';
+                        properties[i].propertyType = data.propertyType || 'Single Family';
+                        
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error refreshing property ${fullAddress}:`, error);
+                    failCount++;
+                }
+                
+                // Update progress
+                refreshText.textContent = `Refreshing... ${i + 1}/${properties.length}`;
+                
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Recalculate metrics for all properties
+            properties = properties.map(prop => calculateMetrics(prop));
+            
+            // Update display
+            renderTable();
+            updatePortfolioStats();
+            
+            // Re-enable button and show results
+            refreshBtn.disabled = false;
+            refreshIcon.classList.remove('refreshing');
+            refreshText.textContent = 'Refresh Real-Time Data';
+            
+            // Show results notification
+            const resultMsg = `Refresh complete! ✅ ${successCount} updated, ${soldCount} sold properties detected${failCount > 0 ? `, ❌ ${failCount} failed` : ''}`;
+            alert(resultMsg);
+            
+            // Set up auto-refresh if not already running
+            if (!autoRefreshInterval) {
+                autoRefreshInterval = setInterval(() => {
+                    refreshAllProperties();
+                }, AUTO_REFRESH_MINUTES * 60 * 1000);
+            }
+        }
+
+        // Parse address into components
+        function parseAddress(address) {
+            // Enhanced address parsing
+            const parts = address.split(',').map(s => s.trim());
+            
+            let streetAddress = parts[0] || '';
+            let city = parts[1] || '';
+            let stateZip = parts[2] || '';
+            
+            // Parse state and zip
+            let state = '';
+            let zip = '';
+            
+            if (stateZip) {
+                const stateZipMatch = stateZip.match(/([A-Z]{2})\s*(\d{5})?/);
+                if (stateZipMatch) {
+                    state = stateZipMatch[1];
+                    zip = stateZipMatch[2] || '';
+                }
+            }
+            
+            return {
+                streetAddress,
+                city,
+                state,
+                zip,
+                fullAddress: address
+            };
         }
 
         // Fetch detailed property information
