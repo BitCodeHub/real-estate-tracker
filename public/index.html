@@ -1452,12 +1452,15 @@
                     💡 <strong>Tip:</strong> Click on any blue-highlighted value below to edit it. Changes will automatically recalculate all metrics.
                 </div>
                 
-                <div style="margin: 15px 0; text-align: center;">
-                    <button onclick="refreshSingleProperty(${index})" class="btn-primary" style="background: #10b981; padding: 10px 20px;">
+                <div style="margin: 20px 0; padding: 20px; background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; text-align: center;">
+                    <button onclick="refreshSingleProperty(${index})" class="btn-primary" style="background: #10b981; padding: 12px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 6px; color: white; cursor: pointer;">
                         🔄 Refresh Real-Time Data for This Property
                     </button>
-                    <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">
                         ${prop.lastUpdated ? `Last updated: ${getTimeAgo(new Date(prop.lastUpdated))}` : 'Never updated'}
+                    </div>
+                    <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">
+                        Uses 1 RentCast API call (${RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY' ? 'API key not configured' : 'API key configured'})
                     </div>
                 </div>
                 
