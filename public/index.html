@@ -119,14 +119,11 @@
         }
         
         tbody tr {
-            cursor: pointer;
             transition: all 0.2s ease;
         }
         
         tbody tr:hover {
             background: #f0f4f8 !important;
-            transform: scale(1.01);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         .section-header {
@@ -1263,6 +1260,8 @@
             return cell;
         }
 
+        // OLD RENDER TABLE - COMMENTED OUT TO USE NEW VERSION
+        /*
         // Render the table
         function renderTable() {
             const tbody = document.getElementById('propertyTableBody');
@@ -1392,6 +1391,7 @@
                 tbody.appendChild(row);
             });
         }
+        */
 
         // Show property detail modal
         function showPropertyDetail(index) {
@@ -3945,8 +3945,6 @@
             
             properties.forEach((prop, index) => {
                 const row = document.createElement('tr');
-                row.className = 'clickable-row';
-                row.onclick = () => showPropertyDetail(index);
                 
                 // Build the row HTML first
                 let rowHTML = '';
@@ -3955,8 +3953,10 @@
                 rowHTML += `
                     <td>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span>${prop.address}</span>
-                            <span class="refresh-icon" onclick="event.stopPropagation(); refreshSingleProperty(${index})" 
+                            <span onclick="showPropertyDetail(${index})" 
+                                  style="cursor: pointer; color: #667eea; text-decoration: underline;"
+                                  title="Click to view property details">${prop.address}</span>
+                            <span class="refresh-icon" onclick="refreshSingleProperty(${index})" 
                                   style="cursor: pointer; font-size: 14px; opacity: 0.7; transition: opacity 0.2s;" 
                                   title="Refresh real-time data for this property">🔄</span>
                         </div>
