@@ -1,3 +1,6 @@
+# Render deployment without database creation
+# Use this if you already have a database or want to use external database
+
 services:
   - type: web
     name: real-estate-tracker
@@ -10,5 +13,5 @@ services:
       - key: RENTCAST_API_KEY
         sync: false  # This will prompt you to enter the value in Render dashboard
       - key: DATABASE_URL
-        sync: false  # You'll manually add your existing database URL
+        sync: false  # You'll need to manually add your database URL
     healthCheckPath: /health
