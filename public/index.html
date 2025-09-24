@@ -1095,7 +1095,7 @@
                 </button>
             </div>
             <div style="color: #4a5568; font-size: 14px;">
-                <strong>Properties:</strong> <span id="propertyCount">17</span>
+                <strong>Properties:</strong> <span id="propertyCount">0</span>
             </div>
         </div>
 
@@ -1236,13 +1236,19 @@
                         properties = [];
                     }
                 } else {
+                    console.log('Raw data from API:', data);
                     properties = data.map(prop => calculateMetrics(prop));
+                    console.log('Properties after calculateMetrics:', properties);
                 }
                 
+                console.log('About to render table with properties:', properties);
                 renderTable();
+                console.log('Table rendered');
+                
                 updatePortfolioStats();
                 document.getElementById('propertyCount').textContent = properties.length;
                 showLoadingState(false);
+                console.log('Loading complete');
             } catch (error) {
                 console.error('Error loading properties:', error);
                 showLoadingState(false);
@@ -1400,6 +1406,9 @@
             const tbody = document.getElementById('propertyTableBody');
             if (isLoading) {
                 tbody.innerHTML = '<tr><td colspan="20" style="text-align: center; padding: 40px;">Loading properties...</td></tr>';
+            } else {
+                // Clear the loading message
+                tbody.innerHTML = '';
             }
         }
         
@@ -4447,11 +4456,19 @@
 
         // Render table with all properties
         function renderTable() {
+            console.log('renderTable called with', properties.length, 'properties');
             const tbody = document.getElementById('propertyTableBody');
+            if (!tbody) {
+                console.error('propertyTableBody element not found!');
+                return;
+            }
             tbody.innerHTML = '';
             
+            console.log('Rendering properties:', properties);
+            
             properties.forEach((prop, index) => {
-                const row = document.createElement('tr');
+                try {
+                    const row = document.createElement('tr');
                 
                 // Check if property is sold and add appropriate class
                 if (prop.isSold) {
@@ -4526,6 +4543,10 @@
                 row.innerHTML = rowHTML;
                 
                 tbody.appendChild(row);
+                } catch (error) {
+                    console.error('Error rendering property at index', index, ':', error);
+                    console.error('Property data:', prop);
+                }
             });
             
             // Re-attach edit handlers after innerHTML

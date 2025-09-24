@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Properties - Real Estate Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #4338ca;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .warning { background: #fef3c7; color: #92400e; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+        .property-detail {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Properties</h1>
+        <p>This page helps diagnose why properties aren't showing in the table.</p>
+        
+        <div id="status" class="status warning">
+            Click buttons below to test different parts of the system...
+        </div>
+        
+        <h2>🧪 Tests</h2>
+        <button onclick="testAPI()">1. Test API Connection</button>
+        <button onclick="testLoadProperties()">2. Test Load Properties</button>
+        <button onclick="testRenderSimple()">3. Test Simple Render</button>
+        <button onclick="testTableElement()">4. Check Table Element</button>
+        <button onclick="testCalculateMetrics()">5. Test Calculate Metrics</button>
+        
+        <h2>📊 Results</h2>
+        <div id="results"></div>
+        
+        <h2>🗃️ Simple Properties Table</h2>
+        <table id="simpleTable">
+            <thead>
+                <tr>
+                    <th>Address</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Price</th>
+                    <th>Rent</th>
+                </tr>
+            </thead>
+            <tbody id="simpleTableBody">
+                <tr><td colspan="5">Click "Test Simple Render" to populate</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        const results = document.getElementById('results');
+        const status = document.getElementById('status');
+        
+        function updateStatus(message, type = 'warning') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        async function testAPI() {
+            results.innerHTML = '<h3>Testing API Connection...</h3>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const data = await response.json();
+                
+                results.innerHTML += `
+                    <pre>
+API Response:
+Status: ${response.status}
+Data: ${JSON.stringify(data, null, 2)}
+                    </pre>
+                `;
+                
+                if (data.success && data.data) {
+                    updateStatus(`✅ API working! Found ${data.data.length} properties`, 'success');
+                } else {
+                    updateStatus('⚠️ API responded but data format unexpected', 'warning');
+                }
+            } catch (error) {
+                results.innerHTML += `<pre class="error">Error: ${error.message}</pre>`;
+                updateStatus('❌ API connection failed', 'error');
+            }
+        }
+        
+        async function testLoadProperties() {
+            results.innerHTML = '<h3>Testing Load Properties...</h3>';
+            
+            try {
+                // Simulate the loadPropertiesFromDB function
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const result = await response.json();
+                const data = result.data || [];
+                
+                results.innerHTML += `
+                    <div class="property-detail">
+                        <strong>Properties loaded:</strong> ${data.length}
+                    </div>
+                `;
+                
+                if (data.length > 0) {
+                    results.innerHTML += '<h4>First Property:</h4>';
+                    results.innerHTML += `<pre>${JSON.stringify(data[0], null, 2)}</pre>`;
+                    
+                    // Test calculateMetrics on first property
+                    const testProp = { ...data[0] };
+                    try {
+                        // Minimal calculateMetrics test
+                        testProp.downPayment = testProp.price * (testProp.downPercent / 100);
+                        testProp.monthlyCF = 100; // Dummy value
+                        results.innerHTML += '<p class="success">✅ Basic calculations work</p>';
+                    } catch (calcError) {
+                        results.innerHTML += `<p class="error">❌ Calculation error: ${calcError.message}</p>`;
+                    }
+                }
+                
+                updateStatus(`Loaded ${data.length} properties successfully`, 'success');
+            } catch (error) {
+                results.innerHTML += `<pre class="error">Error: ${error.message}</pre>`;
+                updateStatus('Failed to load properties', 'error');
+            }
+        }
+        
+        async function testRenderSimple() {
+            results.innerHTML = '<h3>Testing Simple Render...</h3>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const result = await response.json();
+                const properties = result.data || [];
+                
+                const tbody = document.getElementById('simpleTableBody');
+                tbody.innerHTML = '';
+                
+                if (properties.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">No properties found</td></tr>';
+                    updateStatus('No properties to render', 'warning');
+                    return;
+                }
+                
+                properties.forEach((prop, index) => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${prop.address || 'N/A'}</td>
+                        <td>${prop.city || 'N/A'}</td>
+                        <td>${prop.state || 'N/A'}</td>
+                        <td>$${(prop.price || 0).toLocaleString()}</td>
+                        <td>$${(prop.rent || 0).toLocaleString()}</td>
+                    `;
+                });
+                
+                results.innerHTML += `<p class="success">✅ Rendered ${properties.length} properties in simple table</p>`;
+                updateStatus('Simple render successful!', 'success');
+            } catch (error) {
+                results.innerHTML += `<pre class="error">Render Error: ${error.message}</pre>`;
+                updateStatus('Render failed', 'error');
+            }
+        }
+        
+        function testTableElement() {
+            results.innerHTML = '<h3>Testing Table Element...</h3>';
+            
+            // Check if propertyTableBody exists
+            const tbody = document.getElementById('propertyTableBody');
+            if (tbody) {
+                results.innerHTML += '<p class="success">✅ propertyTableBody element exists</p>';
+                results.innerHTML += `<pre>Parent element: ${tbody.parentElement.tagName}
+Current content: ${tbody.innerHTML.substring(0, 100)}...</pre>`;
+            } else {
+                results.innerHTML += '<p class="error">❌ propertyTableBody element NOT FOUND</p>';
+                
+                // Check parent window
+                if (window.parent !== window) {
+                    const parentTbody = window.parent.document.getElementById('propertyTableBody');
+                    if (parentTbody) {
+                        results.innerHTML += '<p class="warning">Found in parent window!</p>';
+                    }
+                }
+            }
+            
+            updateStatus('Table element check complete', tbody ? 'success' : 'error');
+        }
+        
+        function testCalculateMetrics() {
+            results.innerHTML = '<h3>Testing Calculate Metrics...</h3>';
+            
+            const testProperty = {
+                address: "123 Test St",
+                city: "Test City",
+                state: "NV",
+                zip: "89101",
+                price: 300000,
+                downPercent: 20,
+                rent: 2000,
+                taxRate: 0.35,
+                insuranceRate: 0.35,
+                hoaMonthly: 0,
+                managementPercent: 8,
+                maintenancePercent: 5,
+                capexPercent: 4,
+                vacancyPercent: 8,
+                interestRate: 6.75,
+                beds: 3,
+                baths: 2,
+                sqft: 1500,
+                year: 2000,
+                crimeRisk: "MED",
+                floodRisk: "LOW",
+                marketRisk: "MED"
+            };
+            
+            try {
+                // Test each calculation step
+                const prop = { ...testProperty };
+                
+                // Basic calculations
+                prop.downPayment = prop.price * (prop.downPercent / 100);
+                results.innerHTML += `<p>✅ Down payment: $${prop.downPayment.toLocaleString()}</p>`;
+                
+                prop.loanAmount = prop.price - prop.downPayment;
+                results.innerHTML += `<p>✅ Loan amount: $${prop.loanAmount.toLocaleString()}</p>`;
+                
+                // Monthly payment (simplified)
+                const monthlyRate = prop.interestRate / 100 / 12;
+                const numPayments = 30 * 12;
+                prop.monthlyPI = Math.round((prop.loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+                                           (Math.pow(1 + monthlyRate, numPayments) - 1));
+                results.innerHTML += `<p>✅ Monthly PI: $${prop.monthlyPI.toLocaleString()}</p>`;
+                
+                updateStatus('All calculations passed!', 'success');
+            } catch (error) {
+                results.innerHTML += `<pre class="error">Calculation Error: ${error.message}
+Stack: ${error.stack}</pre>`;
+                updateStatus('Calculation failed', 'error');
+            }
+        }
+        
+        // Auto-run basic test on load
+        window.onload = () => {
+            testTableElement();
+        };
+    </script>
+</body>
+</html>
