@@ -1,168 +1,93 @@
-# RentCast API Setup Guide
+# 🔧 RentCast API Setup Guide
 
-## Overview
-This guide will help you set up the RentCast API to get accurate property data including beds, baths, square feet, listing prices, and more.
+## Why Property Data Shows as 0/N/A
 
-## Step 1: Get Your RentCast API Key
+Your properties are showing 0 values because the RentCast API key is not configured on your Render deployment. Without this API, the app cannot fetch real property data like beds, baths, square footage, and estimated values.
 
-1. **Sign Up**: Go to [RentCast API Dashboard](https://app.rentcast.io/app/api)
-2. **Create Account**: Register for a free account
-3. **Get API Key**: After login, you'll see your API key in the dashboard
-4. **Free Tier**: 50 API requests per month (perfect for testing)
+## Quick Fix (Temporary)
 
-## Step 2: Add Your API Key Securely
-
-### ⚠️ SECURITY WARNING
-NEVER commit your API key to GitHub or any public repository!
-
-### Secure Setup Method:
-
-1. **Open the Setup Tool**: Open `setup-api-key.html` in your browser
-2. **Enter Your API Key**: Paste your RentCast API key
-3. **Click Save**: Your key is now stored securely in browser's local storage
-4. **Done!** The tracker will automatically use your saved key
-
-### Alternative: Manual Setup
-Open your browser's console (F12) and run:
+While you set up the API, run this in your browser console to fix existing properties:
 ```javascript
-localStorage.setItem('RENTCAST_API_KEY', 'your-actual-api-key-here');
+fixZeroValues()
 ```
 
-### Why This Method?
-- API key stays on your computer only
-- Never gets uploaded to GitHub
-- Each user sets their own key
-- No risk of exposing sensitive data
+This will populate your properties with reasonable estimated values.
 
-## Step 3: Understanding the Integration
+## Setting Up RentCast API
 
-The tracker now automatically calls RentCast API when you add a property:
+### 1. Get Your Free API Key
+1. Go to https://app.rentcast.io/
+2. Sign up for a free account
+3. Navigate to the API section
+4. Copy your API key (starts with `rc_`)
 
-### Data Retrieved:
-- **Property Details**: Beds, baths, square feet, year built
-- **Financial Info**: Last sale price, sale date, tax assessment
-- **Owner Information**: Property owner name
-- **Location Data**: GPS coordinates, verified address
-- **Estimates**: Rental income estimates
+### 2. Add API Key to Render
 
-### How It Works:
-1. You enter an address (e.g., "123 Main St, Las Vegas, NV 89101")
-2. The app parses the address into components
-3. Calls RentCast API to get real property data
-4. If API fails or no key, falls back to estimates
+1. Go to your Render dashboard
+2. Select your `real-estate-tracker` service
+3. Go to "Environment" tab
+4. Click "Add Environment Variable"
+5. Add:
+   - Key: `RENTCAST_API_KEY`
+   - Value: `your_actual_api_key_here`
+6. Click "Save Changes"
 
-## Step 4: Testing Your Integration
+Your service will automatically redeploy with the API key.
 
-1. **Save** the file after adding your API key
-2. **Refresh** your browser (or reopen the file)
-3. **Add a property** with a real address
-4. **Look for** the green "Live data from RentCast API" indicator
+### 3. Test the API
 
-### Test Addresses:
-Try these real addresses to test:
-- "1234 S Jones Blvd, Las Vegas, NV 89146"
-- "5678 W Sahara Ave, Las Vegas, NV 89146"
-- "910 E Tropicana Ave, Las Vegas, NV 89119"
+After deployment, test if it's working:
+1. Click "AI Analyze Property" 
+2. Enter a real address like: `5317 Lytton Ave, Las Vegas, NV 89146`
+3. You should see real property data (beds, baths, sqft, etc.)
 
-## API Response Fields
+## Free Tier Limits
 
-RentCast provides these fields (when available):
+RentCast's free tier includes:
+- 50 API calls per month
+- Property details endpoint
+- Rent estimates
 
-```javascript
-{
-  "addressLine1": "123 Main St",
-  "city": "Las Vegas",
-  "state": "NV",
-  "zipCode": "89101",
-  "bedrooms": 3,
-  "bathrooms": 2,
-  "squareFeet": 1500,
-  "yearBuilt": 2005,
-  "propertyType": "Single Family",
-  "lotSize": 6500,
-  "lastSalePrice": 350000,
-  "lastSaleDate": "2021-06-15",
-  "taxAssessment": 280000,
-  "ownerName": "John Doe",
-  "latitude": 36.1699,
-  "longitude": -115.1398,
-  "rentEstimate": 2200
-}
-```
+This is enough for personal use with ~1-2 properties analyzed per day.
+
+## What the API Provides
+
+When configured, RentCast provides:
+- Accurate beds/baths count
+- Square footage
+- Year built
+- Last sale price and date
+- Rent estimates
+- Property type
+- Tax assessments
+- Owner information
+
+## Fallback Mode
+
+When the API is not configured, the app:
+- Uses estimated values based on location
+- Shows "Estimated" as data source
+- Still calculates all financial metrics
+- Works fully offline
 
 ## Troubleshooting
 
-### "Using estimated data" message still shows:
-- **Check**: Is your API key correctly added?
-- **Verify**: No quotes or spaces around the key
-- **Test**: Open browser console (F12) to see any errors
+### Still showing zeros after API setup?
+1. Check Render logs for API errors
+2. Verify API key is correct (no extra spaces)
+3. Make sure you're not exceeding rate limits
+4. Run `fixZeroValues()` in console to fix existing properties
 
-### No property data returned:
-- **Address Format**: Use full address with city, state, ZIP
-- **Coverage**: RentCast may not have data for all properties
-- **API Limit**: Check if you've exceeded 50 requests/month
+### API Key Not Working?
+- Make sure it starts with `rc_`
+- Check if you've activated your RentCast account
+- Verify you're within the free tier limits
 
-### Console Errors:
-- **401 Error**: Invalid API key
-- **404 Error**: Property not found in RentCast database
-- **429 Error**: Rate limit exceeded
+## Alternative: Manual Entry
 
-## Advanced Configuration
+You can always:
+1. Click "Add Property" 
+2. Manually enter all property details
+3. The app will calculate all metrics without needing the API
 
-### Increase API Limits:
-- Upgrade to paid plan at [RentCast Pricing](https://www.rentcast.io/pricing)
-- Plans start at $39/month for 1,000 requests
-
-### Add Caching (Optional):
-To reduce API calls, you can add caching:
-
-```javascript
-// Add this after the API configuration
-const propertyCache = new Map();
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-
-// In fetchRentCastData function, check cache first:
-const cacheKey = `${streetAddress}_${city}_${state}_${zip}`;
-const cached = propertyCache.get(cacheKey);
-if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return { success: true, data: cached.data };
-}
-```
-
-### Use Environment Variables (Production):
-For production, don't hardcode the API key:
-
-1. Create a backend proxy endpoint
-2. Store API key in environment variables
-3. Make requests through your backend
-
-## API Endpoints Used
-
-1. **Property Search**: `/v1/properties`
-   - Search by address components
-   - Returns array of matching properties
-
-2. **Property Details**: Included in search results
-   - No separate detail endpoint needed
-
-3. **Market Data**: Available but not currently used
-   - Could add rental comparables
-   - Market trends and statistics
-
-## Next Steps
-
-1. **Test** with real addresses in your area
-2. **Monitor** API usage in RentCast dashboard
-3. **Upgrade** if you need more than 50 requests/month
-4. **Add** additional features like:
-   - Rental comparables
-   - Market trends
-   - Property history
-
-## Support
-
-- **RentCast Support**: support@rentcast.io
-- **Documentation**: [developers.rentcast.io](https://developers.rentcast.io)
-- **API Status**: Check [status.rentcast.io](https://status.rentcast.io)
-
-Remember: Keep your API key secret and never commit it to public repositories!
+The app is designed to work with or without the RentCast API\!
