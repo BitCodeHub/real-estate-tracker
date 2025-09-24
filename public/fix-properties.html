@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Properties Display - Real Estate Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #4338ca;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .warning { background: #fef3c7; color: #92400e; }
+        .property-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix Properties Display</h1>
+        <p>This page helps fix the issue where properties aren't displaying even though they exist.</p>
+        
+        <div id="status" class="status warning">
+            Click the buttons below to diagnose and fix the issue...
+        </div>
+        
+        <h2>🔍 Step 1: Check LocalStorage</h2>
+        <button onclick="checkLocalStorage()">Check LocalStorage Properties</button>
+        
+        <h2>🔄 Step 2: Force Load Properties</h2>
+        <button onclick="forceLoadProperties()">Force Load from LocalStorage</button>
+        
+        <h2>🔗 Step 3: Go to Main App</h2>
+        <button onclick="goToMainApp()">Open Main App with Properties Loaded</button>
+        
+        <h2>💾 Step 4: Export/Import Properties</h2>
+        <button onclick="exportProperties()">Export Properties as JSON</button>
+        <button onclick="document.getElementById('importFile').click()">Import Properties from JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importProperties(event)">
+        
+        <h2>📊 Results</h2>
+        <div id="results"></div>
+        
+        <h2>📋 Properties Found</h2>
+        <div id="propertiesList"></div>
+    </div>
+    
+    <script>
+        const results = document.getElementById('results');
+        const status = document.getElementById('status');
+        const propertiesList = document.getElementById('propertiesList');
+        
+        function updateStatus(message, type = 'warning') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function checkLocalStorage() {
+            results.innerHTML = '<h3>Checking LocalStorage...</h3>';
+            
+            try {
+                const localData = localStorage.getItem('properties');
+                if (localData) {
+                    const properties = JSON.parse(localData);
+                    results.innerHTML += `
+                        <pre>
+Found ${properties.length} properties in localStorage!
+
+First property:
+${JSON.stringify(properties[0], null, 2)}
+
+All properties addresses:
+${properties.map((p, i) => `${i + 1}. ${p.address}`).join('\n')}
+                        </pre>
+                    `;
+                    
+                    // Display properties in a nice list
+                    displayProperties(properties);
+                    
+                    updateStatus(`✅ Found ${properties.length} properties in localStorage`, 'success');
+                } else {
+                    results.innerHTML += '<pre>No properties found in localStorage</pre>';
+                    updateStatus('❌ No properties found in localStorage', 'error');
+                }
+            } catch (error) {
+                results.innerHTML += `<pre class="error">Error: ${error.message}</pre>`;
+                updateStatus('❌ Error reading localStorage', 'error');
+            }
+        }
+        
+        function displayProperties(properties) {
+            propertiesList.innerHTML = '<h3>Properties Details:</h3>';
+            properties.forEach((prop, index) => {
+                propertiesList.innerHTML += `
+                    <div class="property-item">
+                        <strong>#${index + 1}: ${prop.address}</strong><br>
+                        ${prop.city}, ${prop.state} ${prop.zip}<br>
+                        Price: $${(prop.price || 0).toLocaleString()} | 
+                        Rent: $${(prop.rent || 0).toLocaleString()} | 
+                        Beds: ${prop.beds} | Baths: ${prop.baths}
+                    </div>
+                `;
+            });
+        }
+        
+        function forceLoadProperties() {
+            results.innerHTML = '<h3>Force Loading Properties...</h3>';
+            
+            try {
+                const localData = localStorage.getItem('properties');
+                if (localData) {
+                    const properties = JSON.parse(localData);
+                    
+                    // Open main app and inject properties
+                    results.innerHTML += `
+                        <pre>
+Injecting ${properties.length} properties into the main app...
+
+To manually load in console, run:
+forceLoadFromLocalStorage()
+
+Or paste this:
+properties = ${JSON.stringify(properties)};
+renderTable();
+updatePortfolioStats();
+document.getElementById('propertyCount').textContent = properties.length;
+                        </pre>
+                    `;
+                    
+                    updateStatus(`✅ Properties loaded! Click "Open Main App" to see them`, 'success');
+                    
+                    // Store flag to force load on next page
+                    sessionStorage.setItem('forceLoadProperties', 'true');
+                } else {
+                    updateStatus('❌ No properties to load', 'error');
+                }
+            } catch (error) {
+                results.innerHTML += `<pre class="error">Error: ${error.message}</pre>`;
+                updateStatus('❌ Error loading properties', 'error');
+            }
+        }
+        
+        function goToMainApp() {
+            // Set flag to force load properties
+            sessionStorage.setItem('forceLoadProperties', 'true');
+            window.location.href = '/';
+        }
+        
+        function exportProperties() {
+            try {
+                const localData = localStorage.getItem('properties');
+                if (localData) {
+                    const properties = JSON.parse(localData);
+                    const dataStr = JSON.stringify(properties, null, 2);
+                    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(dataBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `properties_backup_${new Date().toISOString().split('T')[0]}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    updateStatus('✅ Properties exported successfully', 'success');
+                } else {
+                    updateStatus('❌ No properties to export', 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Export failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function importProperties(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const properties = JSON.parse(e.target.result);
+                        localStorage.setItem('properties', JSON.stringify(properties));
+                        updateStatus(`✅ Imported ${properties.length} properties successfully`, 'success');
+                        checkLocalStorage();
+                    } catch (error) {
+                        updateStatus(`❌ Import failed: ${error.message}`, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+        
+        // Auto-check on load
+        window.onload = function() {
+            checkLocalStorage();
+        };
+    </script>
+</body>
+</html>

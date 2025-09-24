@@ -4454,6 +4454,28 @@
             }
         }
 
+        // Force load properties from localStorage
+        function forceLoadFromLocalStorage() {
+            console.log('Force loading from localStorage...');
+            const localData = localStorage.getItem('properties');
+            if (localData) {
+                try {
+                    const localProperties = JSON.parse(localData);
+                    console.log('Found properties in localStorage:', localProperties.length);
+                    properties = localProperties.map(prop => calculateMetrics(prop));
+                    renderTable();
+                    updatePortfolioStats();
+                    document.getElementById('propertyCount').textContent = properties.length;
+                    showSuccess(`Loaded ${properties.length} properties from localStorage`);
+                } catch (error) {
+                    console.error('Error parsing localStorage data:', error);
+                    showError('Error loading properties from localStorage');
+                }
+            } else {
+                showError('No properties found in localStorage');
+            }
+        }
+
         // Render table with all properties
         function renderTable() {
             console.log('renderTable called with', properties.length, 'properties');
@@ -4497,20 +4519,31 @@
                 `;
                 
                 // Location continued
-                rowHTML += `<td>${prop.city}</td>`;
-                rowHTML += `<td>${prop.state}</td>`;
-                rowHTML += `<td>${prop.zip}</td>`;
+                rowHTML += `<td>${prop.city || 'N/A'}</td>`;
+                rowHTML += `<td>${prop.state || 'N/A'}</td>`;
+                rowHTML += `<td>${prop.zip || 'N/A'}</td>`;
                 
                 // Property section
-                rowHTML += `<td>${prop.beds}</td>`;
-                rowHTML += `<td>${prop.baths}</td>`;
-                rowHTML += `<td>${prop.sqft.toLocaleString()}</td>`;
-                rowHTML += `<td>${prop.year}</td>`;
-                rowHTML += createEditableCell(prop.price, index, 'price', false, true).outerHTML;
-                rowHTML += createEditableCell(prop.downPercent, index, 'downPercent', true, false).outerHTML;
+                rowHTML += `<td>${prop.beds || 0}</td>`;
+                rowHTML += `<td>${prop.baths || 0}</td>`;
+                rowHTML += `<td>${(prop.sqft || 0).toLocaleString()}</td>`;
+                rowHTML += `<td>${prop.year || 'N/A'}</td>`;
                 
-                // Financials section
-                rowHTML += createEditableCell(prop.rent, index, 'rent', false, true).outerHTML;
+                // Price (editable)
+                rowHTML += `<td class="editable-cell" contenteditable="true" 
+                                data-prop-index="${index}" data-field="price" data-is-currency="true"
+                                style="text-align: right;">$${(prop.price || 0).toLocaleString()}</td>`;
+                
+                // Down% (editable)
+                rowHTML += `<td class="editable-cell" contenteditable="true" 
+                                data-prop-index="${index}" data-field="downPercent" data-is-percent="true"
+                                style="text-align: right;">${prop.downPercent || 0}%</td>`;
+                
+                // Rent (editable)
+                rowHTML += `<td class="editable-cell" contenteditable="true" 
+                                data-prop-index="${index}" data-field="rent" data-is-currency="true"
+                                style="text-align: right;">$${(prop.rent || 0).toLocaleString()}</td>`;
+                
                 // Show N/A for financial metrics if sold
                 if (prop.isSold) {
                     rowHTML += `<td style="color: #999;">N/A</td>`;
@@ -4519,25 +4552,25 @@
                     rowHTML += `<td style="color: #999;">N/A</td>`;
                     rowHTML += `<td style="color: #999;">N/A</td>`;
                 } else {
-                    rowHTML += `<td class="${prop.monthlyCF >= 0 ? 'positive-cf' : 'negative-cf'}">
-                                        $${prop.monthlyCF.toLocaleString()}
+                    rowHTML += `<td class="${(prop.monthlyCF || 0) >= 0 ? 'positive-cf' : 'negative-cf'}">
+                                        $${(prop.monthlyCF || 0).toLocaleString()}
                                      </td>`;
-                    rowHTML += `<td class="${prop.annualCF >= 0 ? 'positive-cf' : 'negative-cf'}">
-                                        $${prop.annualCF.toLocaleString()}
+                    rowHTML += `<td class="${(prop.annualCF || 0) >= 0 ? 'positive-cf' : 'negative-cf'}">
+                                        $${(prop.annualCF || 0).toLocaleString()}
                                      </td>`;
-                    rowHTML += `<td class="${prop.coc >= 8 ? 'good-metric' : prop.coc >= 5 ? 'fair-metric' : 'poor-metric'}">
-                                        ${prop.coc}%
+                    rowHTML += `<td class="${(prop.coc || 0) >= 8 ? 'good-metric' : (prop.coc || 0) >= 5 ? 'fair-metric' : 'poor-metric'}">
+                                        ${prop.coc || 0}%
                                      </td>`;
-                    rowHTML += `<td>${prop.capRate}%</td>`;
-                    rowHTML += `<td class="${prop.dscr >= 1.25 ? 'good-metric' : prop.dscr >= 1 ? 'fair-metric' : 'poor-metric'}">
-                                        ${prop.dscr}
+                    rowHTML += `<td>${prop.capRate || 0}%</td>`;
+                    rowHTML += `<td class="${(prop.dscr || 0) >= 1.25 ? 'good-metric' : (prop.dscr || 0) >= 1 ? 'fair-metric' : 'poor-metric'}">
+                                        ${prop.dscr || 0}
                                      </td>`;
                 }
                 
                 // Risk section
-                rowHTML += `<td><span class="risk-${prop.crimeRisk.toLowerCase()}">${prop.crimeRisk}</span></td>`;
-                rowHTML += `<td><span class="risk-${prop.floodRisk.toLowerCase()}">${prop.floodRisk}</span></td>`;
-                rowHTML += `<td><span class="risk-${prop.marketRisk.toLowerCase()}">${prop.marketRisk}</span></td>`;
+                rowHTML += `<td><span class="risk-${(prop.crimeRisk || 'LOW').toLowerCase()}">${prop.crimeRisk || 'LOW'}</span></td>`;
+                rowHTML += `<td><span class="risk-${(prop.floodRisk || 'LOW').toLowerCase()}">${prop.floodRisk || 'LOW'}</span></td>`;
+                rowHTML += `<td><span class="risk-${(prop.marketRisk || 'LOW').toLowerCase()}">${prop.marketRisk || 'LOW'}</span></td>`;
                 
                 // Set all HTML at once
                 row.innerHTML = rowHTML;
@@ -4556,15 +4589,41 @@
                 const isPercent = cell.getAttribute('data-is-percent') === 'true';
                 const isCurrency = cell.getAttribute('data-is-currency') === 'true';
                 
-                cell.addEventListener('blur', function() {
+                cell.addEventListener('blur', async function() {
                     let newValue = this.textContent.replace(/[$,%,]/g, '').trim();
                     newValue = parseFloat(newValue);
                     
                     if (!isNaN(newValue) && newValue !== properties[propIndex][field]) {
+                        const oldValue = properties[propIndex][field];
                         properties[propIndex][field] = newValue;
-                        calculateMetrics(properties[propIndex]);
-                        renderTable();
-                        updatePortfolioStats();
+                        
+                        // Update in database if property has an id
+                        if (properties[propIndex].id) {
+                            try {
+                                await updatePropertyInDB(properties[propIndex].id, { [field]: newValue });
+                                calculateMetrics(properties[propIndex]);
+                                
+                                // Save to localStorage for offline access
+                                localStorage.setItem('properties', JSON.stringify(properties));
+                                
+                                renderTable();
+                                updatePortfolioStats();
+                                showSuccess('Property updated');
+                            } catch (error) {
+                                // Revert on error
+                                properties[propIndex][field] = oldValue;
+                                renderTable();
+                            }
+                        } else {
+                            // For properties without id
+                            calculateMetrics(properties[propIndex]);
+                            
+                            // Save to localStorage for offline access
+                            localStorage.setItem('properties', JSON.stringify(properties));
+                            
+                            renderTable();
+                            updatePortfolioStats();
+                        }
                     }
                 });
                 
@@ -4671,11 +4730,39 @@
         
         // Initialize on load
         window.onload = async function() {
+            // Check if we should force load from localStorage
+            if (sessionStorage.getItem('forceLoadProperties') === 'true') {
+                sessionStorage.removeItem('forceLoadProperties');
+                console.log('Force loading properties from localStorage...');
+                forceLoadFromLocalStorage();
+                return;
+            }
+            
             // Check API health first
             const health = await checkAPIHealth();
             
             // Load properties from database
             await loadPropertiesFromDB();
+            
+            // If no properties loaded, check localStorage
+            if (properties.length === 0) {
+                console.log('No properties from database, checking localStorage...');
+                const localData = localStorage.getItem('properties');
+                if (localData) {
+                    try {
+                        const localProperties = JSON.parse(localData);
+                        if (localProperties.length > 0) {
+                            console.log(`Found ${localProperties.length} properties in localStorage`);
+                            properties = localProperties.map(prop => calculateMetrics(prop));
+                            renderTable();
+                            updatePortfolioStats();
+                            document.getElementById('propertyCount').textContent = properties.length;
+                        }
+                    } catch (error) {
+                        console.error('Error loading from localStorage:', error);
+                    }
+                }
+            }
             
             // Debug: Check if refresh button appears
             console.log('App initialized. API status:', health.status, 'Properties loaded:', properties.length);
