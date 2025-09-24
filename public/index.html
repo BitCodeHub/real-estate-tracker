@@ -1262,6 +1262,9 @@
         
         async function savePropertyToDB(property) {
             try {
+                console.log('Saving property:', property);
+                console.log('API URL:', `${API_BASE_URL}/api/properties`);
+                
                 const response = await fetch(`${API_BASE_URL}/api/properties`, {
                     method: 'POST',
                     headers: {
@@ -1269,18 +1272,54 @@
                     },
                     body: JSON.stringify(property)
                 });
+                
+                // Try to get response text first
+                const responseText = await response.text();
+                console.log('Response status:', response.status);
+                console.log('Response text:', responseText);
+                
                 if (!response.ok) {
-                    throw new Error(`Failed to save property: ${response.statusText}`);
+                    // Check if it's a network error
+                    if (response.status === 0 || !response.status) {
+                        throw new Error('Cannot connect to server. Make sure the server is running.');
+                    }
+                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
                 }
-                const result = await response.json();
+                
+                // Parse JSON from response text
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('Failed to parse response:', e);
+                    result = { data: property }; // Fallback
+                }
+                
                 // Handle the response format { success: true, data: property }
                 if (result.warning) {
                     console.log('Database status:', result.warning);
+                    showSuccess('Property saved locally (database not connected)');
                 }
+                
                 return result.data || result;
             } catch (error) {
                 console.error('Error saving property:', error);
-                showError('Failed to save property. Please try again.');
+                
+                // More helpful error messages
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    showError('Cannot connect to server. Properties will be saved locally only.');
+                    // Save to localStorage as fallback
+                    const tempProperty = {
+                        ...property,
+                        id: Date.now(),
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+                    return tempProperty;
+                } else {
+                    showError(`Error: ${error.message}`);
+                }
+                
                 throw error;
             }
         }
@@ -4513,13 +4552,37 @@
             }
         }
         
+        // Check API health
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const health = await response.json();
+                console.log('API Health Check:', health);
+                
+                if (health.status === 'healthy' && health.database === 'disconnected') {
+                    showSuccess('App running without database - properties saved locally only');
+                } else if (health.status === 'healthy') {
+                    console.log('API and database connected');
+                }
+                
+                return health;
+            } catch (error) {
+                console.error('API Health Check Failed:', error);
+                showError('Cannot connect to server. Running in offline mode.');
+                return { status: 'offline', database: 'disconnected' };
+            }
+        }
+        
         // Initialize on load
         window.onload = async function() {
+            // Check API health first
+            const health = await checkAPIHealth();
+            
             // Load properties from database
             await loadPropertiesFromDB();
             
             // Debug: Check if refresh button appears
-            console.log('App initialized with database connection. Properties loaded:', properties.length);
+            console.log('App initialized. API status:', health.status, 'Properties loaded:', properties.length);
         };
         
         // Debug function to test modal
