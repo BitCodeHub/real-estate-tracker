@@ -1055,6 +1055,27 @@
             margin-top: 4px;
             display: inline-block;
         }
+        
+        /* Success and error message styles */
+        .success-message, .error-message {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .btn-danger:hover {
+            background: #c82333 !important;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -1184,26 +1205,144 @@
     </div>
 
     <script>
-        // Property data structure with all necessary fields
-        let properties = [
-            {address: "8205 Celina Hills St", city: "Las Vegas", state: "NV", zip: "89131", beds: 3, baths: 2.5, sqft: 2066, year: 2005, price: 459999, downPercent: 20, rent: 2800, taxRate: 0.57, insuranceRate: 0.33, hoaMonthly: 88, managementPercent: 8, maintenancePercent: 5, capexPercent: 4, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "LOW", floodRisk: "LOW", marketRisk: "LOW"},
-            {address: "5317 Lytton Ave", city: "Las Vegas", state: "NV", zip: "89146", beds: 4, baths: 2, sqft: 1610, year: 1963, price: 380000, downPercent: 20, rent: 2600, taxRate: 0.57, insuranceRate: 0.32, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 7, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "MED"},
-            {address: "1701 Canosa Ave", city: "Las Vegas", state: "NV", zip: "89104", beds: 4, baths: 3, sqft: 1751, year: 1954, price: 329000, downPercent: 20, rent: 2800, taxRate: 0.34, insuranceRate: 0.36, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 6, capexPercent: 4, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "HIGH"},
-            {address: "1613 Capistrano Ave", city: "Las Vegas", state: "NV", zip: "89169", beds: 3, baths: 2, sqft: 1453, year: 1961, price: 379900, downPercent: 20, rent: 2700, taxRate: 0.34, insuranceRate: 0.32, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "HIGH"},
-            {address: "4445 Peterson Dr", city: "Las Vegas", state: "NV", zip: "89103", beds: 4, baths: 2, sqft: 1336, year: 1975, price: 385000, downPercent: 20, rent: 2500, taxRate: 0.49, insuranceRate: 0.31, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 7, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "MED"},
-            {address: "2053 Palora Ave", city: "Las Vegas", state: "NV", zip: "89169", beds: 3, baths: 2, sqft: 1614, year: 1963, price: 399999, downPercent: 20, rent: 2500, taxRate: 0.20, insuranceRate: 0.30, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 7, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "HIGH"},
-            {address: "2005 Fontenelle St", city: "Las Vegas", state: "NV", zip: "89102", beds: 3, baths: 2, sqft: 1376, year: 1964, price: 370000, downPercent: 20, rent: 2400, taxRate: 0.38, insuranceRate: 0.32, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "MED"},
-            {address: "1809 Lamplighter Ln", city: "Las Vegas", state: "NV", zip: "89104", beds: 3, baths: 1.5, sqft: 1144, year: 1961, price: 365000, downPercent: 20, rent: 2300, taxRate: 0.25, insuranceRate: 0.33, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "MED"},
-            {address: "1659 Palma Vista Ave", city: "Las Vegas", state: "NV", zip: "89169", beds: 3, baths: 2, sqft: 1503, year: 1961, price: 389000, downPercent: 20, rent: 2500, taxRate: 0.28, insuranceRate: 0.31, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 6, capexPercent: 4, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "HIGH"},
-            {address: "5304 Mountain View Dr", city: "Las Vegas", state: "NV", zip: "89146", beds: 4, baths: 2, sqft: 1335, year: 1963, price: 380000, downPercent: 20, rent: 2200, taxRate: 0.29, insuranceRate: 0.35, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 6, capexPercent: 6, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "MED", floodRisk: "LOW", marketRisk: "MED"},
-            {address: "1615 Palora Ave", city: "Las Vegas", state: "NV", zip: "89169", beds: 3, baths: 2, sqft: 1453, year: 1961, price: 395000, downPercent: 20, rent: 2550, taxRate: 0.33, insuranceRate: 0.33, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 6, capexPercent: 4, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "HIGH"},
-            {address: "5911 Kevin Kelly Pl", city: "Austin", state: "TX", zip: "78727", beds: 2, baths: 2, sqft: 778, year: 1985, price: 275000, downPercent: 20, rent: 1900, taxRate: 2.15, insuranceRate: 0.55, hoaMonthly: 50, managementPercent: 8, maintenancePercent: 5, capexPercent: 4, vacancyPercent: 7, interestRate: 6.75, crimeRisk: "MED", floodRisk: "LOW", marketRisk: "LOW"},
-            {address: "1517 Anise Dr", city: "Austin", state: "TX", zip: "78741", beds: 3, baths: 2, sqft: 1203, year: 2006, price: 355000, downPercent: 20, rent: 2300, taxRate: 2.00, insuranceRate: 0.42, hoaMonthly: 20, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 7, interestRate: 6.75, crimeRisk: "MED", floodRisk: "LOW", marketRisk: "LOW"},
-            {address: "1218 E 52nd St", city: "Austin", state: "TX", zip: "78723", beds: 3, baths: 2, sqft: 1539, year: 1940, price: 350000, downPercent: 20, rent: 2800, taxRate: 2.00, insuranceRate: 0.43, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 7, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "MED"},
-            {address: "5449 Dungaree St", city: "Las Vegas", state: "NV", zip: "89118", beds: 3, baths: 2.5, sqft: 1431, year: 2000, price: 355000, downPercent: 20, rent: 1900, taxRate: 0.36, insuranceRate: 0.34, hoaMonthly: 125, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "MED"},
-            {address: "922 Westminster Ave", city: "Las Vegas", state: "NV", zip: "89119", beds: 3, baths: 2, sqft: 1134, year: 1963, price: 348000, downPercent: 20, rent: 1950, taxRate: 0.25, insuranceRate: 0.34, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "HIGH", floodRisk: "LOW", marketRisk: "HIGH"},
-            {address: "8424 Jamestown Dr", city: "Austin", state: "TX", zip: "78758", beds: 3, baths: 2, sqft: 1258, year: 1969, price: 324500, downPercent: 20, rent: 2000, taxRate: 2.16, insuranceRate: 0.46, hoaMonthly: 0, managementPercent: 8, maintenancePercent: 5, capexPercent: 3, vacancyPercent: 8, interestRate: 6.75, crimeRisk: "MED", floodRisk: "LOW", marketRisk: "MED"}
-        ];
+        // Property data structure - will be loaded from database
+        let properties = [];
+        
+        // API base URL - adjust if your server is on a different port
+        const API_BASE_URL = window.location.origin;
+        
+        // Database API Functions
+        async function loadPropertiesFromDB() {
+            try {
+                showLoadingState(true);
+                const response = await fetch(`${API_BASE_URL}/api/properties`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load properties: ${response.statusText}`);
+                }
+                const data = await response.json();
+                properties = data.map(prop => calculateMetrics(prop));
+                renderTable();
+                updatePortfolioStats();
+                document.getElementById('propertyCount').textContent = properties.length;
+                showLoadingState(false);
+            } catch (error) {
+                console.error('Error loading properties:', error);
+                showLoadingState(false);
+                showError('Failed to load properties. Please refresh the page.');
+            }
+        }
+        
+        async function savePropertyToDB(property) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/properties`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(property)
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to save property: ${response.statusText}`);
+                }
+                const savedProperty = await response.json();
+                return savedProperty;
+            } catch (error) {
+                console.error('Error saving property:', error);
+                showError('Failed to save property. Please try again.');
+                throw error;
+            }
+        }
+        
+        async function updatePropertyInDB(id, updates) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/properties/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updates)
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to update property: ${response.statusText}`);
+                }
+                const updatedProperty = await response.json();
+                return updatedProperty;
+            } catch (error) {
+                console.error('Error updating property:', error);
+                showError('Failed to update property. Please try again.');
+                throw error;
+            }
+        }
+        
+        async function deletePropertyFromDB(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/properties/${id}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to delete property: ${response.statusText}`);
+                }
+                return true;
+            } catch (error) {
+                console.error('Error deleting property:', error);
+                showError('Failed to delete property. Please try again.');
+                throw error;
+            }
+        }
+        
+        // Helper functions for UI states
+        function showLoadingState(isLoading) {
+            const tbody = document.getElementById('propertyTableBody');
+            if (isLoading) {
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align: center; padding: 40px;">Loading properties...</td></tr>';
+            }
+        }
+        
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #ff6b6b;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                z-index: 1000;
+                max-width: 300px;
+            `;
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #51cf66;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                z-index: 1000;
+                max-width: 300px;
+            `;
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
 
         // Calculate mortgage payment
         function calculateMortgage(principal, rate, years) {
@@ -1278,15 +1417,33 @@
             }
             
             // Handle editing
-            cell.addEventListener('blur', function() {
+            cell.addEventListener('blur', async function() {
                 let newValue = this.textContent.replace(/[$,%,]/g, '');
                 newValue = parseFloat(newValue);
                 
-                if (!isNaN(newValue)) {
+                if (!isNaN(newValue) && properties[propIndex][field] !== newValue) {
+                    const oldValue = properties[propIndex][field];
                     properties[propIndex][field] = newValue;
-                    calculateMetrics(properties[propIndex]);
-                    renderTable();
-                    updatePortfolioStats();
+                    
+                    // Update in database if property has an id
+                    if (properties[propIndex].id) {
+                        try {
+                            await updatePropertyInDB(properties[propIndex].id, { [field]: newValue });
+                            calculateMetrics(properties[propIndex]);
+                            renderTable();
+                            updatePortfolioStats();
+                            showSuccess('Property updated');
+                        } catch (error) {
+                            // Revert on error
+                            properties[propIndex][field] = oldValue;
+                            renderTable();
+                        }
+                    } else {
+                        // For properties without id (shouldn't happen with DB), just update locally
+                        calculateMetrics(properties[propIndex]);
+                        renderTable();
+                        updatePortfolioStats();
+                    }
                 }
             });
             
@@ -1683,6 +1840,12 @@
                 </div>
                 
                 ${aiAnalysis}
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                    <button onclick="deleteProperty(${index})" class="btn-danger" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                        🗑️ Delete Property
+                    </button>
+                </div>
             `;
             
             document.getElementById('modalBody').innerHTML = modalContent;
@@ -1698,16 +1861,63 @@
         }
 
         // Update value from modal
-        function updateModalValue(index, field, element) {
+        async function updateModalValue(index, field, element) {
             let newValue = element.textContent.replace(/[$,%,]/g, '');
             newValue = parseFloat(newValue);
             
-            if (!isNaN(newValue)) {
+            if (!isNaN(newValue) && properties[index][field] !== newValue) {
+                const oldValue = properties[index][field];
                 properties[index][field] = newValue;
-                calculateMetrics(properties[index]);
-                renderTable();
-                updatePortfolioStats();
-                showPropertyDetail(index); // Refresh modal
+                
+                // Update in database if property has an id
+                if (properties[index].id) {
+                    try {
+                        await updatePropertyInDB(properties[index].id, { [field]: newValue });
+                        calculateMetrics(properties[index]);
+                        renderTable();
+                        updatePortfolioStats();
+                        showPropertyDetail(index); // Refresh modal
+                        showSuccess('Property updated');
+                    } catch (error) {
+                        // Revert on error
+                        properties[index][field] = oldValue;
+                        showPropertyDetail(index); // Refresh modal with old value
+                    }
+                } else {
+                    // For properties without id (shouldn't happen with DB)
+                    calculateMetrics(properties[index]);
+                    renderTable();
+                    updatePortfolioStats();
+                    showPropertyDetail(index); // Refresh modal
+                }
+            }
+        }
+        
+        // Delete property
+        async function deleteProperty(index) {
+            const prop = properties[index];
+            const confirmDelete = confirm(`Are you sure you want to delete this property?\n\n${prop.address}\n${prop.city}, ${prop.state} ${prop.zip}`);
+            
+            if (confirmDelete) {
+                if (prop.id) {
+                    try {
+                        await deletePropertyFromDB(prop.id);
+                        properties.splice(index, 1);
+                        renderTable();
+                        updatePortfolioStats();
+                        closeModal();
+                        showSuccess('Property deleted successfully');
+                    } catch (error) {
+                        // Error already handled in deletePropertyFromDB
+                    }
+                } else {
+                    // For properties without id (shouldn't happen with DB)
+                    properties.splice(index, 1);
+                    renderTable();
+                    updatePortfolioStats();
+                    closeModal();
+                    showSuccess('Property deleted successfully');
+                }
             }
         }
 
@@ -2858,6 +3068,15 @@
                     // Recalculate metrics
                     properties[index] = calculateMetrics(properties[index]);
                     
+                    // Save updated property to database
+                    if (properties[index].id) {
+                        try {
+                            await updatePropertyInDB(properties[index].id, properties[index]);
+                        } catch (error) {
+                            console.error('Failed to save property updates to database:', error);
+                        }
+                    }
+                    
                     // Update display
                     renderTable();
                     updatePortfolioStats();
@@ -3922,7 +4141,7 @@
             document.getElementById('analysisResults').style.display = 'block';
         }
 
-        function addAnalyzedProperty(address, city, state, zip, beds, baths, sqft, year, price, rent) {
+        async function addAnalyzedProperty(address, city, state, zip, beds, baths, sqft, year, price, rent) {
             // Debug what we're receiving
             console.log('addAnalyzedProperty called with:');
             console.log('address:', address);
@@ -3956,23 +4175,31 @@
                 marketRisk: "MED"
             };
             
-            // Add to properties array
-            properties.push(calculateMetrics(newProperty));
-            
-            // Update display
-            renderTable();
-            updatePortfolioStats();
-            
-            // Update property count
-            document.getElementById('propertyCount').textContent = properties.length;
-            
-            // Close modal and show success
-            closeAddPropertyModal();
-            alert(`✅ Property added successfully!\n\n${address} has been added to your portfolio.\n\nYou can now edit any values directly in the table.`);
+            // Save to database
+            try {
+                const savedProperty = await savePropertyToDB(newProperty);
+                
+                // Add to local array with calculated metrics
+                properties.push(calculateMetrics(savedProperty));
+                
+                // Update display
+                renderTable();
+                updatePortfolioStats();
+                
+                // Update property count
+                document.getElementById('propertyCount').textContent = properties.length;
+                
+                // Close modal and show success
+                closeAddPropertyModal();
+                showSuccess(`Property added: ${address}`);
+            } catch (error) {
+                // Error already handled in savePropertyToDB
+                return;
+            }
         }
 
         // Add property from analysis with real data
-        function addPropertyFromAnalysis(propertyData) {
+        async function addPropertyFromAnalysis(propertyData) {
             const newProperty = {
                 address: propertyData.address,
                 city: propertyData.city,
@@ -3998,18 +4225,26 @@
                 marketRisk: "MED"
             };
             
-            // Add to properties array
-            properties.push(calculateMetrics(newProperty));
-            
-            // Update display
-            renderTable();
-            updatePortfolioStats();
-            
-            // Close modal and show success
-            closeAddPropertyModal();
-            
-            // Show success with property details
-            alert(`✅ Property added successfully!\n\n${propertyData.address}\n${propertyData.city}, ${propertyData.state} ${propertyData.zip}\n\n${propertyData.beds} beds, ${propertyData.baths} baths, ${propertyData.sqft.toLocaleString()} sqft\nEstimated Value: $${propertyData.price.toLocaleString()}\nEstimated Rent: $${propertyData.rent.toLocaleString()}/mo`);
+            try {
+                // Save to database
+                const savedProperty = await savePropertyToDB(newProperty);
+                
+                // Add to local array with calculated metrics
+                properties.push(calculateMetrics(savedProperty));
+                
+                // Update display
+                renderTable();
+                updatePortfolioStats();
+                
+                // Close modal and show success
+                closeAddPropertyModal();
+                
+                // Show success with property details
+                showSuccess(`Property added: ${propertyData.address}, ${propertyData.city}`);
+            } catch (error) {
+                // Error already handled in savePropertyToDB
+                return;
+            }
         }
         
         // Export data
@@ -4145,27 +4380,73 @@
         }
         
         // Update value from modal
-        function updateModalValue(index, field, element) {
+        async function updateModalValue(index, field, element) {
             let newValue = element.textContent.replace(/[$,%,]/g, '');
             newValue = parseFloat(newValue);
             
-            if (!isNaN(newValue)) {
+            if (!isNaN(newValue) && properties[index][field] !== newValue) {
+                const oldValue = properties[index][field];
                 properties[index][field] = newValue;
-                calculateMetrics(properties[index]);
-                renderTable();
-                updatePortfolioStats();
-                showPropertyDetail(index); // Refresh modal
+                
+                // Update in database if property has an id
+                if (properties[index].id) {
+                    try {
+                        await updatePropertyInDB(properties[index].id, { [field]: newValue });
+                        calculateMetrics(properties[index]);
+                        renderTable();
+                        updatePortfolioStats();
+                        showPropertyDetail(index); // Refresh modal
+                        showSuccess('Property updated');
+                    } catch (error) {
+                        // Revert on error
+                        properties[index][field] = oldValue;
+                        showPropertyDetail(index); // Refresh modal with old value
+                    }
+                } else {
+                    // For properties without id (shouldn't happen with DB)
+                    calculateMetrics(properties[index]);
+                    renderTable();
+                    updatePortfolioStats();
+                    showPropertyDetail(index); // Refresh modal
+                }
+            }
+        }
+        
+        // Delete property
+        async function deleteProperty(index) {
+            const prop = properties[index];
+            const confirmDelete = confirm(`Are you sure you want to delete this property?\n\n${prop.address}\n${prop.city}, ${prop.state} ${prop.zip}`);
+            
+            if (confirmDelete) {
+                if (prop.id) {
+                    try {
+                        await deletePropertyFromDB(prop.id);
+                        properties.splice(index, 1);
+                        renderTable();
+                        updatePortfolioStats();
+                        closeModal();
+                        showSuccess('Property deleted successfully');
+                    } catch (error) {
+                        // Error already handled in deletePropertyFromDB
+                    }
+                } else {
+                    // For properties without id (shouldn't happen with DB)
+                    properties.splice(index, 1);
+                    renderTable();
+                    updatePortfolioStats();
+                    closeModal();
+                    showSuccess('Property deleted successfully');
+                }
             }
         }
         
         // Initialize on load
-        window.onload = function() {
-            initializeProperties();
-            renderTable();
-            updatePortfolioStats();
+        window.onload = async function() {
+            // Load properties from database
+            await loadPropertiesFromDB();
             
             // Debug: Check if refresh button appears
-            console.log('App initialized. Click any property to test refresh button.');
+            console.log('App initialized with database connection. Properties loaded:', properties.length);
         };
         
         // Debug function to test modal

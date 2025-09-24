@@ -3,6 +3,7 @@ const path = require('path');
 const cors = require('cors');
 const axios = require('axios');
 require('dotenv').config();
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,6 +12,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Initialize database on startup
+db.initialize().catch(err => {
+    console.error('Failed to initialize database:', err);
+});
 
 // RentCast API configuration
 const RENTCAST_API_KEY = process.env.RENTCAST_API_KEY || 'YOUR_RENTCAST_API_KEY';
@@ -91,8 +97,102 @@ app.get('/api/rentcast/properties', async (req, res) => {
 });
 
 // Health check endpoint for Render
-app.get('/health', (req, res) => {
-    res.status(200).send('OK');
+app.get('/health', async (req, res) => {
+    try {
+        // Check database connection
+        await db.pool.query('SELECT 1');
+        res.status(200).json({ 
+            status: 'healthy',
+            database: 'connected'
+        });
+    } catch (error) {
+        res.status(503).json({ 
+            status: 'unhealthy',
+            database: 'disconnected',
+            error: error.message
+        });
+    }
+});
+
+// Database API endpoints
+
+// Get all properties
+app.get('/api/properties', async (req, res) => {
+    try {
+        const properties = await db.getAllProperties(req.query);
+        res.json({ success: true, data: properties });
+    } catch (error) {
+        console.error('Error fetching properties:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get single property
+app.get('/api/properties/:id', async (req, res) => {
+    try {
+        const property = await db.getPropertyById(req.params.id);
+        if (!property) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+        res.json({ success: true, data: property });
+    } catch (error) {
+        console.error('Error fetching property:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Create new property
+app.post('/api/properties', async (req, res) => {
+    try {
+        const property = await db.createProperty(req.body);
+        res.status(201).json({ success: true, data: property });
+    } catch (error) {
+        console.error('Error creating property:', error);
+        if (error.code === '23505') { // Unique constraint violation
+            res.status(409).json({ success: false, error: 'Property with this address already exists' });
+        } else {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+});
+
+// Update property
+app.put('/api/properties/:id', async (req, res) => {
+    try {
+        const property = await db.updateProperty(req.params.id, req.body);
+        if (!property) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+        res.json({ success: true, data: property });
+    } catch (error) {
+        console.error('Error updating property:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Delete property
+app.delete('/api/properties/:id', async (req, res) => {
+    try {
+        const property = await db.deleteProperty(req.params.id);
+        if (!property) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+        res.json({ success: true, data: property });
+    } catch (error) {
+        console.error('Error deleting property:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get property statistics
+app.get('/api/stats', async (req, res) => {
+    try {
+        const stats = await db.getPropertyStats();
+        res.json({ success: true, data: stats });
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 // Start server
