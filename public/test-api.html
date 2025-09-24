@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Real Estate Tracker API Test</h1>
+    <button onclick="testHealth()">Test Health Endpoint</button>
+    <button onclick="testProperties()">Test Properties Endpoint</button>
+    <button onclick="testAddProperty()">Test Add Property</button>
+    
+    <pre id="results" style="background: #f4f4f4; padding: 20px; margin-top: 20px;"></pre>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        const results = document.getElementById('results');
+        
+        async function testHealth() {
+            results.textContent = 'Testing health endpoint...\n';
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                results.textContent += `Status: ${response.status}\n`;
+                results.textContent += `Response: ${JSON.stringify(data, null, 2)}\n`;
+            } catch (error) {
+                results.textContent += `Error: ${error.message}\n`;
+            }
+        }
+        
+        async function testProperties() {
+            results.textContent = 'Testing properties endpoint...\n';
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const data = await response.json();
+                results.textContent += `Status: ${response.status}\n`;
+                results.textContent += `Response: ${JSON.stringify(data, null, 2)}\n`;
+            } catch (error) {
+                results.textContent += `Error: ${error.message}\n`;
+            }
+        }
+        
+        async function testAddProperty() {
+            results.textContent = 'Testing add property endpoint...\n';
+            const testProperty = {
+                address: '123 Test St',
+                city: 'Test City',
+                state: 'NV',
+                zip: '89101',
+                beds: 3,
+                baths: 2,
+                sqft: 1500,
+                year: 2000,
+                price: 300000,
+                downPercent: 20,
+                rent: 2000,
+                taxRate: 0.35,
+                insuranceRate: 0.35,
+                hoaMonthly: 0,
+                managementPercent: 8,
+                maintenancePercent: 5,
+                capexPercent: 4,
+                vacancyPercent: 8,
+                interestRate: 6.75,
+                crimeRisk: 'MED',
+                floodRisk: 'LOW',
+                marketRisk: 'MED'
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testProperty)
+                });
+                const data = await response.text();
+                results.textContent += `Status: ${response.status}\n`;
+                results.textContent += `Response: ${data}\n`;
+            } catch (error) {
+                results.textContent += `Error: ${error.message}\n`;
+            }
+        }
+    </script>
+</body>
+</html>
