@@ -1219,8 +1219,26 @@
                 if (!response.ok) {
                     throw new Error(`Failed to load properties: ${response.statusText}`);
                 }
-                const data = await response.json();
-                properties = data.map(prop => calculateMetrics(prop));
+                const result = await response.json();
+                
+                // Handle the response format { success: true, data: [] }
+                const data = result.data || [];
+                
+                // If there's a warning, show it to the user
+                if (result.warning) {
+                    console.log('Database status:', result.warning);
+                    // Load from localStorage as fallback
+                    const localProperties = JSON.parse(localStorage.getItem('properties') || '[]');
+                    if (localProperties.length > 0) {
+                        properties = localProperties.map(prop => calculateMetrics(prop));
+                        showSuccess('Using locally saved properties (database not connected)');
+                    } else {
+                        properties = [];
+                    }
+                } else {
+                    properties = data.map(prop => calculateMetrics(prop));
+                }
+                
                 renderTable();
                 updatePortfolioStats();
                 document.getElementById('propertyCount').textContent = properties.length;
@@ -1228,7 +1246,17 @@
             } catch (error) {
                 console.error('Error loading properties:', error);
                 showLoadingState(false);
-                showError('Failed to load properties. Please refresh the page.');
+                // Load from localStorage as fallback
+                const localProperties = JSON.parse(localStorage.getItem('properties') || '[]');
+                if (localProperties.length > 0) {
+                    properties = localProperties.map(prop => calculateMetrics(prop));
+                    renderTable();
+                    updatePortfolioStats();
+                    document.getElementById('propertyCount').textContent = properties.length;
+                    showSuccess('Using locally saved properties');
+                } else {
+                    showError('No properties found. Click "Add Property" to get started.');
+                }
             }
         }
         
@@ -1244,8 +1272,12 @@
                 if (!response.ok) {
                     throw new Error(`Failed to save property: ${response.statusText}`);
                 }
-                const savedProperty = await response.json();
-                return savedProperty;
+                const result = await response.json();
+                // Handle the response format { success: true, data: property }
+                if (result.warning) {
+                    console.log('Database status:', result.warning);
+                }
+                return result.data || result;
             } catch (error) {
                 console.error('Error saving property:', error);
                 showError('Failed to save property. Please try again.');
@@ -1265,8 +1297,12 @@
                 if (!response.ok) {
                     throw new Error(`Failed to update property: ${response.statusText}`);
                 }
-                const updatedProperty = await response.json();
-                return updatedProperty;
+                const result = await response.json();
+                // Handle the response format { success: true, data: property }
+                if (result.warning) {
+                    console.log('Database status:', result.warning);
+                }
+                return result.data || result;
             } catch (error) {
                 console.error('Error updating property:', error);
                 showError('Failed to update property. Please try again.');
@@ -1430,6 +1466,10 @@
                         try {
                             await updatePropertyInDB(properties[propIndex].id, { [field]: newValue });
                             calculateMetrics(properties[propIndex]);
+                            
+                            // Save to localStorage for offline access
+                            localStorage.setItem('properties', JSON.stringify(properties));
+                            
                             renderTable();
                             updatePortfolioStats();
                             showSuccess('Property updated');
@@ -1441,6 +1481,10 @@
                     } else {
                         // For properties without id (shouldn't happen with DB), just update locally
                         calculateMetrics(properties[propIndex]);
+                        
+                        // Save to localStorage for offline access
+                        localStorage.setItem('properties', JSON.stringify(properties));
+                        
                         renderTable();
                         updatePortfolioStats();
                     }
@@ -1903,8 +1947,13 @@
                     try {
                         await deletePropertyFromDB(prop.id);
                         properties.splice(index, 1);
+                        
+                        // Save to localStorage for offline access
+                        localStorage.setItem('properties', JSON.stringify(properties));
+                        
                         renderTable();
                         updatePortfolioStats();
+                        document.getElementById('propertyCount').textContent = properties.length;
                         closeModal();
                         showSuccess('Property deleted successfully');
                     } catch (error) {
@@ -1913,8 +1962,13 @@
                 } else {
                     // For properties without id (shouldn't happen with DB)
                     properties.splice(index, 1);
+                    
+                    // Save to localStorage for offline access
+                    localStorage.setItem('properties', JSON.stringify(properties));
+                    
                     renderTable();
                     updatePortfolioStats();
+                    document.getElementById('propertyCount').textContent = properties.length;
                     closeModal();
                     showSuccess('Property deleted successfully');
                 }
@@ -4182,6 +4236,9 @@
                 // Add to local array with calculated metrics
                 properties.push(calculateMetrics(savedProperty));
                 
+                // Save to localStorage for offline access
+                localStorage.setItem('properties', JSON.stringify(properties));
+                
                 // Update display
                 renderTable();
                 updatePortfolioStats();
@@ -4232,9 +4289,15 @@
                 // Add to local array with calculated metrics
                 properties.push(calculateMetrics(savedProperty));
                 
+                // Save to localStorage for offline access
+                localStorage.setItem('properties', JSON.stringify(properties));
+                
                 // Update display
                 renderTable();
                 updatePortfolioStats();
+                
+                // Update property count
+                document.getElementById('propertyCount').textContent = properties.length;
                 
                 // Close modal and show success
                 closeAddPropertyModal();
@@ -4422,8 +4485,13 @@
                     try {
                         await deletePropertyFromDB(prop.id);
                         properties.splice(index, 1);
+                        
+                        // Save to localStorage for offline access
+                        localStorage.setItem('properties', JSON.stringify(properties));
+                        
                         renderTable();
                         updatePortfolioStats();
+                        document.getElementById('propertyCount').textContent = properties.length;
                         closeModal();
                         showSuccess('Property deleted successfully');
                     } catch (error) {
@@ -4432,8 +4500,13 @@
                 } else {
                     // For properties without id (shouldn't happen with DB)
                     properties.splice(index, 1);
+                    
+                    // Save to localStorage for offline access
+                    localStorage.setItem('properties', JSON.stringify(properties));
+                    
                     renderTable();
                     updatePortfolioStats();
+                    document.getElementById('propertyCount').textContent = properties.length;
                     closeModal();
                     showSuccess('Property deleted successfully');
                 }
