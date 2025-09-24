@@ -188,7 +188,12 @@ app.post('/api/properties', async (req, res) => {
     } catch (error) {
         console.error('Error creating property:', error);
         if (error.code === '23505') { // Unique constraint violation
-            res.status(409).json({ success: false, error: 'Property with this address already exists' });
+            const address = req.body.address || 'Unknown address';
+            res.status(409).json({ 
+                success: false, 
+                error: `Property "${address}" already exists in your portfolio. Each property must have a unique address.`,
+                existingProperty: true
+            });
         } else {
             // Return success with local storage fallback
             const tempProperty = {

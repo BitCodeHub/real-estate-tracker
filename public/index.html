@@ -1279,11 +1279,24 @@
                 console.log('Response text:', responseText);
                 
                 if (!response.ok) {
+                    // Try to parse error message from response
+                    let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        if (errorData.error) {
+                            errorMessage = errorData.error;
+                        }
+                    } catch (e) {
+                        // Use default error message
+                    }
+                    
                     // Check if it's a network error
                     if (response.status === 0 || !response.status) {
                         throw new Error('Cannot connect to server. Make sure the server is running.');
+                    } else if (response.status === 409) {
+                        throw new Error('This property already exists in your portfolio. Check your property list.');
                     }
-                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                    throw new Error(errorMessage);
                 }
                 
                 // Parse JSON from response text
@@ -1316,8 +1329,25 @@
                         updated_at: new Date().toISOString()
                     };
                     return tempProperty;
+                } else if (error.message.includes('already exists')) {
+                    // Find and highlight the existing property
+                    const existingProp = properties.find(p => 
+                        p.address.toLowerCase() === property.address.toLowerCase()
+                    );
+                    if (existingProp) {
+                        const index = properties.indexOf(existingProp);
+                        const rows = document.querySelectorAll('#propertyTable tbody tr');
+                        if (rows[index]) {
+                            rows[index].style.backgroundColor = '#fee2e2';
+                            rows[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => {
+                                rows[index].style.backgroundColor = '';
+                            }, 3000);
+                        }
+                    }
+                    showError('This property already exists in your portfolio (highlighted in red)');
                 } else {
-                    showError(`Error: ${error.message}`);
+                    showError(`${error.message}`);
                 }
                 
                 throw error;
@@ -4242,6 +4272,35 @@
             console.log('state:', state);
             console.log('zip:', zip);
             
+            // Check if property already exists
+            const existingProperty = properties.find(prop => 
+                prop.address.toLowerCase() === address.toLowerCase() &&
+                prop.city.toLowerCase() === city.toLowerCase()
+            );
+            
+            if (existingProperty) {
+                const updateExisting = confirm(`This property already exists in your portfolio:\n\n${address}\n${city}, ${state}\n\nWould you like to view the existing property?`);
+                if (updateExisting) {
+                    // Find the index and show the property detail
+                    const index = properties.indexOf(existingProperty);
+                    closeAddPropertyModal();
+                    
+                    // Highlight the row in the table
+                    const rows = document.querySelectorAll('#propertyTable tbody tr');
+                    if (rows[index]) {
+                        rows[index].style.backgroundColor = '#fef3c7';
+                        rows[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => {
+                            rows[index].style.backgroundColor = '';
+                            showPropertyDetail(index);
+                        }, 1000);
+                    } else {
+                        showPropertyDetail(index);
+                    }
+                }
+                return;
+            }
+            
             // Create new property object
             const newProperty = {
                 address: address,
@@ -4296,6 +4355,22 @@
 
         // Add property from analysis with real data
         async function addPropertyFromAnalysis(propertyData) {
+            // Check if property already exists
+            const existingProperty = properties.find(prop => 
+                prop.address.toLowerCase() === propertyData.address.toLowerCase() &&
+                prop.city.toLowerCase() === propertyData.city.toLowerCase()
+            );
+            
+            if (existingProperty) {
+                const viewExisting = confirm(`This property already exists in your portfolio:\n\n${propertyData.address}\n${propertyData.city}, ${propertyData.state}\n\nWould you like to view the existing property?`);
+                if (viewExisting) {
+                    const index = properties.indexOf(existingProperty);
+                    closeAddPropertyModal();
+                    showPropertyDetail(index);
+                }
+                return;
+            }
+            
             const newProperty = {
                 address: propertyData.address,
                 city: propertyData.city,
