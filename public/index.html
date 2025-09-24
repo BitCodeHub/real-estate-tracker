@@ -4903,6 +4903,10 @@
                 if (tbody && tbody.innerHTML.trim() === '') {
                     tbody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 20px; color: #666;">No properties found. Use the "Add Property" or "AI Analyze Property" buttons to add properties.</td></tr>';
                 }
+            } else if (properties.length === 2 && properties.length !== 17) {
+                // Special check for the "2 properties showing but user has 17" issue
+                console.warn(`⚠️ Only ${properties.length} properties loaded, but user expects 17. Searching for more...`);
+                findAll17Properties();
             }
         };
         
@@ -4983,6 +4987,7 @@
         console.log('To debug: debugFindProperties()');
         console.log('To force fix NOW: fixPropertiesNow()');
         console.log('To fix zero values: fixZeroValues()');
+        console.log('To find all 17 properties: findAll17Properties()');
         
         // URGENT FIX FUNCTION
         window.fixPropertiesNow = function() {
@@ -5191,6 +5196,141 @@
             }
             
             return fixedCount;
+        };
+        
+        // Find ALL 17 properties
+        window.findAll17Properties = function() {
+            console.log('=== SEARCHING FOR ALL 17 PROPERTIES ===');
+            
+            // 1. Check current global properties
+            console.log(`Global properties array has ${properties.length} items`);
+            
+            // 2. Check localStorage for all possible keys
+            const localStorageKeys = Object.keys(localStorage);
+            console.log('LocalStorage keys:', localStorageKeys);
+            
+            const allFoundProperties = [];
+            
+            // Check each localStorage key
+            localStorageKeys.forEach(key => {
+                try {
+                    const value = localStorage.getItem(key);
+                    const parsed = JSON.parse(value);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(item => {
+                            if (item && typeof item === 'object' && 
+                                (item.address || item.price || item.rent)) {
+                                allFoundProperties.push(item);
+                                console.log(`Found property in localStorage['${key}']:`, item.address);
+                            }
+                        });
+                    } else if (parsed && typeof parsed === 'object' && 
+                              (parsed.address || parsed.price || parsed.rent)) {
+                        // Single property object
+                        allFoundProperties.push(parsed);
+                        console.log(`Found single property in localStorage['${key}']:`, parsed.address);
+                    }
+                } catch (e) {
+                    // Not JSON or not an array
+                }
+            });
+            
+            // 3. Check sessionStorage
+            const sessionStorageKeys = Object.keys(sessionStorage);
+            sessionStorageKeys.forEach(key => {
+                try {
+                    const value = sessionStorage.getItem(key);
+                    const parsed = JSON.parse(value);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(item => {
+                            if (item && typeof item === 'object' && 
+                                (item.address || item.price || item.rent)) {
+                                // Check if not duplicate
+                                if (!allFoundProperties.some(p => p.address === item.address)) {
+                                    allFoundProperties.push(item);
+                                    console.log(`Found property in sessionStorage['${key}']:`, item.address);
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {
+                    // Not JSON or not an array
+                }
+            });
+            
+            // 4. Check window object for any arrays
+            for (let key in window) {
+                try {
+                    if (Array.isArray(window[key]) && window[key].length > 0) {
+                        const firstItem = window[key][0];
+                        if (firstItem && typeof firstItem === 'object' && 
+                            (firstItem.address || firstItem.price || firstItem.rent)) {
+                            window[key].forEach(item => {
+                                if (!allFoundProperties.some(p => p.address === item.address)) {
+                                    allFoundProperties.push(item);
+                                    console.log(`Found property in window.${key}:`, item.address);
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {}
+            }
+            
+            console.log(`\n=== TOTAL FOUND: ${allFoundProperties.length} properties ===`);
+            
+            if (allFoundProperties.length === 17) {
+                console.log('✅ FOUND ALL 17 PROPERTIES! Loading them now...');
+                properties = allFoundProperties.map(prop => calculateMetrics(prop));
+                renderTable();
+                updatePortfolioStats();
+                document.getElementById('propertyCount').textContent = properties.length;
+                
+                // Save to localStorage
+                localStorage.setItem('properties', JSON.stringify(properties));
+                
+                showSuccess('Successfully loaded all 17 properties!');
+            } else if (allFoundProperties.length > 0) {
+                console.log(`Found ${allFoundProperties.length} properties. Loading them...`);
+                properties = allFoundProperties.map(prop => calculateMetrics(prop));
+                renderTable();
+                updatePortfolioStats();
+                document.getElementById('propertyCount').textContent = properties.length;
+                
+                // Save to localStorage
+                localStorage.setItem('properties', JSON.stringify(properties));
+                
+                showSuccess(`Loaded ${allFoundProperties.length} properties`);
+            } else {
+                console.error('Could not find properties. Please check your data.');
+                
+                // Last resort - check IndexedDB
+                if (window.indexedDB) {
+                    console.log('Checking IndexedDB...');
+                    const request = indexedDB.open('RealEstateTrackerDB');
+                    request.onsuccess = function(event) {
+                        const db = event.target.result;
+                        if (db.objectStoreNames.contains('properties')) {
+                            const transaction = db.transaction(['properties'], 'readonly');
+                            const objectStore = transaction.objectStore('properties');
+                            const getRequest = objectStore.getAll();
+                            
+                            getRequest.onsuccess = function() {
+                                const dbProperties = getRequest.result;
+                                console.log(`Found ${dbProperties.length} properties in IndexedDB`);
+                                if (dbProperties.length > 0) {
+                                    properties = dbProperties.map(prop => calculateMetrics(prop));
+                                    renderTable();
+                                    updatePortfolioStats();
+                                    document.getElementById('propertyCount').textContent = properties.length;
+                                    showSuccess(`Loaded ${properties.length} properties from IndexedDB`);
+                                }
+                            };
+                        }
+                    };
+                }
+            }
+            
+            return allFoundProperties;
         };
     </script>
 </body>
