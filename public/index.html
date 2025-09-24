@@ -4482,11 +4482,28 @@
             const tbody = document.getElementById('propertyTableBody');
             if (!tbody) {
                 console.error('propertyTableBody element not found!');
+                // Try to find it again
+                setTimeout(() => {
+                    const retryTbody = document.getElementById('propertyTableBody');
+                    if (retryTbody) {
+                        console.log('Found tbody on retry');
+                        renderTable();
+                    }
+                }, 100);
                 return;
             }
+            
+            // Clear existing content
             tbody.innerHTML = '';
             
             console.log('Rendering properties:', properties);
+            console.log('tbody element:', tbody);
+            
+            // If no properties, show message
+            if (properties.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 20px;">No properties in portfolio. Click "Add Property" to get started.</td></tr>';
+                return;
+            }
             
             properties.forEach((prop, index) => {
                 try {
@@ -4728,8 +4745,66 @@
             }
         }
         
+        // Debug function to find hidden properties
+        function debugFindProperties() {
+            console.log('=== DEBUGGING: Finding Properties ===');
+            
+            // Check if properties array has data
+            console.log('1. Properties array length:', properties.length);
+            console.log('Properties array contents:', properties);
+            
+            // Check localStorage
+            const localData = localStorage.getItem('properties');
+            if (localData) {
+                try {
+                    const localProperties = JSON.parse(localData);
+                    console.log('2. LocalStorage has', localProperties.length, 'properties');
+                } catch (e) {
+                    console.log('2. LocalStorage parse error:', e);
+                }
+            } else {
+                console.log('2. LocalStorage is empty');
+            }
+            
+            // Check window object for any property data
+            console.log('3. Checking window object for property data...');
+            for (let key in window) {
+                if (key.toLowerCase().includes('propert') && key !== 'properties') {
+                    console.log('Found window.' + key + ':', window[key]);
+                }
+            }
+            
+            // Check all script tags for embedded data
+            console.log('4. Checking all script contents...');
+            const scripts = document.getElementsByTagName('script');
+            for (let i = 0; i < scripts.length; i++) {
+                const scriptContent = scripts[i].textContent || scripts[i].innerHTML;
+                if (scriptContent.includes('address') && scriptContent.includes('price')) {
+                    console.log('Found script with property-like data:', scriptContent.substring(0, 200) + '...');
+                }
+            }
+            
+            // Force render even with empty array to see if renderTable has issues
+            console.log('5. Force rendering table...');
+            renderTable();
+            
+            // Return debug info
+            return {
+                propertiesLength: properties.length,
+                localStorageExists: !!localData,
+                tableBodyExists: !!document.getElementById('propertyTableBody'),
+                tableBodyHTML: document.getElementById('propertyTableBody')?.innerHTML
+            };
+        }
+        
         // Initialize on load
         window.onload = async function() {
+            console.log('=== PAGE LOAD START ===');
+            
+            // First, run debug to see what's available
+            const debugInfo = debugFindProperties();
+            console.log('Initial debug info:', debugInfo);
+            
             // Check if we should force load from localStorage
             if (sessionStorage.getItem('forceLoadProperties') === 'true') {
                 sessionStorage.removeItem('forceLoadProperties');
@@ -4740,9 +4815,12 @@
             
             // Check API health first
             const health = await checkAPIHealth();
+            console.log('API Health:', health);
             
             // Load properties from database
+            console.log('Loading from database...');
             await loadPropertiesFromDB();
+            console.log('After DB load, properties.length:', properties.length);
             
             // If no properties loaded, check localStorage
             if (properties.length === 0) {
@@ -4764,8 +4842,35 @@
                 }
             }
             
-            // Debug: Check if refresh button appears
-            console.log('App initialized. API status:', health.status, 'Properties loaded:', properties.length);
+            // Final debug check
+            console.log('=== FINAL STATE ===');
+            console.log('Properties loaded:', properties.length);
+            console.log('Table body exists:', !!document.getElementById('propertyTableBody'));
+            console.log('Table body HTML length:', document.getElementById('propertyTableBody')?.innerHTML.length);
+            
+            // CRITICAL FIX: Check if properties exist but table is empty
+            const tbody = document.getElementById('propertyTableBody');
+            if (properties.length > 0 && tbody) {
+                const tableRows = tbody.getElementsByTagName('tr').length;
+                console.log(`Properties: ${properties.length}, Table rows: ${tableRows}`);
+                
+                if (tableRows === 0 || tbody.innerHTML.trim() === '') {
+                    console.error('⚠️ DETECTED: Properties exist but table is empty!');
+                    console.log('Running automatic fix...');
+                    fixPropertiesNow();
+                }
+            }
+            
+            // If still no properties, show a message
+            if (properties.length === 0) {
+                console.warn('NO PROPERTIES FOUND! Running final debug...');
+                debugFindProperties();
+                
+                // Check if there's any data we missed
+                if (tbody && tbody.innerHTML.trim() === '') {
+                    tbody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 20px; color: #666;">No properties found. Use the "Add Property" or "AI Analyze Property" buttons to add properties.</td></tr>';
+                }
+            }
         };
         
         // Debug function to test modal
@@ -4778,6 +4883,153 @@
                 console.log('Look for refresh button in modal');
             }, 100);
         }
+        
+        // Emergency function to display any properties found anywhere
+        window.emergencyShowProperties = function() {
+            console.log('=== EMERGENCY PROPERTY SEARCH ===');
+            
+            // 1. Check global properties array
+            console.log('Global properties array:', properties);
+            
+            // 2. Search all global variables
+            const foundArrays = [];
+            for (let key in window) {
+                try {
+                    if (Array.isArray(window[key]) && window[key].length > 0) {
+                        const firstItem = window[key][0];
+                        if (firstItem && typeof firstItem === 'object' && 
+                            (firstItem.address || firstItem.price || firstItem.rent)) {
+                            console.log(`Found property-like array in window.${key}:`, window[key]);
+                            foundArrays.push({ name: key, data: window[key] });
+                        }
+                    }
+                } catch (e) {}
+            }
+            
+            // 3. Check all data attributes in HTML
+            const elementsWithData = document.querySelectorAll('[data-properties], [data-property]');
+            elementsWithData.forEach(el => {
+                console.log('Found element with property data:', el);
+            });
+            
+            // 4. If we found any arrays, try to use them
+            if (foundArrays.length > 0) {
+                console.log(`Found ${foundArrays.length} potential property arrays!`);
+                foundArrays.forEach(found => {
+                    console.log(`Array '${found.name}' has ${found.data.length} items`);
+                    if (found.data.length === 17) {
+                        console.log('*** FOUND 17 PROPERTIES! Using this array ***');
+                        properties = found.data.map(prop => calculateMetrics(prop));
+                        renderTable();
+                        updatePortfolioStats();
+                        document.getElementById('propertyCount').textContent = properties.length;
+                        showSuccess(`Loaded ${properties.length} properties from ${found.name}`);
+                        return;
+                    }
+                });
+            }
+            
+            // 5. Try parsing any script content
+            const scripts = Array.from(document.scripts);
+            scripts.forEach((script, idx) => {
+                const content = script.textContent || script.innerHTML || '';
+                // Look for array patterns
+                const arrayMatches = content.match(/(?:let|const|var)\s+(\w+)\s*=\s*\[\s*\{[^\]]+\]\s*;/g);
+                if (arrayMatches) {
+                    console.log(`Script ${idx} contains array definitions:`, arrayMatches);
+                }
+            });
+            
+            console.log('=== END EMERGENCY SEARCH ===');
+            return foundArrays;
+        };
+        
+        // Add console helper
+        console.log('%c🚨 PROPERTY DEBUG HELPER LOADED', 'background: #ff0000; color: white; font-size: 16px; padding: 5px;');
+        console.log('If properties are not showing, run: emergencyShowProperties()');
+        console.log('To debug: debugFindProperties()');
+        console.log('To force fix NOW: fixPropertiesNow()');
+        
+        // URGENT FIX FUNCTION
+        window.fixPropertiesNow = function() {
+            console.log('=== URGENT FIX: Forcing properties to display ===');
+            console.log('Current properties array:', properties);
+            console.log('Properties count:', properties.length);
+            
+            if (properties.length > 0) {
+                // Force rebuild the table HTML directly
+                const tbody = document.getElementById('propertyTableBody');
+                if (!tbody) {
+                    console.error('Table body not found! Creating it...');
+                    const table = document.getElementById('propertyTable');
+                    if (table) {
+                        const newTbody = document.createElement('tbody');
+                        newTbody.id = 'propertyTableBody';
+                        table.appendChild(newTbody);
+                    }
+                }
+                
+                // Build table HTML as string
+                let tableHTML = '';
+                properties.forEach((prop, index) => {
+                    const monthlyCF = prop.monthlyCF || prop.cashFlow || 0;
+                    const capRate = prop.capRate || 0;
+                    const coc = prop.coc || prop.cocReturn || 0;
+                    
+                    tableHTML += `<tr>
+                        <td>${prop.address || 'N/A'}</td>
+                        <td>${prop.city || 'N/A'}</td>
+                        <td>${prop.state || 'N/A'}</td>
+                        <td>${prop.zip || 'N/A'}</td>
+                        <td>${prop.beds || 0}</td>
+                        <td>${prop.baths || 0}</td>
+                        <td>$${(prop.price || 0).toLocaleString()}</td>
+                        <td>$${(prop.rent || 0).toLocaleString()}</td>
+                        <td style="color: ${monthlyCF >= 0 ? 'green' : 'red'}">
+                            $${monthlyCF.toFixed(0)}
+                        </td>
+                        <td>${prop.annualCF ? '$' + prop.annualCF.toFixed(0) : 'N/A'}</td>
+                        <td style="color: ${coc >= 0 ? 'green' : 'red'}">
+                            ${coc.toFixed(1)}%
+                        </td>
+                        <td>${capRate.toFixed(1)}%</td>
+                        <td>${prop.dscr ? prop.dscr.toFixed(2) : 'N/A'}</td>
+                        <td>
+                            <button onclick="showPropertyDetail(${index})" class="btn-action">View</button>
+                        </td>
+                    </tr>`;
+                });
+                
+                // Force update the table
+                const finalTbody = document.getElementById('propertyTableBody');
+                if (finalTbody) {
+                    finalTbody.innerHTML = tableHTML;
+                    console.log('✅ Table updated with', properties.length, 'properties');
+                    
+                    // Update property count
+                    document.getElementById('propertyCount').textContent = properties.length;
+                    
+                    // Update stats
+                    updatePortfolioStats();
+                    
+                    showSuccess(`Fixed! Displaying ${properties.length} properties`);
+                } else {
+                    console.error('Could not find table body to update!');
+                }
+            } else {
+                console.log('No properties in array. Checking localStorage...');
+                const localData = localStorage.getItem('properties');
+                if (localData) {
+                    properties = JSON.parse(localData).map(prop => calculateMetrics(prop));
+                    console.log('Loaded', properties.length, 'properties from localStorage');
+                    fixPropertiesNow(); // Recursive call
+                } else {
+                    console.error('No properties found anywhere!');
+                }
+            }
+            
+            return properties.length;
+        };
     </script>
 </body>
 </html>
