@@ -20,8 +20,11 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-    console.error('Unexpected database error:', err);
-    process.exit(-1);
+    console.error('Database connection error:', err);
+    // Don't exit in production if no database
+    if (process.env.NODE_ENV !== 'production') {
+        process.exit(-1);
+    }
 });
 
 // Initialize database schema
