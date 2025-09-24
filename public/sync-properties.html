@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Properties - Real Estate Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #4338ca;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f3f4f6;
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .warning { background: #fef3c7; color: #92400e; }
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .property-list {
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+        }
+        .property-item {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .property-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Sync Properties Tool</h1>
+        <p>This tool helps you manage properties between your browser storage and the database.</p>
+        
+        <div class="status" id="status">
+            Click buttons below to check your properties...
+        </div>
+        
+        <h2>📊 Property Status</h2>
+        <button onclick="checkStatus()">Check Status</button>
+        <button onclick="showLocalProperties()">Show Local Properties</button>
+        <button onclick="showDatabaseProperties()">Show Database Properties</button>
+        
+        <div id="results"></div>
+        
+        <h2>🛠️ Actions</h2>
+        <button onclick="findDuplicates()">Find Duplicates</button>
+        <button onclick="exportLocal()">Export Local to JSON</button>
+        <button onclick="clearLocal()" style="background: #ef4444;">Clear Local Storage</button>
+        
+        <h2>📝 Sync Options</h2>
+        <button onclick="syncFromDatabase()">Sync FROM Database (Replace Local)</button>
+        <button onclick="mergeProperties()">Merge Properties (Keep Unique Only)</button>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        
+        async function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        async function checkStatus() {
+            const results = document.getElementById('results');
+            
+            // Check local storage
+            const localProperties = JSON.parse(localStorage.getItem('properties') || '[]');
+            
+            // Check database
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const data = await response.json();
+                const dbProperties = data.data || [];
+                
+                results.innerHTML = `
+                    <div class="property-list">
+                        <h3>📱 Local Storage: ${localProperties.length} properties</h3>
+                        <h3>💾 Database: ${dbProperties.length} properties</h3>
+                    </div>
+                `;
+                
+                updateStatus(`Found ${localProperties.length} local and ${dbProperties.length} database properties`, 'success');
+            } catch (error) {
+                results.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                updateStatus('Failed to connect to database', 'error');
+            }
+        }
+        
+        function showLocalProperties() {
+            const properties = JSON.parse(localStorage.getItem('properties') || '[]');
+            const results = document.getElementById('results');
+            
+            if (properties.length === 0) {
+                results.innerHTML = '<p>No properties in local storage</p>';
+                return;
+            }
+            
+            results.innerHTML = `
+                <h3>Local Properties (${properties.length})</h3>
+                <div class="property-list">
+                    ${properties.map((p, i) => `
+                        <div class="property-item">
+                            ${i + 1}. ${p.address}, ${p.city}, ${p.state} ${p.zip}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            updateStatus(`Showing ${properties.length} local properties`, 'success');
+        }
+        
+        async function showDatabaseProperties() {
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const data = await response.json();
+                const properties = data.data || [];
+                const results = document.getElementById('results');
+                
+                if (properties.length === 0) {
+                    results.innerHTML = '<p>No properties in database</p>';
+                    return;
+                }
+                
+                results.innerHTML = `
+                    <h3>Database Properties (${properties.length})</h3>
+                    <div class="property-list">
+                        ${properties.map((p, i) => `
+                            <div class="property-item">
+                                ${i + 1}. ${p.address}, ${p.city}, ${p.state} ${p.zip}
+                                <small>(ID: ${p.id})</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                updateStatus(`Showing ${properties.length} database properties`, 'success');
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function findDuplicates() {
+            const localProperties = JSON.parse(localStorage.getItem('properties') || '[]');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const data = await response.json();
+                const dbProperties = data.data || [];
+                
+                const duplicates = [];
+                
+                localProperties.forEach(localProp => {
+                    const dbMatch = dbProperties.find(dbProp => 
+                        dbProp.address.toLowerCase() === localProp.address.toLowerCase() &&
+                        dbProp.city.toLowerCase() === localProp.city.toLowerCase()
+                    );
+                    
+                    if (dbMatch) {
+                        duplicates.push({
+                            address: localProp.address,
+                            city: localProp.city,
+                            state: localProp.state
+                        });
+                    }
+                });
+                
+                const results = document.getElementById('results');
+                if (duplicates.length === 0) {
+                    results.innerHTML = '<p class="success">✅ No duplicates found!</p>';
+                    updateStatus('No duplicate properties found', 'success');
+                } else {
+                    results.innerHTML = `
+                        <h3>⚠️ Found ${duplicates.length} Duplicate Properties</h3>
+                        <div class="property-list">
+                            ${duplicates.map((p, i) => `
+                                <div class="property-item">
+                                    ${i + 1}. ${p.address}, ${p.city}, ${p.state}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <p class="warning">These properties exist in both local storage and database</p>
+                    `;
+                    updateStatus(`Found ${duplicates.length} duplicate properties`, 'warning');
+                }
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function exportLocal() {
+            const properties = JSON.parse(localStorage.getItem('properties') || '[]');
+            const dataStr = JSON.stringify(properties, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `properties_local_${new Date().toISOString().slice(0,10)}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            updateStatus(`Exported ${properties.length} properties to JSON`, 'success');
+        }
+        
+        function clearLocal() {
+            if (confirm('Are you sure you want to clear all properties from local storage? This cannot be undone.')) {
+                localStorage.removeItem('properties');
+                updateStatus('Local storage cleared', 'success');
+                checkStatus();
+            }
+        }
+        
+        async function syncFromDatabase() {
+            if (!confirm('This will replace all local properties with database properties. Continue?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const data = await response.json();
+                const dbProperties = data.data || [];
+                
+                localStorage.setItem('properties', JSON.stringify(dbProperties));
+                updateStatus(`Synced ${dbProperties.length} properties from database`, 'success');
+                checkStatus();
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function mergeProperties() {
+            if (!confirm('This will merge unique properties from both sources. Continue?')) {
+                return;
+            }
+            
+            const localProperties = JSON.parse(localStorage.getItem('properties') || '[]');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/properties`);
+                const data = await response.json();
+                const dbProperties = data.data || [];
+                
+                // Create a map to track unique properties
+                const propertyMap = new Map();
+                
+                // Add database properties first (they have IDs)
+                dbProperties.forEach(prop => {
+                    const key = `${prop.address.toLowerCase()}_${prop.city.toLowerCase()}`;
+                    propertyMap.set(key, prop);
+                });
+                
+                // Add local properties if they don't exist
+                let addedCount = 0;
+                localProperties.forEach(prop => {
+                    const key = `${prop.address.toLowerCase()}_${prop.city.toLowerCase()}`;
+                    if (!propertyMap.has(key)) {
+                        propertyMap.set(key, prop);
+                        addedCount++;
+                    }
+                });
+                
+                const mergedProperties = Array.from(propertyMap.values());
+                localStorage.setItem('properties', JSON.stringify(mergedProperties));
+                
+                updateStatus(`Merged properties: ${mergedProperties.length} total (${addedCount} added from local)`, 'success');
+                checkStatus();
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Check status on load
+        window.onload = checkStatus;
+    </script>
+</body>
+</html>
