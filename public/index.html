@@ -1243,9 +1243,14 @@
                     // Map database properties to frontend format before calculating metrics
                     properties = data.map(dbProp => {
                         const mappedProp = mapDatabasePropertyToFrontend(dbProp);
-                        return calculateMetrics(mappedProp);
+                        console.log('Mapped property:', mappedProp);
+                        const calculatedProp = calculateMetrics(mappedProp);
+                        console.log('After calculateMetrics:', calculatedProp);
+                        return calculatedProp;
                     });
                     console.log('Properties after mapping and calculateMetrics:', properties);
+                    console.log('Sample property monthlyCF:', properties[0]?.monthlyCF);
+                    console.log('Sample property fields:', Object.keys(properties[0] || {}));
                     
                     // If no properties from database, load sample properties
                     if (properties.length === 0 && typeof sampleProperties !== 'undefined' && sampleProperties.length > 0) {
@@ -1263,6 +1268,14 @@
                 document.getElementById('propertyCount').textContent = properties.length;
                 showLoadingState(false);
                 console.log('Loading complete');
+                
+                // Force a re-render after a short delay to ensure table displays
+                if (properties.length > 0) {
+                    setTimeout(() => {
+                        console.log('Force re-rendering table...');
+                        renderTable();
+                    }, 100);
+                }
             } catch (error) {
                 console.error('Error loading properties:', error);
                 showLoadingState(false);
@@ -1556,7 +1569,17 @@
                 dataSource: dbProp.data_source || 'manual',
                 notes: dbProp.notes || '',
                 createdAt: dbProp.created_at,
-                updatedAt: dbProp.updated_at
+                updatedAt: dbProp.updated_at,
+                // Risk fields
+                crimeRisk: dbProp.crime_score || 'LOW',
+                floodRisk: dbProp.flood_risk || 'LOW',
+                marketRisk: dbProp.market_risk || 'MED',
+                // Initialize calculated fields
+                monthlyCF: 0,
+                annualCF: 0,
+                coc: 0,
+                capRate: 0,
+                dscr: 0
             };
         }
 
@@ -1592,10 +1615,14 @@
             prop.monthlyCF = prop.noi - prop.monthlyPI;
             prop.annualCF = prop.monthlyCF * 12;
             
-            // Calculate return metrics
-            prop.coc = prop.downPayment > 0 ? ((prop.annualCF / prop.downPayment) * 100).toFixed(1) : 0;
-            prop.capRate = ((prop.noi * 12 / prop.price) * 100).toFixed(1);
-            prop.dscr = prop.monthlyPI > 0 ? (prop.noi / prop.monthlyPI).toFixed(2) : 0;
+            // Calculate return metrics (keep as numbers, format only when displaying)
+            prop.coc = prop.downPayment > 0 ? parseFloat(((prop.annualCF / prop.downPayment) * 100).toFixed(1)) : 0;
+            prop.capRate = parseFloat(((prop.noi * 12 / prop.price) * 100).toFixed(1));
+            prop.dscr = prop.monthlyPI > 0 ? parseFloat((prop.noi / prop.monthlyPI).toFixed(2)) : 0;
+            
+            // Ensure numeric values are numbers not strings
+            prop.monthlyCF = parseFloat(prop.monthlyCF) || 0;
+            prop.annualCF = parseFloat(prop.annualCF) || 0;
             
             return prop;
         }
@@ -1676,7 +1703,7 @@
         // OLD RENDER TABLE - COMMENTED OUT TO USE NEW VERSION
         /*
         // Render the table
-        function renderTable() {
+        function renderTable_OLD_REMOVE() {
             const tbody = document.getElementById('propertyTableBody');
             tbody.innerHTML = '';
             

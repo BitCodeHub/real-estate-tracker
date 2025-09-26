@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Table Render</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Debug Table Render Issue</h1>
+    
+    <button onclick="testAPI()">1. Test API Response</button>
+    <button onclick="testMapping()">2. Test Field Mapping</button>
+    <button onclick="testCalculations()">3. Test Calculations</button>
+    <button onclick="window.location.href='/'">Go to Main App</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(title, data) {
+            output.innerHTML += `<div class="debug"><h3>${title}</h3><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+        }
+        
+        async function testAPI() {
+            output.innerHTML = '';
+            try {
+                const response = await fetch('/api/properties');
+                const data = await response.json();
+                log('API Response', { 
+                    success: data.success, 
+                    count: data.data.length,
+                    firstProperty: data.data[0] 
+                });
+            } catch (error) {
+                log('API Error', { error: error.message });
+            }
+        }
+        
+        function mapDatabasePropertyToFrontend(dbProp) {
+            return {
+                id: dbProp.id,
+                address: dbProp.address || '',
+                city: dbProp.city || '',
+                state: dbProp.state || '',
+                zip: dbProp.zip || '',
+                price: parseFloat(dbProp.purchase_price) || 0,
+                rent: parseFloat(dbProp.monthly_rent) || 0,
+                beds: parseInt(dbProp.bedrooms) || 0,
+                baths: parseFloat(dbProp.bathrooms) || 0,
+                sqft: parseInt(dbProp.square_footage) || 0,
+                year: parseInt(dbProp.year_built) || 0,
+                downPercent: 20,
+                interestRate: 7.0,
+                taxRate: 1.2,
+                insuranceRate: 0.35,
+                hoaMonthly: parseFloat(dbProp.hoa) || 0,
+                vacancyPercent: 5,
+                managementPercent: 10,
+                maintenancePercent: 5,
+                capexPercent: 5,
+                crimeRisk: dbProp.crime_score || 'LOW',
+                floodRisk: dbProp.flood_risk || 'LOW',
+                marketRisk: dbProp.market_risk || 'MED',
+                monthlyCF: 0,
+                annualCF: 0,
+                coc: 0,
+                capRate: 0,
+                dscr: 0
+            };
+        }
+        
+        function calculateMortgage(loanAmount, rate, years) {
+            const monthlyRate = rate / 100 / 12;
+            const numPayments = years * 12;
+            const payment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+                          (Math.pow(1 + monthlyRate, numPayments) - 1);
+            return Math.round(payment);
+        }
+        
+        function calculateMetrics(prop) {
+            // Calculate basic financials
+            prop.downPayment = prop.price * (prop.downPercent / 100);
+            prop.loanAmount = prop.price - prop.downPayment;
+            prop.monthlyPI = calculateMortgage(prop.loanAmount, prop.interestRate, 30);
+            
+            // Calculate monthly expenses
+            prop.taxMonthly = Math.round((prop.price * prop.taxRate / 100) / 12);
+            prop.insuranceMonthly = Math.round((prop.price * prop.insuranceRate / 100) / 12);
+            
+            // Calculate effective rent and operating expenses
+            prop.effectiveRent = Math.round(prop.rent * (1 - prop.vacancyPercent / 100));
+            prop.managementFee = Math.round(prop.effectiveRent * prop.managementPercent / 100);
+            prop.maintenanceFee = Math.round(prop.effectiveRent * prop.maintenancePercent / 100);
+            prop.capexFee = Math.round(prop.effectiveRent * prop.capexPercent / 100);
+            
+            prop.totalOpEx = prop.taxMonthly + prop.insuranceMonthly + prop.hoaMonthly + 
+                            prop.managementFee + prop.maintenanceFee + prop.capexFee;
+            
+            // Calculate NOI and cash flow
+            prop.noi = prop.effectiveRent - prop.totalOpEx;
+            prop.monthlyCF = prop.noi - prop.monthlyPI;
+            prop.annualCF = prop.monthlyCF * 12;
+            
+            // Calculate return metrics
+            prop.coc = prop.downPayment > 0 ? parseFloat(((prop.annualCF / prop.downPayment) * 100).toFixed(1)) : 0;
+            prop.capRate = parseFloat(((prop.noi * 12 / prop.price) * 100).toFixed(1));
+            prop.dscr = prop.monthlyPI > 0 ? parseFloat((prop.noi / prop.monthlyPI).toFixed(2)) : 0;
+            
+            return prop;
+        }
+        
+        async function testMapping() {
+            try {
+                const response = await fetch('/api/properties');
+                const data = await response.json();
+                const dbProp = data.data[0];
+                
+                log('Original DB Property', dbProp);
+                
+                const mapped = mapDatabasePropertyToFrontend(dbProp);
+                log('After Mapping', {
+                    price: mapped.price,
+                    rent: mapped.rent,
+                    beds: mapped.beds,
+                    baths: mapped.baths,
+                    crimeRisk: mapped.crimeRisk,
+                    floodRisk: mapped.floodRisk
+                });
+                
+            } catch (error) {
+                log('Mapping Error', { error: error.message });
+            }
+        }
+        
+        async function testCalculations() {
+            try {
+                const response = await fetch('/api/properties');
+                const data = await response.json();
+                const dbProp = data.data[0];
+                
+                const mapped = mapDatabasePropertyToFrontend(dbProp);
+                const calculated = calculateMetrics(mapped);
+                
+                log('After Calculations', {
+                    price: calculated.price,
+                    rent: calculated.rent,
+                    monthlyPI: calculated.monthlyPI,
+                    monthlyCF: calculated.monthlyCF,
+                    annualCF: calculated.annualCF,
+                    coc: calculated.coc,
+                    capRate: calculated.capRate,
+                    dscr: calculated.dscr
+                });
+                
+                // Test table rendering
+                const tableHTML = `
+                    <table>
+                        <tr>
+                            <th>Address</th>
+                            <th>Price</th>
+                            <th>Rent</th>
+                            <th>Monthly CF</th>
+                            <th>CoC%</th>
+                            <th>Cap Rate</th>
+                            <th>DSCR</th>
+                        </tr>
+                        <tr>
+                            <td>${calculated.address}</td>
+                            <td>$${calculated.price.toLocaleString()}</td>
+                            <td>$${calculated.rent.toLocaleString()}</td>
+                            <td style="color: ${calculated.monthlyCF >= 0 ? 'green' : 'red'}">
+                                $${calculated.monthlyCF.toLocaleString()}
+                            </td>
+                            <td>${calculated.coc}%</td>
+                            <td>${calculated.capRate}%</td>
+                            <td>${calculated.dscr}</td>
+                        </tr>
+                    </table>
+                `;
+                
+                output.innerHTML += `<div class="debug"><h3>Sample Table Row</h3>${tableHTML}</div>`;
+                
+            } catch (error) {
+                log('Calculation Error', { error: error.message });
+            }
+        }
+        
+        // Auto-run tests
+        window.onload = async () => {
+            await testAPI();
+            await testMapping();
+            await testCalculations();
+        };
+    </script>
+</body>
+</html>
