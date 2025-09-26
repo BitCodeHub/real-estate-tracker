@@ -4775,6 +4775,27 @@
                 row.innerHTML = rowHTML;
                 
                 tbody.appendChild(row);
+                
+                // Find and attach click handlers to the address span
+                const addressSpan = row.querySelector('span[onclick*="showPropertyDetail"]');
+                if (addressSpan) {
+                    // Remove the onclick attribute and add event listener
+                    addressSpan.removeAttribute('onclick');
+                    addressSpan.addEventListener('click', function() {
+                        console.log('Address clicked for property index:', index);
+                        showPropertyDetail(index);
+                    });
+                }
+                
+                // Also attach handler to refresh icon
+                const refreshIcon = row.querySelector('span[onclick*="refreshSingleProperty"]');
+                if (refreshIcon) {
+                    refreshIcon.removeAttribute('onclick');
+                    refreshIcon.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        refreshSingleProperty(index);
+                    });
+                }
                 } catch (error) {
                     console.error('Error rendering property at index', index, ':', error);
                     console.error('Property data:', prop);

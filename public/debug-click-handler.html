@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Click Handler</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .debug-section {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        .success {
+            color: #10b981;
+            font-weight: bold;
+        }
+        .error {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .warning {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Property Click Handler</h1>
+        
+        <div class="debug-section">
+            <h2>Step 1: Check Function Availability</h2>
+            <button onclick="checkFunctions()">Check All Functions</button>
+            <div id="functionCheck"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Step 2: Check Table Content</h2>
+            <button onclick="checkTableContent()">Inspect Table HTML</button>
+            <div id="tableContent"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Step 3: Test Direct Function Call</h2>
+            <button onclick="testDirectCall()">Test showPropertyDetail(0)</button>
+            <div id="directTest"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Step 4: Check Event Listeners</h2>
+            <button onclick="checkEventListeners()">Check Click Handlers</button>
+            <div id="eventCheck"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Step 5: Live Test</h2>
+            <button onclick="createTestTable()">Create Test Table</button>
+            <div id="testTable"></div>
+        </div>
+        
+        <button onclick="window.location.href='/'">Back to Main App</button>
+    </div>
+    
+    <script>
+        function checkFunctions() {
+            const output = document.getElementById('functionCheck');
+            const functions = [
+                'showPropertyDetail',
+                'closeModal',
+                'renderTable',
+                'properties',
+                'calculateMetrics'
+            ];
+            
+            let html = '<h3>Function Availability:</h3>';
+            
+            functions.forEach(func => {
+                const exists = typeof window.parent[func] !== 'undefined';
+                const existsLocal = typeof window[func] !== 'undefined';
+                
+                html += `<div>
+                    <strong>${func}:</strong> 
+                    Parent Window: <span class="${exists ? 'success' : 'error'}">${exists ? '✓ EXISTS' : '✗ MISSING'}</span>, 
+                    Current Window: <span class="${existsLocal ? 'success' : 'error'}">${existsLocal ? '✓ EXISTS' : '✗ MISSING'}</span>
+                </div>`;
+            });
+            
+            // Check if we're in an iframe
+            html += `<div style="margin-top: 10px;">
+                <strong>Window Context:</strong> 
+                ${window.parent === window ? 'Main Window' : 'Inside iFrame'}
+            </div>`;
+            
+            output.innerHTML = html;
+        }
+        
+        async function checkTableContent() {
+            const output = document.getElementById('tableContent');
+            
+            try {
+                // Get the table from the main app
+                const response = await fetch('/');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const tbody = doc.getElementById('propertyTableBody');
+                
+                if (tbody) {
+                    const firstRow = tbody.querySelector('tr');
+                    if (firstRow) {
+                        const addressCell = firstRow.querySelector('td');
+                        output.innerHTML = `
+                            <h3>First Table Row HTML:</h3>
+                            <pre>${escapeHtml(addressCell ? addressCell.innerHTML : 'No address cell found')}</pre>
+                            <h3>Onclick Attributes Found:</h3>
+                        `;
+                        
+                        // Find all elements with onclick
+                        const clickables = firstRow.querySelectorAll('[onclick]');
+                        clickables.forEach((el, i) => {
+                            output.innerHTML += `<div>${i + 1}. <code>${escapeHtml(el.getAttribute('onclick'))}</code></div>`;
+                        });
+                    } else {
+                        output.innerHTML = '<span class="error">No table rows found</span>';
+                    }
+                } else {
+                    output.innerHTML = '<span class="error">Table body not found</span>';
+                }
+                
+            } catch (error) {
+                output.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+        
+        function testDirectCall() {
+            const output = document.getElementById('directTest');
+            
+            try {
+                // Try to get the parent window's function
+                if (window.parent !== window && typeof window.parent.showPropertyDetail === 'function') {
+                    output.innerHTML = '<span class="success">Found showPropertyDetail in parent window. Calling it...</span>';
+                    window.parent.showPropertyDetail(0);
+                } else {
+                    // Try to define it locally for testing
+                    output.innerHTML = '<span class="warning">Creating local test function...</span>';
+                    
+                    window.showPropertyDetail = function(index) {
+                        alert('showPropertyDetail called with index: ' + index);
+                        output.innerHTML += '<br><span class="success">✓ Function called successfully!</span>';
+                    };
+                    
+                    // Test it
+                    window.showPropertyDetail(0);
+                }
+            } catch (error) {
+                output.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+        
+        function checkEventListeners() {
+            const output = document.getElementById('eventCheck');
+            
+            // Create a test element
+            const testSpan = document.createElement('span');
+            testSpan.textContent = 'Test Click Me';
+            testSpan.style.color = '#667eea';
+            testSpan.style.cursor = 'pointer';
+            testSpan.style.textDecoration = 'underline';
+            
+            // Test different ways of attaching handlers
+            const tests = [];
+            
+            // Test 1: Direct onclick
+            const test1 = testSpan.cloneNode(true);
+            test1.onclick = function() { 
+                tests[0].result = '✓ Direct onclick works'; 
+                updateResults(); 
+            };
+            tests.push({ name: 'Direct onclick property', element: test1, result: 'Click to test' });
+            
+            // Test 2: setAttribute
+            const test2 = testSpan.cloneNode(true);
+            test2.setAttribute('onclick', 'this.textContent = "✓ setAttribute onclick works"; checkEventListeners();');
+            tests.push({ name: 'setAttribute onclick', element: test2, result: 'Click to test' });
+            
+            // Test 3: addEventListener
+            const test3 = testSpan.cloneNode(true);
+            test3.addEventListener('click', function() { 
+                tests[2].result = '✓ addEventListener works'; 
+                updateResults(); 
+            });
+            tests.push({ name: 'addEventListener', element: test3, result: 'Click to test' });
+            
+            function updateResults() {
+                let html = '<h3>Event Handler Tests:</h3>';
+                tests.forEach((test, i) => {
+                    html += `<div style="margin: 10px 0;">
+                        <strong>${test.name}:</strong> ${test.result}<br>
+                        <div id="test${i}" style="margin-top: 5px;"></div>
+                    </div>`;
+                });
+                output.innerHTML = html;
+                
+                // Re-append test elements
+                tests.forEach((test, i) => {
+                    document.getElementById(`test${i}`).appendChild(test.element);
+                });
+            }
+            
+            updateResults();
+        }
+        
+        function createTestTable() {
+            const output = document.getElementById('testTable');
+            
+            // Define showPropertyDetail locally
+            window.showPropertyDetail = function(index) {
+                output.innerHTML += `<div class="success">✓ showPropertyDetail called with index: ${index}</div>`;
+                alert(`Property ${index} clicked!`);
+            };
+            
+            const html = `
+                <h3>Test Table with Click Handlers:</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <th style="border: 1px solid #ddd; padding: 8px; background: #667eea; color: white;">Method</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; background: #667eea; color: white;">Test Address</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; background: #667eea; color: white;">Result</th>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 8px;">Inline onclick</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">
+                            <span onclick="showPropertyDetail(1)" style="color: #667eea; cursor: pointer; text-decoration: underline;">
+                                123 Test Street
+                            </span>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 8px;" id="result1">Click to test</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 8px;">JavaScript onclick</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">
+                            <span id="jsClick" style="color: #667eea; cursor: pointer; text-decoration: underline;">
+                                456 JS Avenue
+                            </span>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 8px;" id="result2">Click to test</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 8px;">Event Listener</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">
+                            <span id="eventClick" style="color: #667eea; cursor: pointer; text-decoration: underline;">
+                                789 Event Road
+                            </span>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 8px;" id="result3">Click to test</td>
+                    </tr>
+                </table>
+            `;
+            
+            output.innerHTML = html;
+            
+            // Attach handlers
+            document.getElementById('jsClick').onclick = function() {
+                showPropertyDetail(2);
+                document.getElementById('result2').innerHTML = '<span class="success">✓ Clicked</span>';
+            };
+            
+            document.getElementById('eventClick').addEventListener('click', function() {
+                showPropertyDetail(3);
+                document.getElementById('result3').innerHTML = '<span class="success">✓ Clicked</span>';
+            });
+            
+            // Update result for inline onclick
+            const originalShowPropertyDetail = window.showPropertyDetail;
+            window.showPropertyDetail = function(index) {
+                originalShowPropertyDetail(index);
+                if (index === 1) {
+                    document.getElementById('result1').innerHTML = '<span class="success">✓ Clicked</span>';
+                }
+            };
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Auto-check functions on load
+        window.onload = function() {
+            checkFunctions();
+        };
+    </script>
+</body>
+</html>
