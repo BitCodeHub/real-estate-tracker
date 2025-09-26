@@ -1232,6 +1232,9 @@
                     if (localProperties.length > 0) {
                         properties = localProperties.map(prop => calculateMetrics(prop));
                         showSuccess('Using locally saved properties (database not connected)');
+                    } else if (typeof sampleProperties !== 'undefined' && sampleProperties.length > 0) {
+                        properties = sampleProperties.map(prop => calculateMetrics(prop));
+                        showSuccess('Loaded 17 sample properties for demonstration (database not connected)');
                     } else {
                         properties = [];
                     }
@@ -1239,6 +1242,13 @@
                     console.log('Raw data from API:', data);
                     properties = data.map(prop => calculateMetrics(prop));
                     console.log('Properties after calculateMetrics:', properties);
+                    
+                    // If no properties from database, load sample properties
+                    if (properties.length === 0 && typeof sampleProperties !== 'undefined' && sampleProperties.length > 0) {
+                        console.log('No properties in database. Loading sample properties...');
+                        properties = sampleProperties.map(prop => calculateMetrics(prop));
+                        showSuccess('Loaded 17 sample properties for demonstration');
+                    }
                 }
                 
                 console.log('About to render table with properties:', properties);
@@ -1260,6 +1270,13 @@
                     updatePortfolioStats();
                     document.getElementById('propertyCount').textContent = properties.length;
                     showSuccess('Using locally saved properties');
+                } else if (typeof sampleProperties !== 'undefined' && sampleProperties.length > 0) {
+                    console.log('Loading sample properties as fallback...');
+                    properties = sampleProperties.map(prop => calculateMetrics(prop));
+                    renderTable();
+                    updatePortfolioStats();
+                    document.getElementById('propertyCount').textContent = properties.length;
+                    showSuccess('Loaded 17 sample properties for demonstration');
                 } else {
                     showError('No properties found. Click "Add Property" to get started.');
                 }
@@ -5392,5 +5409,6 @@
             return properties;
         };
     </script>
+    <script src="sampleProperties.js"></script>
 </body>
 </html>
