@@ -1240,8 +1240,12 @@
                     }
                 } else {
                     console.log('Raw data from API:', data);
-                    properties = data.map(prop => calculateMetrics(prop));
-                    console.log('Properties after calculateMetrics:', properties);
+                    // Map database properties to frontend format before calculating metrics
+                    properties = data.map(dbProp => {
+                        const mappedProp = mapDatabasePropertyToFrontend(dbProp);
+                        return calculateMetrics(mappedProp);
+                    });
+                    console.log('Properties after mapping and calculateMetrics:', properties);
                     
                     // If no properties from database, load sample properties
                     if (properties.length === 0 && typeof sampleProperties !== 'undefined' && sampleProperties.length > 0) {
@@ -1486,7 +1490,53 @@
         }
 
         // Calculate all metrics for a property
+        // Convert database property to frontend format
+        function mapDatabasePropertyToFrontend(dbProp) {
+            // If already in frontend format (has 'price' field), return as is
+            if (dbProp.price !== undefined) {
+                return dbProp;
+            }
+            
+            // Map database fields to frontend fields
+            return {
+                id: dbProp.id,
+                address: dbProp.address || '',
+                city: dbProp.city || '',
+                state: dbProp.state || '',
+                zip: dbProp.zip || '',
+                price: parseFloat(dbProp.purchase_price) || 0,
+                rent: parseFloat(dbProp.monthly_rent) || 0,
+                beds: parseInt(dbProp.bedrooms) || 0,
+                baths: parseFloat(dbProp.bathrooms) || 0,
+                sqft: parseInt(dbProp.square_footage) || 0,
+                year: parseInt(dbProp.year_built) || 0,
+                downPercent: 20, // Default 20% down
+                interestRate: 7.0, // Default 7% interest
+                taxRate: 1.2, // Default 1.2% property tax
+                insuranceRate: 0.35, // Default 0.35% insurance
+                hoaMonthly: parseFloat(dbProp.hoa) || 0,
+                vacancyPercent: 5, // Default 5% vacancy
+                managementPercent: 10, // Default 10% management
+                maintenancePercent: 5, // Default 5% maintenance
+                capexPercent: 5, // Default 5% capex
+                propertyType: dbProp.property_type || '',
+                county: dbProp.county || '',
+                rentEstimate: parseFloat(dbProp.rent_estimate) || 0,
+                valueEstimate: parseFloat(dbProp.value_estimate) || 0,
+                lastUpdated: dbProp.last_updated || dbProp.updated_at,
+                dataSource: dbProp.data_source || 'manual',
+                notes: dbProp.notes || '',
+                createdAt: dbProp.created_at,
+                updatedAt: dbProp.updated_at
+            };
+        }
+
         function calculateMetrics(prop) {
+            // Ensure prop has required fields by mapping if necessary
+            if (prop.purchase_price !== undefined && prop.price === undefined) {
+                prop = mapDatabasePropertyToFrontend(prop);
+            }
+            
             // Calculate basic financials
             prop.downPayment = prop.price * (prop.downPercent / 100);
             prop.loanAmount = prop.price - prop.downPayment;
