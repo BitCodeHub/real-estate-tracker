@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Property Rendering</title>
+</head>
+<body>
+    <h1>Debug Property Rendering</h1>
+    <div id="debug-output"></div>
+    
+    <script>
+        const output = document.getElementById('debug-output');
+        
+        async function debugRender() {
+            output.innerHTML = '<h3>Starting debug...</h3>';
+            
+            // Test 1: Check if API is working
+            try {
+                const response = await fetch('/api/properties');
+                const data = await response.json();
+                output.innerHTML += `<p>API Response: ${JSON.stringify(data, null, 2)}</p>`;
+                
+                if (data.success && data.data) {
+                    output.innerHTML += `<p>Properties found: ${data.data.length}</p>`;
+                }
+            } catch (error) {
+                output.innerHTML += `<p style="color:red">API Error: ${error.message}</p>`;
+            }
+            
+            // Test 2: Check database status
+            try {
+                const healthResponse = await fetch('/health');
+                const health = await healthResponse.json();
+                output.innerHTML += `<p>Health Check: ${JSON.stringify(health, null, 2)}</p>`;
+            } catch (error) {
+                output.innerHTML += `<p style="color:red">Health Check Error: ${error.message}</p>`;
+            }
+            
+            // Test 3: Load sampleProperties.js and check
+            const script = document.createElement('script');
+            script.src = 'sampleProperties.js';
+            script.onload = () => {
+                if (typeof sampleProperties !== 'undefined') {
+                    output.innerHTML += `<p style="color:green">Sample properties loaded: ${sampleProperties.length} properties</p>`;
+                } else {
+                    output.innerHTML += `<p style="color:red">Sample properties NOT loaded</p>`;
+                }
+            };
+            document.head.appendChild(script);
+        }
+        
+        debugRender();
+    </script>
+</body>
+</html>

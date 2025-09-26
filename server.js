@@ -23,9 +23,10 @@ db.initialize()
         console.log('Database initialized successfully');
     })
     .catch(err => {
-        console.error('Failed to initialize database:', err);
+        console.error('Failed to initialize database:', err.message);
         databaseConnected = false;
         console.log('Running without database - data will not persist');
+        console.log('Properties will be stored in localStorage only');
     });
 
 // RentCast API configuration

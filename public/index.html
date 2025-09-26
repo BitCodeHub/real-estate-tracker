@@ -4857,7 +4857,7 @@
             await loadPropertiesFromDB();
             console.log('After DB load, properties.length:', properties.length);
             
-            // If no properties loaded, check localStorage
+            // If no properties loaded, check localStorage or use sample properties
             if (properties.length === 0) {
                 console.log('No properties from database, checking localStorage...');
                 const localData = localStorage.getItem('properties');
@@ -4874,6 +4874,16 @@
                     } catch (error) {
                         console.error('Error loading from localStorage:', error);
                     }
+                }
+                
+                // If still no properties, load sample properties
+                if (properties.length === 0 && typeof sampleProperties !== 'undefined') {
+                    console.log('No properties found anywhere. Loading sample properties...');
+                    properties = sampleProperties.map(prop => calculateMetrics(prop));
+                    renderTable();
+                    updatePortfolioStats();
+                    document.getElementById('propertyCount').textContent = properties.length;
+                    showSuccess('Loaded 17 sample properties for demonstration');
                 }
             }
             

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Setup Database Connection</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .step {
+            margin: 20px 0;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+        }
+        .code {
+            background: #2d2d2d;
+            color: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .success { color: #48bb78; }
+        .error { color: #e53e3e; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .highlight { background: #ffffcc; padding: 2px 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Setup Database Connection</h1>
+        
+        <div class="step">
+            <h2>Step 1: Get Your Render Database URL</h2>
+            <p>1. Go to your Render dashboard: <a href="https://dashboard.render.com" target="_blank">https://dashboard.render.com</a></p>
+            <p>2. Click on your database: <strong>real-estate-tracker-db</strong></p>
+            <p>3. Find the "Connections" section</p>
+            <p>4. Copy the <strong>External Database URL</strong> (it starts with postgresql://)</p>
+            <p>Example format:</p>
+            <div class="code">postgresql://username:password@hostname.render.com/database_name</div>
+        </div>
+        
+        <div class="step">
+            <h2>Step 2: Create Your .env File</h2>
+            <p>Paste your database URL here:</p>
+            <input type="password" id="dbUrl" placeholder="postgresql://..." />
+            <button onclick="generateEnv()">Generate .env Content</button>
+            <div id="envContent"></div>
+        </div>
+        
+        <div class="step">
+            <h2>Step 3: Test Connection</h2>
+            <button onclick="testConnection()">Test Database Connection</button>
+            <div id="testResult"></div>
+        </div>
+        
+        <div class="step">
+            <h2>Step 4: Quick Fix - Load Sample Properties</h2>
+            <p>If you want to quickly see the app working with sample data:</p>
+            <button onclick="loadSampleData()">Load 17 Sample Properties</button>
+            <div id="sampleResult"></div>
+        </div>
+    </div>
+    
+    <script src="sampleProperties.js"></script>
+    <script>
+        function generateEnv() {
+            const dbUrl = document.getElementById('dbUrl').value;
+            const envDiv = document.getElementById('envContent');
+            
+            if (!dbUrl) {
+                envDiv.innerHTML = '<p class="error">Please enter your database URL</p>';
+                return;
+            }
+            
+            const envContent = `# Server Configuration
+PORT=3000
+NODE_ENV=development
+
+# Database Configuration  
+DATABASE_URL=${dbUrl}
+
+# RentCast API (optional)
+RENTCAST_API_KEY=your_rentcast_api_key_here`;
+            
+            envDiv.innerHTML = `
+                <p>Copy this content to a file named <span class="highlight">.env</span> in your project root:</p>
+                <div class="code">${envContent.replace(/\n/g, '<br>')}</div>
+                <p class="success">✓ .env content generated!</p>
+            `;
+        }
+        
+        async function testConnection() {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = '<p>Testing connection...</p>';
+            
+            try {
+                // Test health endpoint
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (data.database === 'connected') {
+                    resultDiv.innerHTML = `
+                        <p class="success">✓ Database connected successfully!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">✗ Database not connected</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <p>Make sure you:</p>
+                        <ol>
+                            <li>Created the .env file with your DATABASE_URL</li>
+                            <li>Restarted the server (npm start)</li>
+                            <li>Your Render database is active</li>
+                        </ol>
+                    `;
+                }
+                
+                // Test properties endpoint
+                const propResponse = await fetch('/api/properties');
+                const propData = await propResponse.json();
+                resultDiv.innerHTML += `<p>Properties API: ${propData.success ? '✓ Working' : '✗ Failed'}</p>`;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+        
+        function loadSampleData() {
+            const resultDiv = document.getElementById('sampleResult');
+            
+            if (typeof sampleProperties !== 'undefined') {
+                // Save to localStorage
+                localStorage.setItem('properties', JSON.stringify(sampleProperties));
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✓ Loaded ${sampleProperties.length} sample properties!</p>
+                    <p>Redirecting to main app...</p>
+                `;
+                
+                // Redirect after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                resultDiv.innerHTML = '<p class="error">Sample properties not found!</p>';
+            }
+        }
+        
+        // Auto-test on load
+        window.onload = () => {
+            testConnection();
+        };
+    </script>
+</body>
+</html>

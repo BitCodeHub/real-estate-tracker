@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fix Property Display</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { margin: 10px; padding: 10px 20px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f0f0f0; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Fix Property Display Issue</h1>
+    
+    <div id="status"></div>
+    
+    <button onclick="checkDatabase()">1. Check Database Connection</button>
+    <button onclick="loadSampleProperties()">2. Force Load Sample Properties</button>
+    <button onclick="saveToLocalStorage()">3. Save to LocalStorage</button>
+    <button onclick="testAddProperty()">4. Test Add Property</button>
+    <button onclick="clearAndReload()">5. Clear and Reload</button>
+    
+    <h2>Debug Output:</h2>
+    <pre id="output"></pre>
+    
+    <script src="sampleProperties.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+        
+        function log(msg) {
+            output.textContent += msg + '\n';
+            console.log(msg);
+        }
+        
+        async function checkDatabase() {
+            log('\n=== Checking Database ===');
+            try {
+                // Check health
+                const healthResp = await fetch('/health');
+                const health = await healthResp.json();
+                log('Health: ' + JSON.stringify(health, null, 2));
+                
+                // Check properties endpoint
+                const propResp = await fetch('/api/properties');
+                const propData = await propResp.json();
+                log('Properties Response: ' + JSON.stringify(propData, null, 2));
+                
+                if (propData.success && propData.data) {
+                    log(`Found ${propData.data.length} properties in database`);
+                }
+                
+                status.innerHTML = '<div class="success">Database check complete</div>';
+            } catch (error) {
+                log('Error: ' + error.message);
+                status.innerHTML = '<div class="error">Database error: ' + error.message + '</div>';
+            }
+        }
+        
+        function loadSampleProperties() {
+            log('\n=== Loading Sample Properties ===');
+            if (typeof sampleProperties !== 'undefined') {
+                log(`Found ${sampleProperties.length} sample properties`);
+                localStorage.setItem('properties', JSON.stringify(sampleProperties));
+                log('Saved to localStorage');
+                status.innerHTML = '<div class="success">Sample properties loaded and saved!</div>';
+            } else {
+                log('ERROR: sampleProperties not defined!');
+                status.innerHTML = '<div class="error">Sample properties not found!</div>';
+            }
+        }
+        
+        function saveToLocalStorage() {
+            log('\n=== Saving to LocalStorage ===');
+            const testProperty = {
+                address: "123 Test St",
+                city: "Las Vegas",
+                state: "NV",
+                zip: "89101",
+                price: 400000,
+                rent: 2500,
+                downPayment: 80000,
+                loanAmount: 320000,
+                interestRate: 7.0,
+                loanTerm: 30,
+                propertyTaxes: 4800,
+                insurance: 1400,
+                hoa: 100,
+                maintenance: 200,
+                vacancy: 125,
+                management: 250,
+                beds: 3,
+                baths: 2,
+                sqft: 1500,
+                year: 2000
+            };
+            
+            const existing = JSON.parse(localStorage.getItem('properties') || '[]');
+            existing.push(testProperty);
+            localStorage.setItem('properties', JSON.stringify(existing));
+            log('Added test property to localStorage');
+            log(`Total properties in localStorage: ${existing.length}`);
+            status.innerHTML = '<div class="success">Test property added!</div>';
+        }
+        
+        async function testAddProperty() {
+            log('\n=== Testing Add Property ===');
+            const testProperty = {
+                address: "456 API Test Ave",
+                city: "Las Vegas", 
+                state: "NV",
+                zip_code: "89102",
+                bedrooms: 4,
+                bathrooms: 2.5,
+                square_feet: 2000,
+                year_built: 2005,
+                purchase_price: 450000,
+                monthly_rent: 2800,
+                down_payment: 90000,
+                loan_amount: 360000,
+                interest_rate: 7.0,
+                loan_term: 30,
+                property_taxes: 5400,
+                insurance: 1600,
+                hoa_fees: 150,
+                maintenance_costs: 300,
+                vacancy_rate: 150,
+                management_fees: 280
+            };
+            
+            try {
+                const response = await fetch('/api/properties', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testProperty)
+                });
+                
+                const result = await response.json();
+                log('Add Property Response: ' + JSON.stringify(result, null, 2));
+                
+                if (result.success) {
+                    status.innerHTML = '<div class="success">Property added successfully!</div>';
+                } else {
+                    status.innerHTML = '<div class="error">Failed to add property: ' + (result.error || 'Unknown error') + '</div>';
+                }
+            } catch (error) {
+                log('Error: ' + error.message);
+                status.innerHTML = '<div class="error">Error adding property: ' + error.message + '</div>';
+            }
+        }
+        
+        function clearAndReload() {
+            if (confirm('This will clear localStorage and reload. Continue?')) {
+                localStorage.removeItem('properties');
+                sessionStorage.setItem('forceLoadSampleProperties', 'true');
+                window.location.href = '/';
+            }
+        }
+        
+        // Initial check
+        checkDatabase();
+    </script>
+</body>
+</html>

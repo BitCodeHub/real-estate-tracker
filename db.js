@@ -235,6 +235,17 @@ const db = {
         }
     },
 
+    // Test connection
+    async testConnection() {
+        try {
+            const result = await pool.query('SELECT 1');
+            return true;
+        } catch (error) {
+            console.error('Database connection test failed:', error.message);
+            return false;
+        }
+    },
+
     // Initialize database on startup
     initialize: initializeDatabase,
 
