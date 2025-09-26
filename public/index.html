@@ -4658,6 +4658,36 @@
             }
         }
 
+        // Set up event delegation for table clicks (only once)
+        function setupTableEventDelegation() {
+            const tbody = document.getElementById('propertyTableBody');
+            if (!tbody || tbody.hasAttribute('data-delegation-setup')) return;
+            
+            tbody.setAttribute('data-delegation-setup', 'true');
+            
+            // Handle clicks on the table body
+            tbody.addEventListener('click', function(e) {
+                const target = e.target;
+                
+                // Check if clicked on address span
+                if (target.hasAttribute('data-action') && target.getAttribute('data-action') === 'show-property') {
+                    e.preventDefault();
+                    const index = parseInt(target.getAttribute('data-index'));
+                    console.log('Property address clicked, index:', index);
+                    showPropertyDetail(index);
+                }
+                
+                // Check if clicked on refresh icon
+                if (target.hasAttribute('data-action') && target.getAttribute('data-action') === 'refresh-property') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const index = parseInt(target.getAttribute('data-index'));
+                    console.log('Refresh clicked, index:', index);
+                    refreshSingleProperty(index);
+                }
+            });
+        }
+        
         // Render table with all properties
         function renderTable() {
             console.log('renderTable called with', properties.length, 'properties');
@@ -4674,6 +4704,9 @@
                 }, 100);
                 return;
             }
+            
+            // Set up event delegation if not already done
+            setupTableEventDelegation();
             
             // Clear existing content
             tbody.innerHTML = '';
@@ -4703,13 +4736,16 @@
                 rowHTML += `
                     <td>
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <span onclick="showPropertyDetail(${index})" 
+                            <span data-action="show-property" 
+                                  data-index="${index}"
                                   class="${prop.isSold ? 'address-sold' : ''}"
                                   style="cursor: pointer; ${prop.isSold ? '' : 'color: #667eea; text-decoration: underline;'}"
                                   title="${prop.isSold ? 'Property SOLD - Click for details' : 'Click to view property details'}">${prop.address}</span>
                             ${prop.isSold ? '<span class="sold-badge">SOLD</span>' : ''}
                             ${prop.realTimeData ? '<span class="real-time-badge" style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">LIVE</span>' : ''}
-                            <span class="refresh-icon" onclick="refreshSingleProperty(${index})" 
+                            <span class="refresh-icon" 
+                                  data-action="refresh-property" 
+                                  data-index="${index}"
                                   style="cursor: pointer; font-size: 14px; opacity: 0.7; transition: opacity 0.2s;" 
                                   title="Refresh real-time data for this property">🔄</span>
                         </div>
@@ -4775,27 +4811,6 @@
                 row.innerHTML = rowHTML;
                 
                 tbody.appendChild(row);
-                
-                // Find and attach click handlers to the address span
-                const addressSpan = row.querySelector('span[onclick*="showPropertyDetail"]');
-                if (addressSpan) {
-                    // Remove the onclick attribute and add event listener
-                    addressSpan.removeAttribute('onclick');
-                    addressSpan.addEventListener('click', function() {
-                        console.log('Address clicked for property index:', index);
-                        showPropertyDetail(index);
-                    });
-                }
-                
-                // Also attach handler to refresh icon
-                const refreshIcon = row.querySelector('span[onclick*="refreshSingleProperty"]');
-                if (refreshIcon) {
-                    refreshIcon.removeAttribute('onclick');
-                    refreshIcon.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        refreshSingleProperty(index);
-                    });
-                }
                 } catch (error) {
                     console.error('Error rendering property at index', index, ':', error);
                     console.error('Property data:', prop);
