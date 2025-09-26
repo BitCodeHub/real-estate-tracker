@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Property Click Handler</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: left; 
+        }
+        th { 
+            background: #667eea; 
+            color: white; 
+        }
+        .clickable-address {
+            color: #667eea;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .clickable-address:hover {
+            color: #5a67d8;
+            text-decoration: none;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Property Click Handler</h1>
+        
+        <div id="status"></div>
+        
+        <button onclick="loadProperties()">Load Properties</button>
+        <button onclick="testClickHandler()">Test Click Handler</button>
+        <button onclick="window.location.href='/'">Back to Main App</button>
+        
+        <div id="properties"></div>
+    </div>
+    
+    <div id="propertyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Property Details</h2>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        let properties = [];
+        const status = document.getElementById('status');
+        
+        async function loadProperties() {
+            try {
+                status.innerHTML = '<div class="success">Loading properties...</div>';
+                const response = await fetch('/api/properties');
+                const data = await response.json();
+                
+                properties = data.data;
+                
+                let html = '<table>';
+                html += '<tr><th>Address</th><th>City</th><th>State</th><th>Price</th><th>Test Click</th></tr>';
+                
+                properties.forEach((prop, index) => {
+                    html += `<tr>
+                        <td>
+                            <span class="clickable-address" 
+                                  onclick="showPropertyDetail(${index})"
+                                  title="Click to view details">
+                                ${prop.address}
+                            </span>
+                        </td>
+                        <td>${prop.city || ''}</td>
+                        <td>${prop.state || ''}</td>
+                        <td>$${(prop.purchase_price || 0).toLocaleString()}</td>
+                        <td>
+                            <button onclick="directTest(${index})">Test Direct</button>
+                            <button onclick="showPropertyDetail(${index})">Test Function</button>
+                        </td>
+                    </tr>`;
+                });
+                
+                html += '</table>';
+                document.getElementById('properties').innerHTML = html;
+                
+                status.innerHTML = `<div class="success">Loaded ${properties.length} properties. Click on any address to test.</div>`;
+                
+            } catch (error) {
+                status.innerHTML = `<div class="error">Error loading properties: ${error.message}</div>`;
+            }
+        }
+        
+        // Define the showPropertyDetail function
+        function showPropertyDetail(index) {
+            console.log('showPropertyDetail called with index:', index);
+            
+            if (!properties[index]) {
+                alert('Property not found at index ' + index);
+                return;
+            }
+            
+            const prop = properties[index];
+            
+            document.getElementById('modalTitle').textContent = `Property Details - ${prop.address}`;
+            document.getElementById('modalBody').innerHTML = `
+                <div>
+                    <p><strong>Address:</strong> ${prop.address}</p>
+                    <p><strong>City:</strong> ${prop.city || 'N/A'}</p>
+                    <p><strong>State:</strong> ${prop.state || 'N/A'}</p>
+                    <p><strong>ZIP:</strong> ${prop.zip || 'N/A'}</p>
+                    <p><strong>Price:</strong> $${(prop.purchase_price || 0).toLocaleString()}</p>
+                    <p><strong>Rent:</strong> $${(prop.monthly_rent || 0).toLocaleString()}</p>
+                    <p><strong>Beds:</strong> ${prop.bedrooms || 'N/A'}</p>
+                    <p><strong>Baths:</strong> ${prop.bathrooms || 'N/A'}</p>
+                    <hr>
+                    <p style="color: green;">✓ Click handler is working!</p>
+                </div>
+            `;
+            
+            document.getElementById('propertyModal').style.display = 'block';
+            status.innerHTML = '<div class="success">Property modal opened successfully!</div>';
+        }
+        
+        function directTest(index) {
+            alert('Direct test clicked for property at index ' + index);
+            showPropertyDetail(index);
+        }
+        
+        function testClickHandler() {
+            // Check if function exists
+            if (typeof showPropertyDetail === 'function') {
+                status.innerHTML = '<div class="success">✓ showPropertyDetail function exists</div>';
+                
+                // Try calling it with index 0
+                if (properties.length > 0) {
+                    showPropertyDetail(0);
+                } else {
+                    status.innerHTML += '<div class="error">No properties loaded. Load properties first.</div>';
+                }
+            } else {
+                status.innerHTML = '<div class="error">✗ showPropertyDetail function NOT found!</div>';
+            }
+            
+            // Check if properties exist
+            status.innerHTML += `<div>Properties loaded: ${properties.length}</div>`;
+        }
+        
+        function closeModal() {
+            document.getElementById('propertyModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('propertyModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Load properties on page load
+        window.onload = loadProperties;
+    </script>
+</body>
+</html>

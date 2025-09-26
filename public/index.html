@@ -1836,10 +1836,37 @@
         // Show property detail modal
         function showPropertyDetail(index) {
             console.log('showPropertyDetail called for property index:', index);
+            
+            // Ensure properties exist
+            if (!properties || properties.length === 0) {
+                console.error('No properties loaded');
+                alert('No properties loaded. Please refresh the page.');
+                return;
+            }
+            
+            // Ensure valid index
+            if (index < 0 || index >= properties.length) {
+                console.error('Invalid property index:', index);
+                alert('Invalid property index');
+                return;
+            }
+            
             const prop = properties[index];
             const modal = document.getElementById('propertyModal');
             
-            document.getElementById('modalTitle').innerHTML = `📍 ${prop.address}, ${prop.city}, ${prop.state} - Property ${index + 1} of ${properties.length}${prop.isSold ? ' <span class="sold-badge">SOLD</span>' : ''}${prop.realTimeData ? ' <span class="real-time-badge">LIVE DATA</span>' : ''}`;
+            if (!modal) {
+                console.error('Property modal element not found!');
+                alert('Error: Property modal not found. Please refresh the page.');
+                return;
+            }
+            
+            const modalTitle = document.getElementById('modalTitle');
+            if (!modalTitle) {
+                console.error('Modal title element not found!');
+                return;
+            }
+            
+            modalTitle.innerHTML = `📍 ${prop.address}, ${prop.city}, ${prop.state} - Property ${index + 1} of ${properties.length}${prop.isSold ? ' <span class="sold-badge">SOLD</span>' : ''}${prop.realTimeData ? ' <span class="real-time-badge">LIVE DATA</span>' : ''}`;
             
             // Generate AI analysis
             let aiAnalysis = '';
@@ -2093,8 +2120,19 @@
                 </div>
             `;
             
-            document.getElementById('modalBody').innerHTML = modalContent;
+            const modalBody = document.getElementById('modalBody');
+            if (!modalBody) {
+                console.error('Modal body element not found!');
+                return;
+            }
+            
+            modalBody.innerHTML = modalContent;
             modal.style.display = 'block';
+            
+            // Debug: Check if modal is visible
+            console.log('Modal display set to block');
+            console.log('Modal computed display:', window.getComputedStyle(modal).display);
+            console.log('Modal visibility:', window.getComputedStyle(modal).visibility);
             
             // Debug: Check if refresh button is in the modal
             console.log('Modal opened. Checking for refresh button...');
@@ -2104,6 +2142,9 @@
                 console.error('Refresh button HTML not found in modal content!');
             }
         }
+        
+        // Ensure showPropertyDetail is available globally
+        window.showPropertyDetail = showPropertyDetail;
 
         // Update value from modal
         async function updateModalValue(index, field, element) {
@@ -5524,6 +5565,28 @@
             
             return properties;
         };
+        
+        // Expose functions globally for onclick handlers
+        window.showPropertyDetail = showPropertyDetail;
+        window.closeModal = closeModal;
+        window.refreshSingleProperty = refreshSingleProperty;
+        window.deleteProperty = deleteProperty;
+        window.updateModalValue = updateModalValue;
+        window.runPortfolioAnalysis = runPortfolioAnalysis;
+        window.closePortfolioAnalysis = closePortfolioAnalysis;
+        window.showPropertyMetrics = showPropertyMetrics;
+        window.closePropertyMetrics = closePropertyMetrics;
+        window.openAddPropertyModal = openAddPropertyModal;
+        window.closeAddPropertyModal = closeAddPropertyModal;
+        window.analyzeNewProperty = analyzeNewProperty;
+        window.addPropertyFromAnalysis = addPropertyFromAnalysis;
+        window.exportData = exportData;
+        window.refreshAllProperties = refreshAllProperties;
+        window.saveProperty = saveProperty;
+        window.updateProperty = updateProperty;
+        window.forceLoadFromLocalStorage = forceLoadFromLocalStorage;
+        
+        console.log('All functions exposed globally');
     </script>
     <script src="sampleProperties.js"></script>
 </body>
