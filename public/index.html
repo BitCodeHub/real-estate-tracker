@@ -1381,14 +1381,43 @@
             }
         }
         
+        // Map frontend field names to database field names
+        function mapFrontendFieldsToDatabase(updates) {
+            const fieldMap = {
+                'price': 'purchase_price',
+                'rent': 'monthly_rent',
+                'beds': 'bedrooms',
+                'baths': 'bathrooms',
+                'sqft': 'square_footage',
+                'year': 'year_built',
+                'taxRate': 'property_tax',
+                'insuranceRate': 'insurance',
+                'hoaMonthly': 'hoa',
+                'managementPercent': 'management_fees',
+                'maintenancePercent': 'repairs',
+                'vacancyPercent': 'vacancy',
+                'capexPercent': 'capex'
+            };
+            
+            const mappedUpdates = {};
+            Object.keys(updates).forEach(key => {
+                const dbField = fieldMap[key] || key;
+                mappedUpdates[dbField] = updates[key];
+            });
+            return mappedUpdates;
+        }
+
         async function updatePropertyInDB(id, updates) {
             try {
+                // Map frontend fields to database fields
+                const mappedUpdates = mapFrontendFieldsToDatabase(updates);
+                
                 const response = await fetch(`${API_BASE_URL}/api/properties/${id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(updates)
+                    body: JSON.stringify(mappedUpdates)
                 });
                 if (!response.ok) {
                     throw new Error(`Failed to update property: ${response.statusText}`);

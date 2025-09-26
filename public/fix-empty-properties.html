@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fix Empty Properties</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #667eea; color: white; }
+        input { width: 100%; padding: 5px; border: 1px solid #ddd; }
+        button { background: #667eea; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #5a67d8; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { background: #e3f2fd; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fix Empty Properties</h1>
+        <div class="info">
+            <p>This page helps you populate properties that have missing financial data. Edit the values below and click "Save" to update each property.</p>
+        </div>
+        
+        <button onclick="loadProperties()">Refresh Properties</button>
+        <button onclick="window.location.href='/'">Back to Main App</button>
+        
+        <div id="status"></div>
+        <div id="properties"></div>
+    </div>
+    
+    <script>
+        let properties = [];
+        
+        async function loadProperties() {
+            const status = document.getElementById('status');
+            const propertiesDiv = document.getElementById('properties');
+            
+            try {
+                status.innerHTML = '<p>Loading properties...</p>';
+                const response = await fetch('/api/properties');
+                const data = await response.json();
+                
+                properties = data.data;
+                
+                let html = '<table>';
+                html += '<tr><th>ID</th><th>Address</th><th>Price</th><th>Rent</th><th>Beds</th><th>Baths</th><th>Sqft</th><th>Year</th><th>Action</th></tr>';
+                
+                properties.forEach(prop => {
+                    const needsUpdate = !prop.purchase_price || parseFloat(prop.purchase_price) === 0;
+                    const rowStyle = needsUpdate ? 'style="background: #fffbeb;"' : '';
+                    
+                    html += `<tr ${rowStyle}>
+                        <td>${prop.id}</td>
+                        <td>${prop.address}</td>
+                        <td><input type="number" id="price_${prop.id}" value="${prop.purchase_price || 0}" /></td>
+                        <td><input type="number" id="rent_${prop.id}" value="${prop.monthly_rent || 0}" /></td>
+                        <td><input type="number" id="beds_${prop.id}" value="${prop.bedrooms || 3}" /></td>
+                        <td><input type="number" step="0.5" id="baths_${prop.id}" value="${prop.bathrooms || 2}" /></td>
+                        <td><input type="number" id="sqft_${prop.id}" value="${prop.square_footage || 1500}" /></td>
+                        <td><input type="number" id="year_${prop.id}" value="${prop.year_built || 2000}" /></td>
+                        <td><button onclick="saveProperty(${prop.id})">Save</button></td>
+                    </tr>`;
+                });
+                
+                html += '</table>';
+                propertiesDiv.innerHTML = html;
+                status.innerHTML = `<p class="success">Loaded ${properties.length} properties</p>`;
+                
+            } catch (error) {
+                status.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function saveProperty(id) {
+            const status = document.getElementById('status');
+            
+            try {
+                const updates = {
+                    purchase_price: parseFloat(document.getElementById(`price_${id}`).value) || 0,
+                    monthly_rent: parseFloat(document.getElementById(`rent_${id}`).value) || 0,
+                    bedrooms: parseInt(document.getElementById(`beds_${id}`).value) || 0,
+                    bathrooms: parseFloat(document.getElementById(`baths_${id}`).value) || 0,
+                    square_footage: parseInt(document.getElementById(`sqft_${id}`).value) || 0,
+                    year_built: parseInt(document.getElementById(`year_${id}`).value) || 0
+                };
+                
+                const response = await fetch(`/api/properties/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                
+                if (!response.ok) throw new Error('Failed to update');
+                
+                status.innerHTML = `<p class="success">✓ Property ${id} updated successfully!</p>`;
+                
+                // Reload after a short delay
+                setTimeout(loadProperties, 1000);
+                
+            } catch (error) {
+                status.innerHTML = `<p class="error">Error updating property ${id}: ${error.message}</p>`;
+            }
+        }
+        
+        // Load on page load
+        window.onload = loadProperties;
+    </script>
+</body>
+</html>
