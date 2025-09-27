@@ -1624,21 +1624,59 @@
             // Merge properties, preferring server data for duplicates
             const propertyMap = new Map();
             
-            // Add local properties first
-            localProperties.forEach(prop => {
+            // Add server properties first
+            serverProperties.forEach(prop => {
                 propertyMap.set(prop.address, prop);
             });
             
-            // Override with server properties (they're more authoritative)
-            serverProperties.forEach(prop => {
-                propertyMap.set(prop.address, prop);
+            // Merge with local properties, preserving newer RentCast data
+            localProperties.forEach(localProp => {
+                const existingProp = propertyMap.get(localProp.address);
+                
+                if (existingProp) {
+                    // If local property has more recent RentCast data, preserve it
+                    const existingLastUpdated = existingProp.lastUpdated ? new Date(existingProp.lastUpdated) : new Date(0);
+                    const localLastUpdated = localProp.lastUpdated ? new Date(localProp.lastUpdated) : new Date(0);
+                    
+                    if (localProp.realTimeData && localLastUpdated > existingLastUpdated) {
+                        console.log(`Preserving newer RentCast data for ${localProp.address} from localStorage`);
+                        console.log('Server version lastUpdated:', existingProp.lastUpdated);
+                        console.log('Local version lastUpdated:', localProp.lastUpdated);
+                        // Merge server data with local RentCast data
+                        propertyMap.set(localProp.address, {
+                            ...existingProp,
+                            ...localProp,
+                            id: existingProp.id // Keep server ID
+                        });
+                    } else if (!existingProp.realTimeData && localProp.realTimeData) {
+                        // Server doesn't have RentCast data but local does
+                        console.log(`Server missing RentCast data for ${localProp.address}, using local version`);
+                        propertyMap.set(localProp.address, {
+                            ...existingProp,
+                            ...localProp,
+                            id: existingProp.id // Keep server ID
+                        });
+                    }
+                } else {
+                    // Property only exists locally
+                    console.log(`Property ${localProp.address} only exists locally`);
+                    propertyMap.set(localProp.address, localProp);
+                }
             });
             
             // Convert back to array
             properties = Array.from(propertyMap.values());
             
+            console.log('Final merged properties:', properties.length);
+            properties.forEach((prop, index) => {
+                if (prop.realTimeData) {
+                    console.log(`Property ${index}: ${prop.address} has RentCast data, lastUpdated: ${prop.lastUpdated}`);
+                }
+            });
+            
             // Save merged data back to localStorage
             localStorage.setItem('properties', JSON.stringify(properties));
+            console.log('Saved merged properties to localStorage');
             
             updateDisplay();
             updateStats();
@@ -1667,10 +1705,21 @@
                         const data = await response.json();
                         
                         if (data.success && data.data) {
-                            // Update the property with server response
-                            properties[propertyIndex] = { ...property, ...data.data };
+                            // Update the property with server response, but preserve RentCast data if it's newer
+                            const serverData = data.data;
+                            const localLastUpdated = property.lastUpdated ? new Date(property.lastUpdated) : new Date(0);
+                            const serverLastUpdated = serverData.lastUpdated ? new Date(serverData.lastUpdated) : new Date(0);
+                            
+                            if (property.realTimeData && localLastUpdated >= serverLastUpdated) {
+                                console.log('Preserving local RentCast data as it\'s newer or same');
+                                properties[propertyIndex] = { ...serverData, ...property };
+                            } else {
+                                console.log('Using server data');
+                                properties[propertyIndex] = { ...property, ...serverData };
+                            }
+                            
                             localStorage.setItem('properties', JSON.stringify(properties));
-                            console.log('Property updated on server');
+                            console.log('Property updated on server and localStorage');
                         }
                     } catch (error) {
                         console.error('Error updating property on server:', error);
@@ -1978,6 +2027,7 @@
                     const data = rentCastResult.data;
                     
                     console.log(`✅ RentCast data received for ${fullAddress}:`, data);
+                    console.log('Current property before update:', properties[index]);
                     
                     // Update property with comprehensive real-time data
                     properties[index] = {
@@ -2035,8 +2085,15 @@
                         }
                     };
                     
+                    console.log('Updated property with RentCast data:', properties[index]);
+                    
                     // Save to localStorage and server with specific property index
                     await saveProperties(index);
+                    console.log('Property saved to localStorage and server');
+                    
+                    // Verify data was saved
+                    const savedProperties = JSON.parse(localStorage.getItem('properties') || '[]');
+                    console.log('Verified saved property:', savedProperties[index]);
                     
                     // Update display
                     updateDisplay();

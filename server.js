@@ -261,6 +261,7 @@ app.get('/api/properties', async (req, res) => {
             if (prop.rentcast_data && typeof prop.rentcast_data === 'object') {
                 // Merge the JSONB data back into the main object
                 const { rentcast_data, ...mainProps } = prop;
+                console.log(`Expanding RentCast data for ${mainProps.address}:`, Object.keys(rentcast_data));
                 return {
                     ...mainProps,
                     ...rentcast_data
@@ -357,6 +358,7 @@ app.post('/api/properties', async (req, res) => {
 // Update property
 app.put('/api/properties/:id', async (req, res) => {
     try {
+        console.log(`Updating property ${req.params.id}, has RentCast data: ${req.body.realTimeData}`);
         const property = await db.updateProperty(req.params.id, req.body);
         if (!property) {
             return res.status(404).json({ success: false, error: 'Property not found' });
@@ -365,6 +367,7 @@ app.put('/api/properties/:id', async (req, res) => {
         // Merge rentcast_data back into response
         if (property.rentcast_data && typeof property.rentcast_data === 'object') {
             const { rentcast_data, ...mainProps } = property;
+            console.log('Returning merged property with RentCast data');
             res.json({ success: true, data: { ...mainProps, ...rentcast_data } });
         } else {
             res.json({ success: true, data: property });

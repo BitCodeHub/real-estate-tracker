@@ -122,6 +122,20 @@ const db = {
     // Create new property
     async createProperty(propertyData) {
         try {
+            // Handle field name variations
+            const normalizedData = {
+                ...propertyData,
+                bedrooms: propertyData.bedrooms || propertyData.beds,
+                bathrooms: propertyData.bathrooms || propertyData.baths,
+                squareFootage: propertyData.squareFootage || propertyData.square_footage || propertyData.sqft,
+                yearBuilt: propertyData.yearBuilt || propertyData.year_built,
+                monthlyRent: propertyData.monthlyRent || propertyData.monthly_rent,
+                rentEstimate: propertyData.rentEstimate || propertyData.rent_estimate,
+                valueEstimate: propertyData.valueEstimate || propertyData.value_estimate || propertyData.currentValue,
+                lastUpdated: propertyData.lastUpdated || propertyData.last_updated,
+                dataSource: propertyData.dataSource || propertyData.data_source
+            };
+            
             const {
                 address, city, state, zip, purchasePrice, monthlyRent,
                 hoa, propertyTax, insurance, managementFees, repairs,
@@ -131,7 +145,7 @@ const db = {
                 rentEstimate, valueEstimate, status, notes, lastUpdated, dataSource,
                 // Extract all other data for JSONB storage
                 ...otherData
-            } = propertyData;
+            } = normalizedData;
 
             // Prepare comprehensive RentCast data for JSONB storage
             const rentcastData = {
@@ -159,14 +173,14 @@ const db = {
                 marketData: otherData.marketData,
                 // Any other real-time data
                 realTimeData: otherData.realTimeData,
-                lastUpdated: lastUpdated || new Date().toISOString(),
-                dataSource: dataSource || 'manual',
                 // Store any additional fields not explicitly defined in schema
                 ...Object.keys(otherData).reduce((acc, key) => {
                     if (!['stories', 'garage', 'pool', 'fireplace', 'basement', 'airConditioning', 
                           'heating', 'foundation', 'roofType', 'exteriorWall', 'architecturalStyle',
                           'ownerName', 'ownerType', 'ownerOccupied', 'taxAssessedValue', 
-                          'taxAssessedYear', 'marketData', 'realTimeData'].includes(key)) {
+                          'taxAssessedYear', 'marketData', 'realTimeData', 'beds', 'baths', 'sqft',
+                          'yearBuilt', 'year_built', 'currentValue', 'lastUpdated', 'last_updated',
+                          'dataSource', 'data_source'].includes(key)) {
                         acc[key] = otherData[key];
                     }
                     return acc;
@@ -213,7 +227,7 @@ const db = {
             const values = [];
             let paramCount = 1;
             
-            // Separate RentCast-specific data
+            // Separate RentCast-specific data (only fields that don't have dedicated columns)
             const rentcastFields = ['stories', 'garage', 'pool', 'fireplace', 'basement', 
                                   'airConditioning', 'heating', 'foundation', 'roofType', 
                                   'exteriorWall', 'architecturalStyle', 'ownerName', 'ownerType', 
@@ -223,12 +237,26 @@ const db = {
             const rentcastData = {};
             const regularFields = {};
 
+            // Field mapping for regular columns
+            const fieldMapping = {
+                'beds': 'bedrooms',
+                'baths': 'bathrooms',
+                'sqft': 'square_footage',
+                'yearBuilt': 'year_built',
+                'currentValue': 'value_estimate',
+                'monthlyRent': 'monthly_rent',
+                'lastUpdated': 'last_updated',
+                'dataSource': 'data_source'
+            };
+            
             // Separate fields
             Object.keys(propertyData).forEach(key => {
                 if (rentcastFields.includes(key)) {
                     rentcastData[key] = propertyData[key];
                 } else if (!['id', 'created_at', 'updated_at', 'createdAt', 'updatedAt'].includes(key)) {
-                    regularFields[key] = propertyData[key];
+                    // Map certain fields to their database column names
+                    const mappedKey = fieldMapping[key] || key;
+                    regularFields[mappedKey] = propertyData[key];
                 }
             });
 
@@ -243,6 +271,7 @@ const db = {
             
             // Add rentcast_data if there's any RentCast-specific data
             if (Object.keys(rentcastData).length > 0) {
+                console.log('Updating RentCast data:', Object.keys(rentcastData));
                 // Merge with existing rentcast_data
                 updateFields.push(`rentcast_data = 
                     CASE 
