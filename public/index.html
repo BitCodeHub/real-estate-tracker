@@ -4074,11 +4074,31 @@
             document.getElementById('analysisResults').style.display = 'none';
             
             try {
-                // Get location data
-                const locationData = await geocodeAddress(address);
+                // Fetch real property data using existing function
+                const propertyResult = await fetchRealPropertyData(address);
                 
-                // Fetch property estimates
-                const propertyDetails = await fetchPropertyDetails(locationData);
+                if (!propertyResult.success || !propertyResult.data) {
+                    throw new Error('Unable to fetch property data');
+                }
+                
+                const propertyData = propertyResult.data;
+                
+                // Extract location data from property data
+                const locationData = {
+                    city: propertyData.city,
+                    state: propertyData.state,
+                    zip: propertyData.zip,
+                    lat: propertyData.lat,
+                    lon: propertyData.lon,
+                    formattedAddress: propertyData.formattedAddress
+                };
+                
+                // Property details are already included in propertyData
+                const propertyDetails = {
+                    ...propertyData,
+                    price: propertyData.price || 500000,
+                    rentEstimate: propertyData.rentEstimate || 2500
+                };
                 
                 // Calculate financial metrics
                 const metrics = calculateFinancialMetrics(propertyDetails);
