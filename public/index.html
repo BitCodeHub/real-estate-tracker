@@ -1408,8 +1408,8 @@
                     await saveProperties();
                     updateDisplay();
                     
-                    // Show success message
-                    alert(`✅ Property data refreshed successfully!\n\n📍 Address: ${fullAddress}\n💰 Rent Estimate: $${property.rentEstimate || 'N/A'}\n🏠 Value Estimate: $${property.estimatedValue ? property.estimatedValue.toLocaleString() : 'N/A'}\n📊 Market Data: ${property.marketStats ? 'Available' : 'Not available'}`);
+                    // Success - data refreshed silently without interrupting the user
+                    console.log('✅ Property data refreshed successfully');
                     
                 } else {
                     console.warn('⚠️ No RentCast data returned:', rentcastData);
@@ -1420,12 +1420,13 @@
                         errorMessage = `API Error: ${rentcastData.error}`;
                     }
                     
-                    alert(`⚠️ Refresh completed but no new data found.\n\n📍 Address: ${fullAddress}\n❌ Issue: ${errorMessage}\n\n💡 Tip: Try verifying the address format or check if the property exists in RentCast's database.`);
+                    // Log warning without interrupting the user
+                    console.warn(`⚠️ Refresh completed but no new data found for ${fullAddress}. ${errorMessage}`);
                 }
             } catch (error) {
                 console.error('❌ Error refreshing property:', error);
-                const errorMsg = `Failed to refresh property data.\n\nError: ${error.message}\n\n📍 Property: ${property.address || 'Unknown address'}`;
-                alert(errorMsg);
+                // Only log errors to console, don't interrupt the user
+                console.error(`Failed to refresh data for ${property.address || 'Unknown address'}:`, error.message);
             } finally {
                 // Stop animation
                 const rows = document.querySelectorAll('#propertyTableBody tr');
