@@ -1150,6 +1150,18 @@
 
         // Generate property details HTML
         function generatePropertyDetailsHTML(property) {
+            // Debug log to check property data in modal
+            console.log('🏠 Property data in modal:', {
+                address: property.address,
+                beds: property.beds,
+                baths: property.baths,
+                sqft: property.sqft,
+                yearBuilt: property.yearBuilt,
+                estimatedValue: property.estimatedValue,
+                currentValue: property.currentValue,
+                realTimeData: property.realTimeData
+            });
+            
             const monthlyMortgage = calculateMortgagePayment(
                 (property.purchasePrice || 0) * 0.8,
                 0.065,
@@ -1206,10 +1218,22 @@
                             <div class="metric-label">Current Value</div>
                             <div class="metric-value">${formatCurrency(property.currentValue || property.purchasePrice || 0)}</div>
                         </div>
+                        ${property.estimatedValue ? `
+                        <div class="metric-card">
+                            <div class="metric-label">Est. Value (RentCast)</div>
+                            <div class="metric-value">${formatCurrency(property.estimatedValue)}</div>
+                        </div>
+                        ` : ''}
                         <div class="metric-card">
                             <div class="metric-label">Monthly Rent</div>
                             <div class="metric-value positive">${formatCurrency(property.monthlyRent || 0)}</div>
                         </div>
+                        ${property.rentEstimate ? `
+                        <div class="metric-card">
+                            <div class="metric-label">Rent Est. (RentCast)</div>
+                            <div class="metric-value positive">${formatCurrency(property.rentEstimate)}</div>
+                        </div>
+                        ` : ''}
                         <div class="metric-card">
                             <div class="metric-label">Monthly Cash Flow</div>
                             <div class="metric-value ${(property.monthlyCashFlow || 0) >= 0 ? 'positive' : 'negative'}">
@@ -1339,8 +1363,36 @@
                     property.realTimeData = true;
                     property.lastRentCastUpdate = new Date().toISOString();
                     
-                    // Update with fetched data
-                    Object.assign(property, rentcastData.data);
+                    // Update with fetched data - preserve our field naming convention
+                    const mappedData = {
+                        ...rentcastData.data,
+                        // Ensure we have both sets of field names for compatibility
+                        beds: rentcastData.data.beds || rentcastData.data.bedrooms,
+                        baths: rentcastData.data.baths || rentcastData.data.bathrooms,
+                        sqft: rentcastData.data.sqft || rentcastData.data.squareFootage,
+                        // Also keep the database column names
+                        bedrooms: rentcastData.data.beds || rentcastData.data.bedrooms,
+                        bathrooms: rentcastData.data.baths || rentcastData.data.bathrooms,
+                        square_footage: rentcastData.data.sqft || rentcastData.data.squareFootage,
+                        // Ensure yearBuilt is set
+                        yearBuilt: rentcastData.data.yearBuilt,
+                        year_built: rentcastData.data.yearBuilt
+                    };
+                    
+                    Object.assign(property, mappedData);
+                    
+                    // Debug log to check property data
+                    console.log('📊 Property after RentCast update:', {
+                        beds: property.beds,
+                        baths: property.baths,
+                        sqft: property.sqft,
+                        bedrooms: property.bedrooms,
+                        bathrooms: property.bathrooms,
+                        square_footage: property.square_footage,
+                        estimatedValue: property.estimatedValue,
+                        currentValue: property.currentValue,
+                        yearBuilt: property.yearBuilt
+                    });
                     
                     // Recalculate financial metrics
                     calculatePropertyMetrics(property);
@@ -1432,11 +1484,12 @@
                             sqft: property.squareFootage,
                             yearBuilt: property.yearBuilt,
                             rentEstimate: rentData?.rent || property.rentEstimate,
-                            estimatedValue: valueData?.value || property.price,
+                            estimatedValue: valueData?.price || valueData?.value || property.price,
                             marketStats: marketData || {},
                             // Add metadata
                             dataSource: 'RentCast API',
-                            fetchedAt: new Date().toISOString()
+                            fetchedAt: new Date().toISOString(),
+                            realTimeData: true
                         }
                     };
                 } else {
@@ -1450,17 +1503,18 @@
                         fetchMarketStats(address.zip)
                     ]);
                     
-                    if (rentData?.rent || valueData?.value || marketData?.zipCode) {
+                    if (rentData?.rent || valueData?.price || valueData?.value || marketData?.zipCode) {
                         console.log('✅ Found fallback data');
                         return {
                             success: true,
                             data: {
                                 address: `${address.streetAddress || address.address}, ${address.city}, ${address.state} ${address.zip}`,
                                 rentEstimate: rentData?.rent,
-                                estimatedValue: valueData?.value,
+                                estimatedValue: valueData?.price || valueData?.value,
                                 marketStats: marketData || {},
                                 dataSource: 'RentCast API (Estimates Only)',
-                                fetchedAt: new Date().toISOString()
+                                fetchedAt: new Date().toISOString(),
+                                realTimeData: true
                             }
                         };
                     }
@@ -1643,7 +1697,19 @@
             // Try to fetch additional data from RentCast
             const rentcastData = await fetchRentCastData(property);
             if (rentcastData && rentcastData.success && rentcastData.data) {
-                Object.assign(property, rentcastData.data);
+                // Merge with proper field mapping
+                const mappedData = {
+                    ...rentcastData.data,
+                    // Ensure we have both sets of field names
+                    beds: rentcastData.data.beds || rentcastData.data.bedrooms || property.beds,
+                    baths: rentcastData.data.baths || rentcastData.data.bathrooms || property.baths,
+                    sqft: rentcastData.data.sqft || rentcastData.data.squareFootage || property.sqft,
+                    // Database column names
+                    bedrooms: rentcastData.data.beds || rentcastData.data.bedrooms || property.beds,
+                    bathrooms: rentcastData.data.baths || rentcastData.data.bathrooms || property.baths,
+                    square_footage: rentcastData.data.sqft || rentcastData.data.squareFootage || property.sqft
+                };
+                Object.assign(property, mappedData);
             }
             
             // Calculate metrics
