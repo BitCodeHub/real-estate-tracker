@@ -198,9 +198,9 @@ app.get('/api/rentcast/market-stats', async (req, res) => {
 
         console.log('Fetching market stats for ZIP:', zipCode);
 
-        // RentCast API might expect 'zip' instead of 'zipCode'
+        // RentCast API expects 'zipCode' as the parameter
         const params = new URLSearchParams({ 
-            zip: zipCode, // Changed from zipCode to zip
+            zipCode: zipCode, // Must be 'zipCode' not 'zip'
             historyRange: historyRange
         });
 
