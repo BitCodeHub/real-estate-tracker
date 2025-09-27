@@ -3312,7 +3312,10 @@ Format your response in clear sections with bullet points where appropriate. Be 
             updateDisplay();
             
             // Show instructions
-            alert(`🧪 Test Property Added Successfully!\n\n📍 Address: ${testProperty.address}, ${testProperty.city}, ${testProperty.state} ${testProperty.zip}\n\n🔄 Next Steps:\n1. Look for the new property in the table below\n2. Click the refresh icon (🔄) in the Actions column\n3. Watch for RentCast data to be fetched\n4. Check browser console (F12) for detailed logs\n5. Look for the 📊 icon indicating successful data fetch\n\n💡 This address is known to work with RentCast API for testing!`);
+            // Log success message to console instead of showing alert
+            console.log(`🧪 Test Property Added Successfully!`);
+            console.log(`📍 Address: ${testProperty.address}, ${testProperty.city}, ${testProperty.state} ${testProperty.zip}`);
+            console.log(`💡 This address is known to work with RentCast API for testing!`);
         }
     </script>
 </body>
