@@ -3006,40 +3006,40 @@ Be specific and data-driven. Act as an experienced investor who has analyzed tho
                 const roi5yr = downPayment > 0 ? (totalReturn5yr / downPayment) * 100 : 0;
                 
                 // Create enhanced prompt for individual property analysis
-                const prompt = \`You are a real estate investment expert. Analyze this property and provide a comprehensive investment report.
+                const prompt = `You are a real estate investment expert. Analyze this property and provide a comprehensive investment report.
 
 PROPERTY DETAILS:
-Address: \${property.address}, \${property.city}, \${property.state} \${property.zip}
-Property Type: \${property.propertyType || 'Single Family'}
-Bedrooms: \${property.beds || property.bedrooms || 'N/A'}
-Bathrooms: \${property.baths || property.bathrooms || 'N/A'}
-Square Feet: \${property.sqft || property.squareFootage || 'N/A'}
-Year Built: \${property.yearBuilt || 'N/A'}
+Address: ${property.address}, ${property.city}, ${property.state} ${property.zip}
+Property Type: ${property.propertyType || 'Single Family'}
+Bedrooms: ${property.beds || property.bedrooms || 'N/A'}
+Bathrooms: ${property.baths || property.bathrooms || 'N/A'}
+Square Feet: ${property.sqft || property.squareFootage || 'N/A'}
+Year Built: ${property.yearBuilt || 'N/A'}
 
 FINANCIAL ANALYSIS:
-Purchase Price: $\${purchasePrice.toLocaleString()}
-Down Payment (20%): $\${downPayment.toLocaleString()}
-Monthly Rent: $\${monthlyRent.toLocaleString()}
-Rent Estimate (RentCast): $\${property.rentEstimate || 'N/A'}
-Estimated Value (RentCast): $\${property.estimatedValue ? property.estimatedValue.toLocaleString() : 'N/A'}
+Purchase Price: $${purchasePrice.toLocaleString()}
+Down Payment (20%): $${downPayment.toLocaleString()}
+Monthly Rent: $${monthlyRent.toLocaleString()}
+Rent Estimate (RentCast): $${property.rentEstimate || 'N/A'}
+Estimated Value (RentCast): $${property.estimatedValue ? property.estimatedValue.toLocaleString() : 'N/A'}
 
 CASH FLOW ANALYSIS:
-Monthly Cash Flow: $\${monthlyCashFlow.toLocaleString()}
-Annual Cash Flow: $\${annualCashFlow.toLocaleString()}
-Cash-on-Cash Return: \${cashOnCashReturn.toFixed(2)}%
-Cap Rate: \${capRate.toFixed(2)}%
-Debt Service Coverage Ratio: \${dscr.toFixed(2)}
+Monthly Cash Flow: $${monthlyCashFlow.toLocaleString()}
+Annual Cash Flow: $${annualCashFlow.toLocaleString()}
+Cash-on-Cash Return: ${cashOnCashReturn.toFixed(2)}%
+Cap Rate: ${capRate.toFixed(2)}%
+Debt Service Coverage Ratio: ${dscr.toFixed(2)}
 
 PROJECTIONS (5-Year):
-Projected Property Value: $\${projectedValue5yr.toLocaleString()}
-Projected Monthly Rent: $\${projectedRent5yr.toLocaleString()}
-Total ROI (5-Year): \${roi5yr.toFixed(1)}%
+Projected Property Value: $${projectedValue5yr.toLocaleString()}
+Projected Monthly Rent: $${projectedRent5yr.toLocaleString()}
+Total ROI (5-Year): ${roi5yr.toFixed(1)}%
 
 MARKET DATA:
-\${property.marketStats ? JSON.stringify(property.marketStats, null, 2) : 'Market data not available'}
+${property.marketStats ? JSON.stringify(property.marketStats, null, 2) : 'Market data not available'}
 
-DATA SOURCE: \${property.realTimeData ? 'Real-time RentCast API data' : 'Manual/estimated data'}
-Last Updated: \${property.lastRentCastUpdate ? new Date(property.lastRentCastUpdate).toLocaleDateString() : 'N/A'}
+DATA SOURCE: ${property.realTimeData ? 'Real-time RentCast API data' : 'Manual/estimated data'}
+Last Updated: ${property.lastRentCastUpdate ? new Date(property.lastRentCastUpdate).toLocaleDateString() : 'N/A'}
 
 Please provide a comprehensive analysis covering:
 
@@ -3052,7 +3052,7 @@ Please provide a comprehensive analysis covering:
 7. **OPTIMIZATION OPPORTUNITIES**: Ways to improve returns
 8. **RED FLAGS**: Any concerning aspects that need attention
 
-Format your response in clear sections with bullet points where appropriate. Be specific and actionable in your recommendations.\`;
+Format your response in clear sections with bullet points where appropriate. Be specific and actionable in your recommendations.`;
 
                 // Send to AI for analysis
                 const response = await fetch('/api/ai-analysis', {
@@ -3064,7 +3064,7 @@ Format your response in clear sections with bullet points where appropriate. Be 
                 });
                 
                 if (!response.ok) {
-                    throw new Error(\`AI Analysis failed: \${response.status}\`);
+                    throw new Error(`AI Analysis failed: ${response.status}`);
                 }
                 
                 const aiData = await response.json();
@@ -3080,10 +3080,10 @@ Format your response in clear sections with bullet points where appropriate. Be 
                 
             } catch (error) {
                 console.error('❌ Error generating property AI analysis:', error);
-                document.getElementById('aiAnalysisContent').innerHTML = \`
+                document.getElementById('aiAnalysisContent').innerHTML = `
                     <div style="color: var(--accent-danger); padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; border: 1px solid var(--accent-danger);">
                         <h4 style="margin-top: 0;">❌ Analysis Failed</h4>
-                        <p><strong>Error:</strong> \${error.message}</p>
+                        <p><strong>Error:</strong> ${error.message}</p>
                         
                         <p><strong>Troubleshooting:</strong></p>
                         <ul style="margin: 10px 0;">
@@ -3093,11 +3093,11 @@ Format your response in clear sections with bullet points where appropriate. Be 
                             <li>Check server console for detailed errors</li>
                         </ul>
                         
-                        <button class="btn btn-secondary" onclick="generatePropertyAIAnalysis(\${propertyIndex})" style="margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="generatePropertyAIAnalysis(${propertyIndex})" style="margin-top: 10px;">
                             <i class="fas fa-redo"></i> Retry Analysis
                         </button>
                     </div>
-                \`;
+                `;
             }
         }
 

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Real Estate App</title>
+</head>
+<body>
+    <h1>Debug Real Estate App</h1>
+    <p>Open the browser console (F12) to see the debug output</p>
+    <div id="results"></div>
+    
+    <script>
+        // Debug script to check what's happening
+        async function debugApp() {
+            const results = document.getElementById('results');
+            
+            console.log('=== Starting debug checks ===');
+            results.innerHTML += '<h3>Debug Results:</h3>';
+            
+            // Check 1: Test if JavaScript is running
+            console.log('✅ JavaScript is running');
+            results.innerHTML += '<p>✅ JavaScript is running</p>';
+            
+            // Check 2: Test API connectivity
+            try {
+                console.log('Testing API status...');
+                const statusResponse = await fetch('/api/status');
+                const statusData = await statusResponse.json();
+                console.log('API Status:', statusData);
+                results.innerHTML += `<p>API Status: ${JSON.stringify(statusData)}</p>`;
+            } catch (error) {
+                console.error('❌ API status check failed:', error);
+                results.innerHTML += `<p>❌ API status check failed: ${error.message}</p>`;
+            }
+            
+            // Check 3: Test database connectivity
+            try {
+                console.log('Testing database connection...');
+                const dbResponse = await fetch('/api/properties');
+                const dbData = await dbResponse.json();
+                console.log('Database response:', dbData);
+                results.innerHTML += `<p>Database response: ${dbData.success ? '✅ Connected' : '❌ Not connected'}</p>`;
+                if (dbData.warning) {
+                    results.innerHTML += `<p>⚠️ ${dbData.warning}</p>`;
+                }
+                if (dbData.data) {
+                    results.innerHTML += `<p>Properties count: ${dbData.data.length}</p>`;
+                }
+            } catch (error) {
+                console.error('❌ Database check failed:', error);
+                results.innerHTML += `<p>❌ Database check failed: ${error.message}</p>`;
+            }
+            
+            // Check 4: Test localStorage
+            try {
+                console.log('Testing localStorage...');
+                localStorage.setItem('test', 'value');
+                const testValue = localStorage.getItem('test');
+                localStorage.removeItem('test');
+                console.log('localStorage working:', testValue === 'value');
+                results.innerHTML += `<p>localStorage: ${testValue === 'value' ? '✅ Working' : '❌ Not working'}</p>`;
+                
+                // Check for existing properties
+                const savedProperties = localStorage.getItem('properties');
+                if (savedProperties) {
+                    const props = JSON.parse(savedProperties);
+                    console.log('Found properties in localStorage:', props.length);
+                    results.innerHTML += `<p>Found ${props.length} properties in localStorage</p>`;
+                } else {
+                    console.log('No properties found in localStorage');
+                    results.innerHTML += `<p>No properties found in localStorage</p>`;
+                }
+            } catch (error) {
+                console.error('❌ localStorage check failed:', error);
+                results.innerHTML += `<p>❌ localStorage check failed: ${error.message}</p>`;
+            }
+            
+            // Check 5: Test if main app functions exist
+            console.log('Checking if app functions exist on main page...');
+            results.innerHTML += '<h4>Function availability (need to check in main app):</h4>';
+            results.innerHTML += '<ul>';
+            
+            const functionsToCheck = [
+                'openAddPropertyModal',
+                'openAnalyzeModal',
+                'generateMarketInsights',
+                'generateAIInsights',
+                'addTestProperty',
+                'openModal',
+                'loadProperties',
+                'updateDisplay'
+            ];
+            
+            results.innerHTML += '<li>Check these functions in the main app console:</li>';
+            functionsToCheck.forEach(fn => {
+                results.innerHTML += `<li>typeof ${fn} === 'function'</li>`;
+            });
+            results.innerHTML += '</ul>';
+            
+            console.log('=== Debug checks complete ===');
+            console.log('Now go to the main app and check:');
+            console.log('1. Open browser console (F12)');
+            console.log('2. Look for any red error messages');
+            console.log('3. Type: typeof openAddPropertyModal');
+            console.log('4. Type: properties');
+            console.log('5. Click a button and see if any errors appear');
+        }
+        
+        // Run debug on load
+        window.onload = debugApp;
+    </script>
+</body>
+</html>
