@@ -687,6 +687,9 @@
                 <button class="btn btn-success" onclick="generateAIInsights()">
                     <i class="fas fa-brain"></i> AI Market Insights
                 </button>
+                <button class="btn btn-secondary" onclick="addTestProperty()" style="background: #6b7280;">
+                    <i class="fas fa-flask"></i> Add Test Property
+                </button>
             </div>
         </div>
     </div>
@@ -1051,7 +1054,13 @@
                 <td>${(property.cashOnCashReturn || 0).toFixed(1)}%</td>
                 <td class="${statusClass}">${property.status || 'Available'}</td>
                 <td onclick="event.stopPropagation()">
-                    <i class="fas fa-sync-alt icon-refresh" onclick="refreshProperty(${index})" title="Refresh"></i>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-sync-alt icon-refresh" onclick="refreshProperty(${index})" title="Refresh RentCast Data"></i>
+                        ${property.realTimeData ? 
+                            `<span style="color: #10b981; font-size: 12px;" title="RentCast data available (${property.lastRentCastUpdate ? new Date(property.lastRentCastUpdate).toLocaleDateString() : 'Unknown date'})">📊</span>` : 
+                            `<span style="color: #ef4444; font-size: 12px;" title="No RentCast data - click refresh">❌</span>`
+                        }
+                    </div>
                 </td>
             `;
             
@@ -1202,7 +1211,10 @@
         // Refresh property data
         async function refreshProperty(index) {
             const property = properties[index];
-            if (!property) return;
+            if (!property) {
+                console.error('No property found at index:', index);
+                return;
+            }
             
             try {
                 // Animate the refresh icon
@@ -1212,8 +1224,22 @@
                     refreshIcon.style.animation = 'spin 1s linear infinite';
                 }
                 
+                console.log(`🔄 Refreshing property ${index}:`, {
+                    address: property.address,
+                    city: property.city,
+                    state: property.state,
+                    zip: property.zip
+                });
+                
+                // Validate address components
+                if (!property.address || !property.city || !property.state) {
+                    throw new Error(`Incomplete address for property: ${property.address || 'No address'}`);
+                }
+                
                 // Fetch updated data from RentCast
                 const fullAddress = `${property.address}, ${property.city}, ${property.state} ${property.zip}`;
+                console.log('📍 Full address for API call:', fullAddress);
+                
                 const rentcastData = await fetchRentCastData({
                     streetAddress: property.address,
                     city: property.city,
@@ -1221,20 +1247,54 @@
                     zip: property.zip
                 });
                 
+                console.log('📊 RentCast API response:', rentcastData);
+                
                 if (rentcastData && rentcastData.success && rentcastData.data) {
-                    // Update property with new data
+                    console.log('✅ RentCast data found, updating property...');
+                    
+                    // Store original values for comparison
+                    const originalRent = property.monthlyRent;
+                    const originalValue = property.currentValue;
+                    
+                    // Update property with new data - mark as real-time data
+                    property.realTimeData = true;
+                    property.lastRentCastUpdate = new Date().toISOString();
+                    
+                    // Update with fetched data
                     Object.assign(property, rentcastData.data);
                     
                     // Recalculate financial metrics
                     calculatePropertyMetrics(property);
                     
+                    // Log what changed
+                    console.log('📈 Property updated:', {
+                        rentChange: `${originalRent} → ${property.monthlyRent || property.rentEstimate}`,
+                        valueChange: `${originalValue} → ${property.currentValue || property.estimatedValue}`,
+                        hasMarketStats: !!property.marketStats
+                    });
+                    
                     // Save and update display
                     await saveProperties();
                     updateDisplay();
+                    
+                    // Show success message
+                    alert(`✅ Property data refreshed successfully!\n\n📍 Address: ${fullAddress}\n💰 Rent Estimate: $${property.rentEstimate || 'N/A'}\n🏠 Value Estimate: $${property.estimatedValue ? property.estimatedValue.toLocaleString() : 'N/A'}\n📊 Market Data: ${property.marketStats ? 'Available' : 'Not available'}`);
+                    
+                } else {
+                    console.warn('⚠️ No RentCast data returned:', rentcastData);
+                    
+                    // Try to get specific error details
+                    let errorMessage = 'No data available for this address from RentCast API.';
+                    if (rentcastData && rentcastData.error) {
+                        errorMessage = `API Error: ${rentcastData.error}`;
+                    }
+                    
+                    alert(`⚠️ Refresh completed but no new data found.\n\n📍 Address: ${fullAddress}\n❌ Issue: ${errorMessage}\n\n💡 Tip: Try verifying the address format or check if the property exists in RentCast's database.`);
                 }
             } catch (error) {
-                console.error('Error refreshing property:', error);
-                alert('Failed to refresh property data');
+                console.error('❌ Error refreshing property:', error);
+                const errorMsg = `Failed to refresh property data.\n\nError: ${error.message}\n\n📍 Property: ${property.address || 'Unknown address'}`;
+                alert(errorMsg);
             } finally {
                 // Stop animation
                 const rows = document.querySelectorAll('#propertyTableBody tr');
@@ -1248,6 +1308,8 @@
         // Fetch RentCast data
         async function fetchRentCastData(address) {
             try {
+                console.log('🌐 Fetching RentCast data for:', address);
+                
                 const params = new URLSearchParams({
                     address: address.streetAddress || address.address,
                     city: address.city,
@@ -1255,18 +1317,31 @@
                     zipcode: address.zip
                 });
                 
+                console.log('📋 API Parameters:', params.toString());
+                
+                // Fetch properties data first
                 const response = await fetch(`/api/rentcast/properties?${params}`);
                 const data = await response.json();
                 
+                console.log('🏘️ Properties API Response:', data);
+                
                 if (data.success && data.data && data.data.length > 0) {
                     const property = data.data[0];
+                    console.log('✅ Found property data:', property);
                     
-                    // Also fetch rent estimate and value estimate
+                    // Also fetch rent estimate, value estimate, and market stats in parallel
+                    console.log('🔄 Fetching additional data (rent, value, market stats)...');
                     const [rentData, valueData, marketData] = await Promise.all([
                         fetchRentEstimate(address),
                         fetchValueEstimate(address),
                         fetchMarketStats(address.zip)
                     ]);
+                    
+                    console.log('📊 Additional data fetched:', {
+                        rentData: rentData?.rent ? `$${rentData.rent}` : 'No data',
+                        valueData: valueData?.value ? `$${valueData.value.toLocaleString()}` : 'No data',
+                        marketData: marketData?.zipCode ? `ZIP ${marketData.zipCode}` : 'No data'
+                    });
                     
                     return {
                         success: true,
@@ -1274,15 +1349,51 @@
                             ...property,
                             rentEstimate: rentData?.rent || property.rentEstimate,
                             estimatedValue: valueData?.value || property.price,
-                            marketStats: marketData || {}
+                            marketStats: marketData || {},
+                            // Add metadata
+                            dataSource: 'RentCast API',
+                            fetchedAt: new Date().toISOString()
                         }
                     };
+                } else {
+                    console.warn('⚠️ Properties API returned no data:', data);
+                    
+                    // Even if properties API fails, try to get rent/value estimates
+                    console.log('🔄 Trying fallback: rent and value estimates only...');
+                    const [rentData, valueData, marketData] = await Promise.all([
+                        fetchRentEstimate(address),
+                        fetchValueEstimate(address),
+                        fetchMarketStats(address.zip)
+                    ]);
+                    
+                    if (rentData?.rent || valueData?.value || marketData?.zipCode) {
+                        console.log('✅ Found fallback data');
+                        return {
+                            success: true,
+                            data: {
+                                address: `${address.streetAddress || address.address}, ${address.city}, ${address.state} ${address.zip}`,
+                                rentEstimate: rentData?.rent,
+                                estimatedValue: valueData?.value,
+                                marketStats: marketData || {},
+                                dataSource: 'RentCast API (Estimates Only)',
+                                fetchedAt: new Date().toISOString()
+                            }
+                        };
+                    }
+                    
+                    return { 
+                        success: false, 
+                        error: data.error || 'No property data found',
+                        message: data.message || 'The address may not exist in RentCast database'
+                    };
                 }
-                
-                return { success: false };
             } catch (error) {
-                console.error('Error fetching RentCast data:', error);
-                return { success: false, error: error.message };
+                console.error('❌ Error fetching RentCast data:', error);
+                return { 
+                    success: false, 
+                    error: error.message,
+                    message: 'Network or server error occurred'
+                };
             }
         }
 
@@ -2883,6 +2994,41 @@ Be specific and data-driven. Act as an experienced investor who has analyzed tho
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
+        }
+
+        // Add test property for RentCast testing
+        async function addTestProperty() {
+            const testProperty = {
+                address: '1500 S Eastern Ave',
+                city: 'Las Vegas',
+                state: 'NV',
+                zip: '89104',
+                propertyType: 'single-family',
+                purchasePrice: 450000,
+                monthlyRent: 2100,
+                beds: 3,
+                baths: 2,
+                sqft: 1500,
+                currentValue: 450000,
+                status: 'available',
+                dateAdded: new Date().toISOString(),
+                realTimeData: false
+            };
+            
+            console.log('🧪 Adding test property for RentCast testing:', testProperty);
+            
+            // Calculate initial metrics
+            calculatePropertyMetrics(testProperty);
+            
+            // Add to properties array
+            properties.push(testProperty);
+            
+            // Save and update display
+            await saveProperties();
+            updateDisplay();
+            
+            // Show instructions
+            alert(`🧪 Test Property Added Successfully!\n\n📍 Address: ${testProperty.address}, ${testProperty.city}, ${testProperty.state} ${testProperty.zip}\n\n🔄 Next Steps:\n1. Look for the new property in the table below\n2. Click the refresh icon (🔄) in the Actions column\n3. Watch for RentCast data to be fetched\n4. Check browser console (F12) for detailed logs\n5. Look for the 📊 icon indicating successful data fetch\n\n💡 This address is known to work with RentCast API for testing!`);
         }
     </script>
 </body>
