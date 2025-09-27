@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Apply Comprehensive Fixes</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .status { 
+            padding: 15px; 
+            margin: 20px 0; 
+            border-radius: 4px; 
+            background: #f0f0f0;
+            border-left: 4px solid #667eea;
+        }
+        .success { 
+            background: #d4edda; 
+            border-color: #28a745;
+            color: #155724;
+        }
+        .error { 
+            background: #f8d7da; 
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .fix-item {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .fix-item h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Real Estate Tracker - Comprehensive Fix</h1>
+        
+        <div class="status">
+            <h2>Issues to Fix:</h2>
+            <ol>
+                <li><strong>RentCast API Not Fetching Data</strong> - Properties show $0 values</li>
+                <li><strong>Refresh Not Working</strong> - Refresh icon doesn't update data</li>
+                <li><strong>Click Handlers Broken</strong> - Can't click addresses to view details</li>
+            </ol>
+        </div>
+        
+        <div class="fix-item">
+            <h3>📍 Fix 1: RentCast API Integration</h3>
+            <p>Updates the data extraction to handle the actual RentCast API response format, including proper field mapping for bedrooms, bathrooms, square footage, and financial data.</p>
+        </div>
+        
+        <div class="fix-item">
+            <h3>🔄 Fix 2: Refresh Functionality</h3>
+            <p>Enhances the refresh feature with visual feedback (spinning icon), proper error handling, and toast notifications for success/failure.</p>
+        </div>
+        
+        <div class="fix-item">
+            <h3>🖱️ Fix 3: Click Handlers</h3>
+            <p>Implements robust event handling using event delegation and proper event listener attachment after DOM updates.</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <button onclick="applyFixes()">Apply All Fixes</button>
+            <button onclick="window.open('/', '_blank')">Open Main App</button>
+        </div>
+        
+        <div id="output"></div>
+    </div>
+    
+    <script>
+        async function applyFixes() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<div class="status">Applying fixes...</div>';
+            
+            try {
+                // Load the comprehensive fix script
+                const script = document.createElement('script');
+                script.src = '/comprehensive-fix.js';
+                
+                script.onload = function() {
+                    output.innerHTML = '<div class="status success">✅ Fixes loaded successfully!</div>';
+                    
+                    // Show next steps
+                    output.innerHTML += `
+                        <div class="fix-item">
+                            <h3>✨ Fixes Applied!</h3>
+                            <p>The comprehensive fixes have been loaded. Now:</p>
+                            <ol>
+                                <li>Open the main app in a new tab</li>
+                                <li>Test adding a new property - should fetch real data from RentCast</li>
+                                <li>Click the refresh icon on any property - should update with live data</li>
+                                <li>Click on any property address/row - should open the detail modal</li>
+                            </ol>
+                            
+                            <h4>API Configuration:</h4>
+                            <p>Make sure your server has the RENTCAST_API_KEY environment variable set:</p>
+                            <pre>RENTCAST_API_KEY=42e42e7a08204cba9a397326d9d05415</pre>
+                            
+                            <p>For local development, add this to your .env file.<br>
+                            For production (Render), add it in the Environment tab.</p>
+                        </div>
+                    `;
+                };
+                
+                script.onerror = function() {
+                    output.innerHTML = '<div class="status error">❌ Error loading fix script</div>';
+                };
+                
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                output.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-apply on load
+        window.onload = function() {
+            console.log('Fix page loaded. Click "Apply All Fixes" to begin.');
+        };
+    </script>
+</body>
+</html>

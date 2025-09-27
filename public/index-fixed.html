@@ -507,17 +507,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        @keyframes slideOut {
-            from {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            to {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-        }
-        
         /* Analysis modal specific styles */
         .analysis-section {
             margin-bottom: 30px;
@@ -1397,55 +1386,47 @@
                     const property = properties[0]; // Take the first match
                     console.log('First property match:', property);
                     
-                    // FIX: Handle the actual RentCast API response format correctly
-                    // RentCast uses different field names than we expect
+                    // Extract data with multiple fallbacks for different API response formats
                     const extractedData = {
                         // Address info
-                        streetAddress: property.addressLine1 || property.address || streetAddress,
-                        address: property.addressLine1 || property.address || streetAddress,
+                        streetAddress: property.addressLine1 || property.address || property.streetAddress || streetAddress,
+                        address: property.addressLine1 || property.address || property.streetAddress || streetAddress,
                         city: property.city || city,
                         state: property.state || state,
-                        zip: property.zipCode || property.zip || zip,
+                        zip: property.zipCode || property.zipcode || property.zip || zip,
                         lat: property.latitude || property.lat || 0,
-                        lon: property.longitude || property.lng || 0,
+                        lon: property.longitude || property.lon || property.lng || 0,
                         formattedAddress: property.formattedAddress || `${streetAddress}, ${city}, ${state} ${zip}`,
                         
-                        // Property details - FIXED field mapping
-                        beds: property.bedrooms || property.beds || 3,
-                        baths: property.bathrooms || property.baths || 2,
-                        sqft: property.squareFootage || property.buildingSize || property.livingArea || 1500,
-                        year: property.yearBuilt || 2000,
-                        propertyType: property.propertyType || 'Single Family',
-                        lotSize: property.lotSize || property.lotSquareFootage || 6000,
+                        // Property details - Check ALL possible field names
+                        beds: property.bedrooms || property.beds || property.bedroom || property.bedroomCount || 3,
+                        baths: property.bathrooms || property.baths || property.bathroom || property.bathroomCount || 2,
+                        sqft: property.squareFeet || property.sqft || property.squareFootage || property.buildingSize || property.livingArea || 1500,
+                        year: property.yearBuilt || property.year || property.yearConstructed || 2000,
+                        propertyType: property.propertyType || property.type || property.propertySubType || 'Single Family',
+                        lotSize: property.lotSize || property.lotSquareFeet || property.lotSqft || 6000,
                         
-                        // Financial data - FIXED to use tax assessment properly
-                        price: property.price || property.lastSoldPrice || 
-                               (property.taxAssessedValue ? Math.round(property.taxAssessedValue * 1.1) : null) ||
-                               property.lastSalePrice || 500000,
-                        rentEstimate: property.rent || property.rentEstimate || 
-                                    (property.rentRangeLow && property.rentRangeHigh ? 
-                                     Math.round((property.rentRangeLow + property.rentRangeHigh) / 2) : null) ||
-                                    (property.squareFootage ? Math.round(property.squareFootage * 1.5) : 2500),
+                        // Financial data - Check rent estimates and comparables
+                        price: property.price || property.lastSalePrice || property.estimatedValue || 500000,
+                        rentEstimate: property.rent || property.rentEstimate || property.rentRange?.average || 
+                                    property.rentRangeLow || property.monthlyRent || 2500,
                         
                         // Additional financial details
-                        taxRate: property.taxRate || 0.012,
-                        insuranceRate: 0.004,
-                        hoaMonthly: property.hoaFee || 0,
+                        taxRate: property.taxRate || property.propertyTaxRate || 0.012,
+                        insuranceRate: property.insuranceRate || 0.004,
+                        hoaMonthly: property.hoaFee || property.hoaMonthly || property.monthlyHoa || 0,
                         
                         // Market data
-                        lastSaleDate: property.lastSoldDate,
-                        lastSalePrice: property.lastSoldPrice,
-                        pricePerSqft: property.pricePerSquareFoot || 
-                                     (property.price && property.squareFootage ? 
-                                      Math.round(property.price / property.squareFootage) : 0),
-                        rentPerSqft: property.rentPerSquareFoot || 0,
+                        lastSaleDate: property.lastSaleDate,
+                        lastSalePrice: property.lastSalePrice,
+                        pricePerSqft: property.pricePerSquareFoot || (property.price / property.squareFeet) || 0,
+                        rentPerSqft: property.rentPerSquareFoot || (property.rent / property.squareFeet) || 0,
                         
-                        // Tax assessment data
-                        taxAssessedValue: property.taxAssessedValue || 0,
-                        taxAssessedYear: property.taxAssessedYear || new Date().getFullYear()
+                        // Comparable properties
+                        comparables: property.comparables || property.comps || []
                     };
                     
-                    console.log('✅ Extracted property data:', extractedData);
+                    console.log('Extracted property data:', extractedData);
                     
                     return {
                         success: true,
@@ -1482,14 +1463,10 @@
             const statusMsg = `Refreshing property data for ${prop.address}...`;
             console.log(statusMsg);
             
-            // Find the refresh icon and add spinning animation
-            const rows = document.querySelectorAll('#propertyTableBody tr');
-            const refreshIcon = rows[index]?.querySelector('.refresh-icon');
-            
+            // Add visual feedback
+            const refreshIcon = document.querySelector(`[onclick*="refreshSingleProperty(${index})"]`);
             if (refreshIcon) {
-                // Add spinning animation
-                refreshIcon.style.animation = 'spin 1s linear infinite';
-                refreshIcon.style.opacity = '1';
+                refreshIcon.classList.add('refreshing');
             }
             
             try {
@@ -1548,42 +1525,31 @@
                 console.error('Error refreshing property:', error);
                 showMessage(`Error refreshing property: ${error.message}`, 'error');
             } finally {
-                // Remove loading state and stop spinning
+                // Remove loading state
                 if (refreshIcon) {
-                    refreshIcon.style.animation = '';
-                    refreshIcon.style.opacity = '0.7';
+                    refreshIcon.classList.remove('refreshing');
                 }
             }
         }
         
         // Helper function to show messages
         function showMessage(text, type = 'info') {
-            // Create toast element for better visibility
-            const toast = document.createElement('div');
-            toast.className = `toast-message toast-${type}`;
-            toast.textContent = text;
-            toast.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 25px;
-                background: ${type === 'success' ? '#48bb78' : type === 'error' ? '#f56565' : '#4299e1'};
-                color: white;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                z-index: 10000;
-                font-weight: 500;
-                animation: slideIn 0.3s ease;
-                max-width: 400px;
-            `;
+            // Create or update message element
+            let messageEl = document.querySelector('.message');
+            if (!messageEl) {
+                messageEl = document.createElement('div');
+                messageEl.className = 'message';
+                document.querySelector('.container').insertBefore(messageEl, document.querySelector('.analysis-form'));
+            }
             
-            document.body.appendChild(toast);
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            messageEl.style.display = 'block';
             
-            // Auto-hide after 4 seconds
+            // Auto-hide after 5 seconds
             setTimeout(() => {
-                toast.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
+                messageEl.style.display = 'none';
+            }, 5000);
         }
         
         // Parse address into components for API calls
@@ -1679,33 +1645,17 @@
                     }
                 }
                 
-                // Make entire row clickable - ENHANCED EVENT HANDLER
+                // Make entire row clickable - FIXED EVENT HANDLER
                 row.style.cursor = 'pointer';
-                
-                // Add hover effect
-                row.addEventListener('mouseenter', function() {
-                    if (!this.classList.contains('property-sold')) {
-                        this.style.backgroundColor = '#f8f9fa';
-                    }
-                });
-                
-                row.addEventListener('mouseleave', function() {
-                    if (!this.classList.contains('property-sold') && 
-                        !this.style.backgroundColor.includes('rgb(232, 245, 233)')) {
-                        this.style.backgroundColor = '';
-                    }
-                });
-                
-                // Click handler with better event handling
                 row.addEventListener('click', function(e) {
-                    // Check if the click is not on an interactive element
+                    // Check if the click is not on an editable cell or refresh icon
                     const target = e.target;
                     const isEditableCell = target.classList.contains('editable-cell');
-                    const isRefreshIcon = target.classList.contains('refresh-icon') || target.closest('.refresh-icon');
-                    const isActionButton = target.tagName === 'BUTTON' || target.closest('button');
+                    const isRefreshIcon = target.closest('.refresh-icon');
+                    const isActionButton = target.closest('button');
                     
                     if (!isEditableCell && !isRefreshIcon && !isActionButton) {
-                        console.log(`Property row clicked, showing details for: ${prop.address} (index: ${index})`);
+                        console.log('Row clicked, showing property detail for index:', index);
                         showPropertyDetail(index);
                     }
                 });
@@ -1719,24 +1669,9 @@
                 
                 const addressSpan = document.createElement('span');
                 addressSpan.textContent = prop.address;
-                addressSpan.style.cursor = 'pointer';
-                addressSpan.title = 'Click to view property details';
-                
                 if (prop.isSold) {
                     addressSpan.className = 'address-sold';
-                } else {
-                    // Add underline and color for non-sold properties
-                    addressSpan.style.color = '#667eea';
-                    addressSpan.style.textDecoration = 'underline';
                 }
-                
-                // Add direct click handler to address span
-                addressSpan.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    console.log(`Address clicked: ${prop.address} (index: ${index})`);
-                    showPropertyDetail(index);
-                });
-                
                 addressContainer.appendChild(addressSpan);
                 
                 // Create refresh icon
