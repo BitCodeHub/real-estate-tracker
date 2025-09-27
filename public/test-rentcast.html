@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RentCast API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .result { margin: 10px 0; padding: 10px; background: #f9f9f9; border-radius: 4px; }
+        .error { background: #ffe6e6; color: #d00; }
+        .success { background: #e6ffe6; color: #060; }
+        button { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; width: 300px; }
+        pre { background: #f0f0f0; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 RentCast API Integration Test</h1>
+        
+        <div class="test-section">
+            <h2>1. Server Status Test</h2>
+            <button onclick="testServerStatus()">Test Server Status</button>
+            <div id="serverResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. Properties API Test</h2>
+            <input id="propertyAddress" placeholder="Enter address (e.g., 1500 S Eastern Ave)" value="1500 S Eastern Ave">
+            <input id="propertyCity" placeholder="City (e.g., Las Vegas)" value="Las Vegas">
+            <input id="propertyState" placeholder="State (e.g., NV)" value="NV">
+            <input id="propertyZip" placeholder="Zip (e.g., 89104)" value="89104">
+            <br>
+            <button onclick="testPropertiesAPI()">Test Properties API</button>
+            <div id="propertiesResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. Rent Estimate Test</h2>
+            <button onclick="testRentEstimate()">Test Rent Estimate API</button>
+            <div id="rentResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. Value Estimate Test</h2>
+            <button onclick="testValueEstimate()">Test Value Estimate API</button>
+            <div id="valueResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>5. Market Stats Test</h2>
+            <input id="marketZip" placeholder="ZIP Code (e.g., 89146)" value="89146">
+            <button onclick="testMarketStats()">Test Market Stats API</button>
+            <div id="marketResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>6. Full Integration Test</h2>
+            <input id="fullTestAddress" placeholder="Full address (e.g., 1500 S Eastern Ave, Las Vegas, NV 89104)" value="1500 S Eastern Ave, Las Vegas, NV 89104">
+            <button onclick="testFullIntegration()">Test Full RentCast Integration</button>
+            <div id="fullResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Test server status
+        async function testServerStatus() {
+            const resultDiv = document.getElementById('serverResult');
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `
+                    <strong>✅ Server Status: OK</strong><br>
+                    API Key Configured: ${data.apiKeyConfigured ? '✅' : '❌'}<br>
+                    Message: ${data.message}
+                `;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Server Error: ${error.message}`;
+            }
+        }
+
+        // Test properties API
+        async function testPropertiesAPI() {
+            const resultDiv = document.getElementById('propertiesResult');
+            const address = document.getElementById('propertyAddress').value;
+            const city = document.getElementById('propertyCity').value;
+            const state = document.getElementById('propertyState').value;
+            const zipcode = document.getElementById('propertyZip').value;
+
+            try {
+                const params = new URLSearchParams({ address, city, state, zipcode });
+                const response = await fetch(`/api/rentcast/properties?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Properties API: Success</strong><br>
+                        Found ${data.data?.length || 0} properties<br>
+                        <pre>${JSON.stringify(data.data?.[0] || {}, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Properties API Error: ${data.error} - ${data.message}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Request Error: ${error.message}`;
+            }
+        }
+
+        // Test rent estimate
+        async function testRentEstimate() {
+            const resultDiv = document.getElementById('rentResult');
+            const address = document.getElementById('propertyAddress').value;
+            const city = document.getElementById('propertyCity').value;
+            const state = document.getElementById('propertyState').value;
+            const zipcode = document.getElementById('propertyZip').value;
+
+            try {
+                const params = new URLSearchParams({ address, city, state, zipcode });
+                const response = await fetch(`/api/rentcast/rent-estimate?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Rent Estimate: Success</strong><br>
+                        Estimated Rent: $${data.data?.rent || 'N/A'}<br>
+                        Range: $${data.data?.rentRangeLow || 'N/A'} - $${data.data?.rentRangeHigh || 'N/A'}<br>
+                        <pre>${JSON.stringify(data.data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Rent Estimate Error: ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Request Error: ${error.message}`;
+            }
+        }
+
+        // Test value estimate
+        async function testValueEstimate() {
+            const resultDiv = document.getElementById('valueResult');
+            const address = document.getElementById('propertyAddress').value;
+            const city = document.getElementById('propertyCity').value;
+            const state = document.getElementById('propertyState').value;
+            const zipcode = document.getElementById('propertyZip').value;
+
+            try {
+                const params = new URLSearchParams({ address, city, state, zipcode });
+                const response = await fetch(`/api/rentcast/value-estimate?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Value Estimate: Success</strong><br>
+                        Estimated Value: $${data.data?.value || 'N/A'}<br>
+                        <pre>${JSON.stringify(data.data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Value Estimate Error: ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Request Error: ${error.message}`;
+            }
+        }
+
+        // Test market stats
+        async function testMarketStats() {
+            const resultDiv = document.getElementById('marketResult');
+            const zipCode = document.getElementById('marketZip').value;
+
+            try {
+                const response = await fetch(`/api/rentcast/market-stats?zipCode=${zipCode}&historyRange=12`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Market Stats: Success</strong><br>
+                        ZIP: ${data.data?.zipCode || 'N/A'}<br>
+                        Median Price: $${data.data?.saleData?.medianPrice?.toLocaleString() || 'N/A'}<br>
+                        Avg Days on Market: ${data.data?.saleData?.averageDaysOnMarket || 'N/A'}<br>
+                        <pre>${JSON.stringify(data.data?.saleData || {}, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Market Stats Error: ${data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Request Error: ${error.message}`;
+            }
+        }
+
+        // Parse address components (same as main app)
+        function parseAddressComponents(address) {
+            const parts = address.split(',').map(s => s.trim());
+            let streetAddress = '', city = '', state = '', zip = '';
+            
+            if (parts.length >= 3) {
+                streetAddress = parts[0];
+                city = parts[1];
+                
+                const stateZip = parts[2].trim().split(' ');
+                if (stateZip.length >= 2) {
+                    state = stateZip[0];
+                    zip = stateZip[1];
+                } else if (stateZip.length === 1) {
+                    state = stateZip[0];
+                }
+            }
+            
+            return { streetAddress, city, state, zip };
+        }
+
+        // Test full integration (same as main app)
+        async function testFullIntegration() {
+            const resultDiv = document.getElementById('fullResult');
+            const address = document.getElementById('fullTestAddress').value;
+
+            try {
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = '🔄 Testing full integration...';
+
+                const parsedAddress = parseAddressComponents(address);
+                console.log('Parsed address:', parsedAddress);
+
+                // Test all APIs in parallel (same as main app)
+                const [propertiesResponse, rentResponse, valueResponse, marketResponse] = await Promise.all([
+                    fetch(`/api/rentcast/properties?${new URLSearchParams({
+                        address: parsedAddress.streetAddress,
+                        city: parsedAddress.city,
+                        state: parsedAddress.state,
+                        zipcode: parsedAddress.zip
+                    })}`),
+                    fetch(`/api/rentcast/rent-estimate?${new URLSearchParams({
+                        address: parsedAddress.streetAddress,
+                        city: parsedAddress.city,
+                        state: parsedAddress.state,
+                        zipcode: parsedAddress.zip
+                    })}`),
+                    fetch(`/api/rentcast/value-estimate?${new URLSearchParams({
+                        address: parsedAddress.streetAddress,
+                        city: parsedAddress.city,
+                        state: parsedAddress.state,
+                        zipcode: parsedAddress.zip
+                    })}`),
+                    fetch(`/api/rentcast/market-stats?zipCode=${parsedAddress.zip}&historyRange=12`)
+                ]);
+
+                const [propertiesData, rentData, valueData, marketData] = await Promise.all([
+                    propertiesResponse.json(),
+                    rentResponse.json(),
+                    valueResponse.json(),
+                    marketResponse.json()
+                ]);
+
+                // Compile results
+                let successCount = 0;
+                let results = [];
+
+                if (propertiesData.success && propertiesData.data?.length > 0) {
+                    successCount++;
+                    results.push(`✅ Properties: Found ${propertiesData.data.length} properties`);
+                } else {
+                    results.push(`⚠️ Properties: ${propertiesData.error || 'No data found'}`);
+                }
+
+                if (rentData.success && rentData.data?.rent) {
+                    successCount++;
+                    results.push(`✅ Rent Estimate: $${rentData.data.rent}`);
+                } else {
+                    results.push(`⚠️ Rent Estimate: ${rentData.error || 'No data'}`);
+                }
+
+                if (valueData.success && valueData.data?.value) {
+                    successCount++;
+                    results.push(`✅ Value Estimate: $${valueData.data.value.toLocaleString()}`);
+                } else {
+                    results.push(`⚠️ Value Estimate: ${valueData.error || 'No data'}`);
+                }
+
+                if (marketData.success && marketData.data?.zipCode) {
+                    successCount++;
+                    results.push(`✅ Market Stats: ${marketData.data.zipCode} data available`);
+                } else {
+                    results.push(`⚠️ Market Stats: ${marketData.error || 'No data'}`);
+                }
+
+                resultDiv.className = successCount >= 2 ? 'result success' : 'result error';
+                resultDiv.innerHTML = `
+                    <strong>${successCount >= 2 ? '✅' : '❌'} Full Integration Test Results (${successCount}/4 successful)</strong><br>
+                    ${results.join('<br>')}
+                    <br><br>
+                    <strong>Summary:</strong> ${successCount >= 2 ? 'RentCast integration is working!' : 'Some APIs may not have data for this address.'}
+                `;
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Integration Test Error: ${error.message}`;
+            }
+        }
+
+        // Auto-run server status test on load
+        window.addEventListener('load', () => {
+            testServerStatus();
+        });
+    </script>
+</body>
+</html>
