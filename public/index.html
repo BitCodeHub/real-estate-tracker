@@ -1127,6 +1127,161 @@
             background: #fee2e2;
             color: #991b1b;
         }
+        
+        /* AI Insights Styles */
+        .ai-insights-container {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .metric-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .metric-value.positive {
+            color: #28a745;
+        }
+        
+        .metric-value.negative {
+            color: #dc3545;
+        }
+        
+        .metric-value.warning {
+            color: #ffc107;
+        }
+        
+        .metric-subtext {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        
+        .ai-analysis {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+        
+        .ai-content {
+            margin-top: 15px;
+            line-height: 1.8;
+        }
+        
+        .ai-content ul {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        
+        .ai-content li {
+            margin-bottom: 8px;
+        }
+        
+        .ai-content strong {
+            color: #2d3748;
+        }
+        
+        .investment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .investment-table th,
+        .investment-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .investment-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .investment-table td {
+            font-weight: 500;
+        }
+        
+        .investment-table td.positive {
+            color: #28a745;
+        }
+        
+        .investment-table td.negative {
+            color: #dc3545;
+        }
+        
+        .property-details {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .property-details p {
+            margin: 8px 0;
+            color: #4a5568;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -3734,9 +3889,327 @@
             return estimates;
         }
         
-        // Generate AI insights (placeholder)
+        // Gemini API configuration
+        const GEMINI_API_KEY = 'AIzaSyCgpECc-whrISaCwlwxXiZV_YppN4dTQT4';
+        const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+        
+        // Calculate financial metrics
+        function calculateFinancialMetrics(property) {
+            const purchasePrice = property.price || 0;
+            const monthlyRent = property.rentEstimate || 0;
+            const downPayment = purchasePrice * 0.2; // Assume 20% down
+            const loanAmount = purchasePrice - downPayment;
+            
+            // Monthly expenses
+            const mortgageRate = 0.07 / 12; // 7% annual rate
+            const mortgageMonths = 360; // 30 years
+            const monthlyMortgage = loanAmount * (mortgageRate * Math.pow(1 + mortgageRate, mortgageMonths)) / (Math.pow(1 + mortgageRate, mortgageMonths) - 1);
+            const monthlyTaxes = (purchasePrice * (property.taxRate || 0.012)) / 12;
+            const monthlyInsurance = (purchasePrice * (property.insuranceRate || 0.004)) / 12;
+            const monthlyHOA = property.hoaMonthly || 0;
+            const monthlyMaintenance = purchasePrice * 0.001; // 0.1% monthly maintenance
+            const propertyManagement = monthlyRent * 0.1; // 10% property management
+            
+            const totalMonthlyExpenses = monthlyMortgage + monthlyTaxes + monthlyInsurance + monthlyHOA + monthlyMaintenance + propertyManagement;
+            const monthlyCashFlow = monthlyRent - totalMonthlyExpenses;
+            const annualCashFlow = monthlyCashFlow * 12;
+            
+            // Investment metrics
+            const cashOnCashReturn = (annualCashFlow / downPayment) * 100;
+            const capRate = ((monthlyRent * 12 - (monthlyTaxes + monthlyInsurance + monthlyHOA + monthlyMaintenance) * 12) / purchasePrice) * 100;
+            const dscr = monthlyRent / monthlyMortgage;
+            
+            // 5-year projection
+            const rentGrowthRate = 0.03; // 3% annual
+            const appreciationRate = 0.04; // 4% annual
+            let totalReturn = 0;
+            let projectedValue = purchasePrice;
+            let projectedRent = monthlyRent;
+            
+            for (let year = 1; year <= 5; year++) {
+                projectedValue *= (1 + appreciationRate);
+                projectedRent *= (1 + rentGrowthRate);
+                const yearCashFlow = (projectedRent - totalMonthlyExpenses) * 12;
+                totalReturn += yearCashFlow;
+            }
+            
+            const equity5Year = projectedValue - (loanAmount * 0.85); // Approximate remaining balance
+            const totalReturn5Year = totalReturn + equity5Year - downPayment;
+            const roi5Year = (totalReturn5Year / downPayment) * 100;
+            
+            return {
+                purchasePrice,
+                downPayment,
+                monthlyRent,
+                totalMonthlyExpenses,
+                monthlyCashFlow,
+                annualCashFlow,
+                cashOnCashReturn,
+                capRate,
+                dscr,
+                roi5Year,
+                projectedValue,
+                projectedRent
+            };
+        }
+        
+        // Generate comprehensive AI insights
         async function generateAIInsights() {
-            alert('AI Market Insights feature coming soon! This will analyze market trends, comparable properties, and investment opportunities in your target areas.');
+            const address = document.getElementById('propertyAddressInput').value.trim();
+            
+            if (!address) {
+                showMessage('Please enter a property address first', 'error');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('analysisLoading').style.display = 'block';
+            document.getElementById('analysisResults').style.display = 'none';
+            
+            try {
+                // Get location data
+                const locationData = await geocodeAddress(address);
+                
+                // Fetch property estimates
+                const propertyDetails = await fetchPropertyDetails(locationData);
+                
+                // Calculate financial metrics
+                const metrics = calculateFinancialMetrics(propertyDetails);
+                
+                // Prepare comprehensive prompt for Gemini
+                const prompt = `
+                    You are an experienced real estate investor and financial advisor. Analyze this property and provide comprehensive investment insights.
+                    
+                    Property Details:
+                    - Address: ${address}
+                    - Location: ${locationData.city}, ${locationData.state}
+                    - Estimated Price: $${propertyDetails.price.toLocaleString()}
+                    - Estimated Rent: $${propertyDetails.rentEstimate.toLocaleString()}/month
+                    - Property Type: ${propertyDetails.propertyType}
+                    - Bedrooms: ${propertyDetails.beds}, Bathrooms: ${propertyDetails.baths}
+                    - Square Feet: ${propertyDetails.sqft}
+                    - Year Built: ${propertyDetails.year}
+                    
+                    Financial Metrics:
+                    - Monthly Cash Flow: $${metrics.monthlyCashFlow.toFixed(2)}
+                    - Annual Cash Flow: $${metrics.annualCashFlow.toFixed(2)}
+                    - Cash-on-Cash Return: ${metrics.cashOnCashReturn.toFixed(2)}%
+                    - Cap Rate: ${metrics.capRate.toFixed(2)}%
+                    - Debt Service Coverage Ratio: ${metrics.dscr.toFixed(2)}
+                    - 5-Year ROI Projection: ${metrics.roi5Year.toFixed(2)}%
+                    
+                    Provide a comprehensive analysis including:
+                    1. Overall Investment Rating (Excellent/Good/Fair/Poor)
+                    2. Key Strengths and Opportunities
+                    3. Risk Assessment:
+                       - Crime risk level for the neighborhood
+                       - Natural disaster risks (flood, earthquake, hurricane)
+                       - Market volatility risk
+                       - Tenant risk factors
+                    4. Profitability Analysis:
+                       - Is the cash flow sustainable?
+                       - How does it compare to the 8% cash-on-cash target?
+                       - Cap rate analysis (6%+ is good)
+                       - DSCR analysis (1.25+ is preferred)
+                    5. 5-Year Investment Outlook:
+                       - Expected appreciation
+                       - Rental growth potential
+                       - Exit strategy recommendations
+                    6. Specific Recommendations:
+                       - Should they buy, hold, or pass?
+                       - Suggested improvements to increase ROI
+                       - Alternative investment strategies
+                    
+                    Format your response with clear sections and bullet points. Be specific and data-driven.
+                `;
+                
+                // Call Gemini API
+                const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            topK: 40,
+                            topP: 0.95,
+                            maxOutputTokens: 2048,
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const aiAnalysis = data.candidates[0].content.parts[0].text;
+                
+                // Display comprehensive results
+                displayAIInsights(propertyDetails, metrics, aiAnalysis, locationData);
+                
+            } catch (error) {
+                console.error('Error generating AI insights:', error);
+                document.getElementById('analysisLoading').style.display = 'none';
+                showMessage('Error generating AI insights. Please try again.', 'error');
+            }
+        }
+        
+        // Display AI insights in a comprehensive format
+        function displayAIInsights(property, metrics, aiAnalysis, location) {
+            const cashFlowClass = metrics.monthlyCashFlow >= 0 ? 'positive' : 'negative';
+            const cocClass = metrics.cashOnCashReturn >= 8 ? 'positive' : metrics.cashOnCashReturn >= 5 ? 'warning' : 'negative';
+            const capClass = metrics.capRate >= 6 ? 'positive' : metrics.capRate >= 4 ? 'warning' : 'negative';
+            const dscrClass = metrics.dscr >= 1.25 ? 'positive' : metrics.dscr >= 1.0 ? 'warning' : 'negative';
+            
+            document.getElementById('analysisResults').innerHTML = `
+                <div class="ai-insights-container">
+                    <h2 style="color: #764ba2; margin-bottom: 20px;">
+                        <i class="fas fa-brain"></i> AI Market Insights
+                    </h2>
+                    
+                    <div class="analysis-section">
+                        <h3>Property Overview</h3>
+                        <div class="property-details">
+                            <p><strong>Address:</strong> ${property.address || location.formatted}</p>
+                            <p><strong>Type:</strong> ${property.propertyType} | <strong>Beds/Baths:</strong> ${property.beds}/${property.baths}</p>
+                            <p><strong>Square Feet:</strong> ${property.sqft.toLocaleString()} | <strong>Year Built:</strong> ${property.year}</p>
+                            <p><strong>List Price:</strong> $${property.price.toLocaleString()} | <strong>Rent Estimate:</strong> $${property.rentEstimate.toLocaleString()}/mo</p>
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-section">
+                        <h3>Financial Metrics Dashboard</h3>
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-label">Monthly Cash Flow</div>
+                                <div class="metric-value ${cashFlowClass}">
+                                    $${metrics.monthlyCashFlow.toFixed(0)}
+                                </div>
+                                <div class="metric-subtext">Annual: $${metrics.annualCashFlow.toFixed(0)}</div>
+                            </div>
+                            
+                            <div class="metric-card">
+                                <div class="metric-label">Cash-on-Cash Return</div>
+                                <div class="metric-value ${cocClass}">
+                                    ${metrics.cashOnCashReturn.toFixed(1)}%
+                                </div>
+                                <div class="metric-subtext">Target: 8%+</div>
+                            </div>
+                            
+                            <div class="metric-card">
+                                <div class="metric-label">Cap Rate</div>
+                                <div class="metric-value ${capClass}">
+                                    ${metrics.capRate.toFixed(1)}%
+                                </div>
+                                <div class="metric-subtext">Good: 6%+</div>
+                            </div>
+                            
+                            <div class="metric-card">
+                                <div class="metric-label">DSCR</div>
+                                <div class="metric-value ${dscrClass}">
+                                    ${metrics.dscr.toFixed(2)}
+                                </div>
+                                <div class="metric-subtext">Preferred: 1.25+</div>
+                            </div>
+                            
+                            <div class="metric-card">
+                                <div class="metric-label">5-Year ROI</div>
+                                <div class="metric-value positive">
+                                    ${metrics.roi5Year.toFixed(0)}%
+                                </div>
+                                <div class="metric-subtext">Projected Total Return</div>
+                            </div>
+                            
+                            <div class="metric-card">
+                                <div class="metric-label">Down Payment</div>
+                                <div class="metric-value">
+                                    $${metrics.downPayment.toLocaleString()}
+                                </div>
+                                <div class="metric-subtext">20% Down</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-section ai-analysis">
+                        <h3>AI Investment Analysis</h3>
+                        <div class="ai-content">
+                            ${formatAIResponse(aiAnalysis)}
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-section">
+                        <h3>Investment Calculator</h3>
+                        <table class="investment-table">
+                            <tr>
+                                <th>Monthly Income</th>
+                                <th>Monthly Expenses</th>
+                                <th>Net Cash Flow</th>
+                            </tr>
+                            <tr>
+                                <td class="positive">$${metrics.monthlyRent.toLocaleString()}</td>
+                                <td class="negative">$${metrics.totalMonthlyExpenses.toFixed(0)}</td>
+                                <td class="${cashFlowClass}">$${metrics.monthlyCashFlow.toFixed(0)}</td>
+                            </tr>
+                        </table>
+                        
+                        <h4 style="margin-top: 15px;">5-Year Projection</h4>
+                        <table class="investment-table">
+                            <tr>
+                                <th>Current Value</th>
+                                <th>5-Year Value</th>
+                                <th>Monthly Rent (5yr)</th>
+                            </tr>
+                            <tr>
+                                <td>$${property.price.toLocaleString()}</td>
+                                <td class="positive">$${metrics.projectedValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                                <td class="positive">$${metrics.projectedRent.toFixed(0)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="action-buttons" style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="addPropertyFromAnalysis()">
+                            <i class="fas fa-plus"></i> Add to Portfolio
+                        </button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('propertyAddressInput').value=''; document.getElementById('analysisResults').style.display='none';">
+                            <i class="fas fa-redo"></i> New Analysis
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('analysisLoading').style.display = 'none';
+            document.getElementById('analysisResults').style.display = 'block';
+        }
+        
+        // Format AI response with proper HTML structure
+        function formatAIResponse(text) {
+            // Convert markdown-style formatting to HTML
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^(\d+\.)\s+(.*)$/gm, '<li>$2</li>')
+                .replace(/^[-•]\s+(.*)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>');
+        }
+        
+        // Add property from AI analysis
+        function addPropertyFromAnalysis() {
+            const address = document.getElementById('propertyAddressInput').value.trim();
+            if (address) {
+                // This will trigger the existing analyzeNewProperty function
+                analyzeNewProperty();
+            }
         }
         
         // Handle window clicks for closing modals
