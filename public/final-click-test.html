@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Final Click Handler Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .test-section {
+            background: #f9f9f9;
+            padding: 15px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Final Click Handler Test & Fix</h1>
+        
+        <div class="test-section">
+            <h2>Automated Fix Application</h2>
+            <button onclick="applyFix()">Apply Click Handler Fix</button>
+            <button onclick="testAfterFix()">Test Click Handler</button>
+            <div id="fixStatus"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Manual Testing</h2>
+            <ol>
+                <li>Open the main app at <a href="/" target="_blank">/</a></li>
+                <li>Open browser console (F12)</li>
+                <li>Click on any property address</li>
+                <li>Check console for "Property address clicked" message</li>
+                <li>Verify modal opens with property details</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>Debug Output</h2>
+            <pre id="debugOutput"></pre>
+        </div>
+    </div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('debugOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            output.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+        }
+        
+        async function applyFix() {
+            const status = document.getElementById('fixStatus');
+            status.innerHTML = '<div class="success">Applying comprehensive fix...</div>';
+            
+            // Open the main app in a hidden iframe
+            const iframe = document.createElement('iframe');
+            iframe.src = '/';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            iframe.onload = function() {
+                try {
+                    const iframeWindow = iframe.contentWindow;
+                    const iframeDoc = iframe.contentDocument;
+                    
+                    log('iFrame loaded, applying fix...');
+                    
+                    // Fix 1: Ensure event delegation is set up
+                    if (iframeWindow.setupTableEventDelegation) {
+                        log('Calling setupTableEventDelegation()');
+                        iframeWindow.setupTableEventDelegation();
+                    }
+                    
+                    // Fix 2: Add backup event listener
+                    const tableWrapper = iframeDoc.querySelector('.table-wrapper');
+                    const tbody = iframeDoc.getElementById('propertyTableBody');
+                    const targetElement = tableWrapper || tbody || iframeDoc.body;
+                    
+                    if (targetElement) {
+                        log(`Adding backup event listener to ${targetElement.tagName}`);
+                        
+                        targetElement.addEventListener('click', function(e) {
+                            const target = e.target;
+                            if (target.hasAttribute('data-action') && target.getAttribute('data-action') === 'show-property') {
+                                e.preventDefault();
+                                const index = parseInt(target.getAttribute('data-index'));
+                                console.log('[BACKUP] Property clicked, index:', index);
+                                
+                                if (iframeWindow.showPropertyDetail) {
+                                    iframeWindow.showPropertyDetail(index);
+                                } else {
+                                    console.error('showPropertyDetail not found!');
+                                }
+                            }
+                        }, true); // Use capture phase
+                    }
+                    
+                    // Fix 3: Verify showPropertyDetail is available
+                    if (iframeWindow.showPropertyDetail) {
+                        log('✓ showPropertyDetail function is available', 'success');
+                    } else {
+                        log('✗ showPropertyDetail function NOT found!', 'error');
+                    }
+                    
+                    // Fix 4: Check for clickable elements
+                    const clickableElements = iframeDoc.querySelectorAll('[data-action="show-property"]');
+                    log(`Found ${clickableElements.length} clickable addresses`);
+                    
+                    if (clickableElements.length > 0) {
+                        // Test the first one
+                        const firstAddress = clickableElements[0];
+                        log(`First address: "${firstAddress.textContent.trim()}"`, 'success');
+                    }
+                    
+                    status.innerHTML += '<div class="success">✓ Fix applied successfully!</div>';
+                    status.innerHTML += '<div>Now click "Test Click Handler" or test in the main app</div>';
+                    
+                } catch (error) {
+                    log('Error applying fix: ' + error.message, 'error');
+                    status.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                }
+                
+                // Remove iframe
+                document.body.removeChild(iframe);
+            };
+        }
+        
+        function testAfterFix() {
+            window.open('/', '_blank');
+            alert('The main app is now open in a new tab. Click on any property address and check if the modal opens.');
+        }
+        
+        // Initial check
+        window.onload = function() {
+            log('Final click test loaded');
+            log('Ready to apply fixes');
+        };
+    </script>
+</body>
+</html>

@@ -1076,6 +1076,17 @@
             background: #c82333 !important;
             transform: scale(1.05);
         }
+        
+        /* Ensure clickable addresses are interactive */
+        [data-action="show-property"] {
+            pointer-events: auto !important;
+            position: relative;
+            z-index: 10;
+        }
+        
+        [data-action="show-property"]:hover {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -4661,12 +4672,26 @@
         // Set up event delegation for table clicks (only once)
         function setupTableEventDelegation() {
             const tbody = document.getElementById('propertyTableBody');
-            if (!tbody || tbody.hasAttribute('data-delegation-setup')) return;
+            if (!tbody) {
+                console.error('setupTableEventDelegation: tbody not found');
+                return;
+            }
             
-            tbody.setAttribute('data-delegation-setup', 'true');
+            // Remove the attribute check temporarily to ensure event listener is always added
+            // This helps debug if the listener is being removed
+            
+            console.log('Setting up event delegation on table body');
+            
+            // Remove any existing listeners first
+            const oldListener = tbody._clickHandler;
+            if (oldListener) {
+                tbody.removeEventListener('click', oldListener);
+                console.log('Removed old click handler');
+            }
             
             // Handle clicks on the table body
             tbody.addEventListener('click', function(e) {
+                console.log('Table body clicked, target:', e.target);
                 const target = e.target;
                 
                 // Check if clicked on address span
@@ -4674,7 +4699,20 @@
                     e.preventDefault();
                     const index = parseInt(target.getAttribute('data-index'));
                     console.log('Property address clicked, index:', index);
-                    showPropertyDetail(index);
+                    
+                    // Verify showPropertyDetail exists
+                    if (typeof showPropertyDetail === 'function') {
+                        showPropertyDetail(index);
+                    } else {
+                        console.error('showPropertyDetail function not found!');
+                        // Try window.showPropertyDetail
+                        if (typeof window.showPropertyDetail === 'function') {
+                            console.log('Using window.showPropertyDetail');
+                            window.showPropertyDetail(index);
+                        } else {
+                            alert('Error: Property detail function not available');
+                        }
+                    }
                 }
                 
                 // Check if clicked on refresh icon
@@ -4683,9 +4721,29 @@
                     e.stopPropagation();
                     const index = parseInt(target.getAttribute('data-index'));
                     console.log('Refresh clicked, index:', index);
-                    refreshSingleProperty(index);
+                    
+                    // Verify refreshSingleProperty exists
+                    if (typeof refreshSingleProperty === 'function') {
+                        refreshSingleProperty(index);
+                    } else if (typeof window.refreshSingleProperty === 'function') {
+                        window.refreshSingleProperty(index);
+                    } else {
+                        console.error('refreshSingleProperty function not found!');
+                    }
                 }
             });
+            
+            // Store reference to the handler so we can remove it later if needed
+            tbody._clickHandler = arguments[arguments.length - 1];
+            
+            console.log('Event delegation setup complete');
+            
+            // Test the setup by checking computed styles
+            const testSpan = tbody.querySelector('[data-action="show-property"]');
+            if (testSpan) {
+                const computed = window.getComputedStyle(testSpan);
+                console.log('Test span found, pointer-events:', computed.pointerEvents, 'cursor:', computed.cursor);
+            }
         }
         
         // Render table with all properties
@@ -4705,11 +4763,11 @@
                 return;
             }
             
-            // Set up event delegation if not already done
-            setupTableEventDelegation();
-            
-            // Clear existing content
+            // Clear existing content FIRST
             tbody.innerHTML = '';
+            
+            // Then set up event delegation AFTER clearing (to ensure it's not removed)
+            setupTableEventDelegation();
             
             console.log('Rendering properties:', properties);
             console.log('tbody element:', tbody);
@@ -5018,6 +5076,34 @@
         // Initialize on load
         window.onload = async function() {
             console.log('=== PAGE LOAD START ===');
+            
+            // Set up event delegation on the table wrapper (parent of tbody)
+            // This ensures the listener persists even when tbody content changes
+            const tableWrapper = document.querySelector('.table-wrapper');
+            if (tableWrapper) {
+                console.log('Setting up event delegation on table wrapper');
+                tableWrapper.addEventListener('click', function(e) {
+                    const target = e.target;
+                    
+                    // Check if clicked on address span
+                    if (target.hasAttribute('data-action') && target.getAttribute('data-action') === 'show-property') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const index = parseInt(target.getAttribute('data-index'));
+                        console.log('Property address clicked via wrapper, index:', index);
+                        showPropertyDetail(index);
+                    }
+                    
+                    // Check if clicked on refresh icon
+                    if (target.hasAttribute('data-action') && target.getAttribute('data-action') === 'refresh-property') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const index = parseInt(target.getAttribute('data-index'));
+                        console.log('Refresh clicked via wrapper, index:', index);
+                        refreshSingleProperty(index);
+                    }
+                });
+            }
             
             // First, run debug to see what's available
             const debugInfo = debugFindProperties();
@@ -5621,8 +5707,14 @@
         window.saveProperty = saveProperty;
         window.updateProperty = updateProperty;
         window.forceLoadFromLocalStorage = forceLoadFromLocalStorage;
+        window.setupTableEventDelegation = setupTableEventDelegation;
+        window.renderTable = renderTable;
         
         console.log('All functions exposed globally');
+        
+        // Verify critical functions are available
+        console.log('showPropertyDetail available:', typeof window.showPropertyDetail === 'function');
+        console.log('setupTableEventDelegation available:', typeof window.setupTableEventDelegation === 'function');
     </script>
     <script src="sampleProperties.js"></script>
 </body>
