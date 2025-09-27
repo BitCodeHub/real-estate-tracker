@@ -1,0 +1,63 @@
+<!-- Quick Fix Instructions for Real Estate Tracker Performance Issues -->
+
+<!-- 
+To apply this fix to your index.html:
+
+1. Add this CSS to the <style> section (around line 440):
+-->
+
+/* Fix chart heights */
+.chart-card {
+    height: 400px;
+    position: relative;
+}
+
+.chart-card canvas {
+    max-height: 350px !important;
+    height: 350px !important;
+}
+
+@media (max-width: 768px) {
+    .chart-card {
+        height: 300px;
+    }
+    
+    .chart-card canvas {
+        max-height: 250px !important;
+        height: 250px !important;
+    }
+}
+
+<!-- 
+2. In the initCharts() function (around line 2306), add these options to both charts:
+
+animation: false,
+interaction: {
+    intersect: false,
+    mode: 'index'
+},
+
+And in the scales.y object add:
+ticks: {
+    maxTicksLimit: 8
+}
+
+3. In the updateCharts() function (around line 2387), add this at the beginning:
+
+// Limit to 20 properties for performance
+let displayProperties = properties;
+if (properties.length > 20) {
+    displayProperties = properties.slice(0, 20);
+}
+
+Then use displayProperties instead of properties for the data.
+
+4. For immediate performance boost, disable animations when updating charts:
+
+charts.cashFlow.options.animation = false;
+charts.cashFlow.update('none');
+
+charts.roi.options.animation = false;
+charts.roi.update('none');
+
+-->

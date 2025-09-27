@@ -436,11 +436,29 @@
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            height: 400px;
+            position: relative;
         }
         
         .chart-card h3 {
             margin-bottom: 15px;
             color: #4a5568;
+        }
+        
+        .chart-card canvas {
+            max-height: 350px !important;
+            height: 350px !important;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-card {
+                height: 300px;
+            }
+            
+            .chart-card canvas {
+                max-height: 250px !important;
+                height: 250px !important;
+            }
         }
         
         /* Editable cells */
@@ -1207,6 +1225,14 @@
         <span id="apiStatusText">Checking API...</span>
     </div>
 
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+        <div style="text-align: center;">
+            <div style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+            <p style="color: #667eea; font-size: 18px; font-weight: 500;">Loading Real Estate Tracker...</p>
+        </div>
+    </div>
+    
     <!-- Import Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -1215,6 +1241,7 @@
         let charts = {};
         let currentEditIndex = -1;
         let apiKeyConfigured = false;
+        let chartUpdateTimer = null;
         
         // Load properties on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1222,6 +1249,16 @@
             updateStats();
             initCharts();
             checkApiStatus();
+            
+            // Hide loading indicator after a short delay
+            setTimeout(function() {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) {
+                    loadingIndicator.style.transition = 'opacity 0.3s ease';
+                    loadingIndicator.style.opacity = '0';
+                    setTimeout(() => loadingIndicator.remove(), 300);
+                }
+            }, 300);
         });
         
         // Check API status on startup
@@ -1291,7 +1328,7 @@
             
             updateDisplay();
             updateStats();
-            updateCharts();
+            debouncedUpdateCharts();
         }
         
         // Save properties to localStorage and server
@@ -1862,7 +1899,7 @@
                 
                 saveProperties();
                 updateStats();
-                updateCharts();
+                debouncedUpdateCharts();
             });
             
             // Prevent row click when editing
@@ -2085,7 +2122,7 @@
             saveProperties();
             updateDisplay();
             updateStats();
-            updateCharts();
+            debouncedUpdateCharts();
             
             // Close modal and show success message
             closeModal('propertyModal');
@@ -2175,7 +2212,7 @@
             await saveProperties();
             updateDisplay();
             updateStats();
-            updateCharts();
+            debouncedUpdateCharts();
             closeModal('addPropertyModal');
             
             showMessage(index ? 'Property updated successfully' : 'Property added successfully', 'success');
@@ -2188,7 +2225,7 @@
                 saveProperties();
                 updateDisplay();
                 updateStats();
-                updateCharts();
+                debouncedUpdateCharts();
                 closeModal('propertyModal');
                 
                 showMessage('Property deleted successfully', 'success');
@@ -2321,13 +2358,25 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
                                     return '$' + value.toLocaleString();
-                                }
+                                },
+                                maxTicksLimit: 8
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
                     },
@@ -2360,13 +2409,25 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
                                     return value + '%';
-                                }
+                                },
+                                maxTicksLimit: 8
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
                     },
@@ -2383,16 +2444,38 @@
             });
         }
         
+        // Debounced update charts to prevent excessive updates
+        function debouncedUpdateCharts() {
+            if (chartUpdateTimer) {
+                clearTimeout(chartUpdateTimer);
+            }
+            chartUpdateTimer = setTimeout(() => {
+                updateCharts();
+            }, 100);
+        }
+        
         // Update charts
         function updateCharts() {
             if (!charts.cashFlow || !charts.roi) return;
             
-            // Prepare data
-            const labels = properties.map(prop => prop.address.substring(0, 20) + '...');
-            const cashFlowData = properties.map(prop => calculateCashFlow(prop));
-            const roiData = properties.map(prop => calculateROI(prop));
+            // Limit to 20 properties for performance
+            let displayProperties = properties;
+            if (properties.length > 20) {
+                // Show top 20 properties by ROI
+                displayProperties = [...properties]
+                    .sort((a, b) => calculateROI(b) - calculateROI(a))
+                    .slice(0, 20);
+            }
             
-            // Update Cash Flow Chart
+            // Prepare data
+            const labels = displayProperties.map(prop => {
+                const addr = prop.address || '';
+                return addr.length > 15 ? addr.substring(0, 15) + '...' : addr;
+            });
+            const cashFlowData = displayProperties.map(prop => calculateCashFlow(prop));
+            const roiData = displayProperties.map(prop => calculateROI(prop));
+            
+            // Update Cash Flow Chart with no animation
             charts.cashFlow.data.labels = labels;
             charts.cashFlow.data.datasets[0].data = cashFlowData;
             charts.cashFlow.data.datasets[0].backgroundColor = cashFlowData.map(value => 
@@ -2401,12 +2484,12 @@
             charts.cashFlow.data.datasets[0].borderColor = cashFlowData.map(value => 
                 value >= 0 ? '#48bb78' : '#f56565'
             );
-            charts.cashFlow.update();
+            charts.cashFlow.update('none');
             
-            // Update ROI Chart
+            // Update ROI Chart with no animation
             charts.roi.data.labels = labels;
             charts.roi.data.datasets[0].data = roiData;
-            charts.roi.update();
+            charts.roi.update('none');
         }
         
         // Export to CSV
@@ -2530,7 +2613,7 @@
                 saveProperties();
                 updateDisplay();
                 updateStats();
-                updateCharts();
+                debouncedUpdateCharts();
                 
                 showMessage(`Imported ${properties.length} properties successfully`, 'success');
             };
@@ -2933,7 +3016,7 @@
             saveProperties();
             updateDisplay();
             updateStats();
-            updateCharts();
+            debouncedUpdateCharts();
             
             // Clear form and hide results
             document.getElementById('propertyAddressInput').value = '';
@@ -2985,5 +3068,8 @@
             }
         }
     </script>
+    
+    <!-- Performance Optimization Script -->
+    <script src="performance-fix.js"></script>
 </body>
 </html>
