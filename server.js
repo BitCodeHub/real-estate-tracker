@@ -403,6 +403,73 @@ app.get('/api/stats', async (req, res) => {
     }
 });
 
+// AI Analysis endpoint (proxy for Gemini API to avoid CORS)
+app.post('/api/ai-analysis', async (req, res) => {
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCgpECc-whrISaCwlwxXiZV_YppN4dTQT4';
+    const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+    
+    console.log('AI Analysis request received');
+    
+    try {
+        const { prompt } = req.body;
+        
+        if (!prompt) {
+            return res.status(400).json({ error: 'Prompt is required' });
+        }
+        
+        console.log('Calling Gemini API...');
+        
+        const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }],
+            generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 2048,
+            }
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        console.log('Gemini API response status:', response.status);
+        
+        // Validate response
+        if (!response.data.candidates || !response.data.candidates[0] || !response.data.candidates[0].content) {
+            console.error('Invalid Gemini response structure:', response.data);
+            return res.status(500).json({ error: 'Invalid AI response structure' });
+        }
+        
+        console.log('AI Analysis successful');
+        res.json({
+            success: true,
+            analysis: response.data.candidates[0].content.parts[0].text
+        });
+        
+    } catch (error) {
+        console.error('AI Analysis error:', error.message);
+        
+        if (error.response) {
+            console.error('Gemini API error response:', error.response.data);
+            return res.status(error.response.status).json({ 
+                error: 'AI service error', 
+                details: error.response.data,
+                status: error.response.status 
+            });
+        }
+        
+        res.status(500).json({ 
+            error: 'Failed to generate AI analysis',
+            message: error.message 
+        });
+    }
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`Real Estate Tracker server running on port ${PORT}`);
