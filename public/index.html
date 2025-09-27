@@ -262,12 +262,15 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: visible;
             box-shadow: var(--shadow-sm);
+            max-width: 100%;
         }
         
         table {
             width: 100%;
+            min-width: 1800px;
             border-collapse: collapse;
         }
         
@@ -661,6 +664,16 @@
             
             .table-container {
                 overflow-x: auto;
+                font-size: 12px;
+            }
+            
+            table {
+                min-width: 1600px;
+            }
+            
+            th, td {
+                padding: 12px 8px;
+                font-size: 12px;
             }
             
             .modal-content {
@@ -759,11 +772,18 @@
                         <th>Address</th>
                         <th>City</th>
                         <th>Type</th>
+                        <th>Bed/Bath</th>
+                        <th>Sqft</th>
                         <th>Purchase Price</th>
-                        <th>Current Value</th>
+                        <th>Est. Value</th>
                         <th>Monthly Rent</th>
+                        <th>Rent Est.</th>
                         <th>Cash Flow</th>
+                        <th>Annual CF</th>
                         <th>Cash-on-Cash</th>
+                        <th>Cap Rate</th>
+                        <th>Down Payment</th>
+                        <th>DSCR</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -1042,19 +1062,70 @@
                                property.status === 'pending' ? 'status-pending' : 'status-available';
             
             const cashFlowClass = (property.monthlyCashFlow || 0) >= 0 ? 'positive' : 'negative';
+            const annualCashFlowClass = (property.annualCashFlow || 0) >= 0 ? 'positive' : 'negative';
+            
+            // Calculate additional metrics if not already calculated
+            if (!property.monthlyCashFlow) {
+                calculatePropertyMetrics(property);
+            }
+            
+            // Calculate DSCR (Debt Service Coverage Ratio)
+            const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
+            const downPayment = purchasePrice * 0.2;
+            const loanAmount = purchasePrice - downPayment;
+            const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
+            const noi = (property.monthlyRent || property.rentEstimate || 0) * 12 - (calculateTotalExpenses(property) * 12);
+            const annualDebtService = monthlyMortgage * 12;
+            const dscr = annualDebtService > 0 ? noi / annualDebtService : 0;
+            
+            // Determine styling classes for financial metrics
+            const capRateClass = (property.capRate || 0) >= 6 ? 'positive' : 'warning';
+            const cashOnCashClass = (property.cashOnCashReturn || 0) >= 8 ? 'positive' : 'warning';
+            const dscrClass = dscr >= 1.25 ? 'positive' : dscr >= 1.0 ? 'warning' : 'negative';
             
             row.innerHTML = `
-                <td>${property.address || ''}</td>
-                <td>${property.city || ''}</td>
-                <td>${property.propertyType || 'Single Family'}</td>
-                <td>${formatCurrency(property.purchasePrice || 0)}</td>
-                <td>${formatCurrency(property.currentValue || property.purchasePrice || 0)}</td>
-                <td>${formatCurrency(property.monthlyRent || 0)}</td>
-                <td class="${cashFlowClass}">${formatCurrency(property.monthlyCashFlow || 0)}</td>
-                <td>${(property.cashOnCashReturn || 0).toFixed(1)}%</td>
-                <td class="${statusClass}">${property.status || 'Available'}</td>
-                <td onclick="event.stopPropagation()">
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                <td style="min-width: 200px;">${property.address || ''}</td>
+                <td style="min-width: 120px;">${property.city || ''}</td>
+                <td style="min-width: 100px;">${property.propertyType || 'Single Family'}</td>
+                <td style="min-width: 80px; text-align: center;">
+                    ${property.beds || property.bedrooms || 0}/${property.baths || property.bathrooms || 0}
+                </td>
+                <td style="min-width: 80px; text-align: right;">
+                    ${property.sqft || property.squareFootage ? (property.sqft || property.squareFootage).toLocaleString() : 'N/A'}
+                </td>
+                <td style="min-width: 120px; text-align: right;">${formatCurrency(property.purchasePrice || 0)}</td>
+                <td style="min-width: 120px; text-align: right;">
+                    ${formatCurrency(property.estimatedValue || property.currentValue || property.purchasePrice || 0)}
+                    ${property.realTimeData && property.estimatedValue ? '<span style="color: #10b981; font-size: 10px;">📊</span>' : ''}
+                </td>
+                <td style="min-width: 120px; text-align: right;">${formatCurrency(property.monthlyRent || 0)}</td>
+                <td style="min-width: 120px; text-align: right;">
+                    ${formatCurrency(property.rentEstimate || 0)}
+                    ${property.realTimeData && property.rentEstimate ? '<span style="color: #10b981; font-size: 10px;">📊</span>' : ''}
+                </td>
+                <td class="${cashFlowClass}" style="min-width: 100px; text-align: right; font-weight: 500;">
+                    ${formatCurrency(property.monthlyCashFlow || 0)}
+                </td>
+                <td class="${annualCashFlowClass}" style="min-width: 100px; text-align: right;">
+                    ${formatCurrency(property.annualCashFlow || 0)}
+                </td>
+                <td class="${cashOnCashClass}" style="min-width: 90px; text-align: right; font-weight: 500;">
+                    ${(property.cashOnCashReturn || 0).toFixed(1)}%
+                </td>
+                <td class="${capRateClass}" style="min-width: 80px; text-align: right; font-weight: 500;">
+                    ${(property.capRate || 0).toFixed(1)}%
+                </td>
+                <td style="min-width: 120px; text-align: right;">
+                    ${formatCurrency(downPayment)}
+                </td>
+                <td class="${dscrClass}" style="min-width: 80px; text-align: right; font-weight: 500;">
+                    ${dscr > 0 ? dscr.toFixed(2) : 'N/A'}
+                </td>
+                <td class="${statusClass}" style="min-width: 80px; text-align: center;">
+                    ${property.status || 'Available'}
+                </td>
+                <td onclick="event.stopPropagation()" style="min-width: 80px;">
+                    <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
                         <i class="fas fa-sync-alt icon-refresh" onclick="refreshProperty(${index})" title="Refresh RentCast Data"></i>
                         ${property.realTimeData ? 
                             `<span style="color: #10b981; font-size: 12px;" title="RentCast data available (${property.lastRentCastUpdate ? new Date(property.lastRentCastUpdate).toLocaleDateString() : 'Unknown date'})">📊</span>` : 
@@ -1192,7 +1263,15 @@
                 </div>
                 ` : ''}
 
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <div id="aiAnalysisSection" style="display: none; margin: 20px 0;">
+                    <h3>🤖 AI Investment Analysis</h3>
+                    <div id="aiAnalysisContent" style="background: var(--bg-secondary); padding: 20px; border-radius: 8px; white-space: pre-wrap; line-height: 1.6; border: 1px solid var(--border-color);"></div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="generatePropertyAIAnalysis(${selectedPropertyIndex})" style="background: #8b5cf6;">
+                        <i class="fas fa-brain"></i> AI Analysis
+                    </button>
                     ${property.status !== 'sold' ? `
                         <button class="btn btn-secondary" onclick="editProperty(${selectedPropertyIndex})">
                             <i class="fas fa-edit"></i> Edit
@@ -1347,6 +1426,11 @@
                         success: true,
                         data: {
                             ...property,
+                            // Map RentCast field names to our application's field names
+                            beds: property.bedrooms,
+                            baths: property.bathrooms,
+                            sqft: property.squareFootage,
+                            yearBuilt: property.yearBuilt,
                             rentEstimate: rentData?.rent || property.rentEstimate,
                             estimatedValue: valueData?.value || property.price,
                             marketStats: marketData || {},
@@ -2815,6 +2899,139 @@ Be specific and data-driven. Act as an experienced investor who has analyzed tho
                 `;
                 document.getElementById('marketInsightsLoading').style.display = 'none';
                 document.getElementById('marketInsightsContent').style.display = 'block';
+            }
+        }
+
+        // Generate AI analysis for individual property
+        async function generatePropertyAIAnalysis(propertyIndex) {
+            const property = properties[propertyIndex];
+            if (!property) {
+                alert('Property not found');
+                return;
+            }
+            
+            try {
+                // Show loading state
+                document.getElementById('aiAnalysisContent').innerHTML = 'Generating AI analysis...';
+                document.getElementById('aiAnalysisSection').style.display = 'block';
+                
+                console.log('🤖 Generating AI analysis for property:', property.address);
+                
+                // Calculate financial metrics
+                const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
+                const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
+                const downPayment = purchasePrice * 0.2;
+                const loanAmount = purchasePrice - downPayment;
+                const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
+                const totalExpenses = calculateTotalExpenses(property);
+                const monthlyCashFlow = monthlyRent - monthlyMortgage - totalExpenses;
+                const annualCashFlow = monthlyCashFlow * 12;
+                const cashOnCashReturn = downPayment > 0 ? (annualCashFlow / downPayment) * 100 : 0;
+                const noi = monthlyRent * 12 - totalExpenses * 12;
+                const capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
+                const dscr = monthlyMortgage > 0 ? (monthlyRent * 12) / (monthlyMortgage * 12) : 0;
+                
+                // 5-year projections
+                const rentGrowth = 0.03;
+                const appreciationRate = 0.04;
+                const projectedValue5yr = purchasePrice * Math.pow(1 + appreciationRate, 5);
+                const projectedRent5yr = monthlyRent * Math.pow(1 + rentGrowth, 5);
+                const totalReturn5yr = (projectedValue5yr - purchasePrice) + (annualCashFlow * 5);
+                const roi5yr = downPayment > 0 ? (totalReturn5yr / downPayment) * 100 : 0;
+                
+                // Create enhanced prompt for individual property analysis
+                const prompt = \`You are a real estate investment expert. Analyze this property and provide a comprehensive investment report.
+
+PROPERTY DETAILS:
+Address: \${property.address}, \${property.city}, \${property.state} \${property.zip}
+Property Type: \${property.propertyType || 'Single Family'}
+Bedrooms: \${property.beds || property.bedrooms || 'N/A'}
+Bathrooms: \${property.baths || property.bathrooms || 'N/A'}
+Square Feet: \${property.sqft || property.squareFootage || 'N/A'}
+Year Built: \${property.yearBuilt || 'N/A'}
+
+FINANCIAL ANALYSIS:
+Purchase Price: $\${purchasePrice.toLocaleString()}
+Down Payment (20%): $\${downPayment.toLocaleString()}
+Monthly Rent: $\${monthlyRent.toLocaleString()}
+Rent Estimate (RentCast): $\${property.rentEstimate || 'N/A'}
+Estimated Value (RentCast): $\${property.estimatedValue ? property.estimatedValue.toLocaleString() : 'N/A'}
+
+CASH FLOW ANALYSIS:
+Monthly Cash Flow: $\${monthlyCashFlow.toLocaleString()}
+Annual Cash Flow: $\${annualCashFlow.toLocaleString()}
+Cash-on-Cash Return: \${cashOnCashReturn.toFixed(2)}%
+Cap Rate: \${capRate.toFixed(2)}%
+Debt Service Coverage Ratio: \${dscr.toFixed(2)}
+
+PROJECTIONS (5-Year):
+Projected Property Value: $\${projectedValue5yr.toLocaleString()}
+Projected Monthly Rent: $\${projectedRent5yr.toLocaleString()}
+Total ROI (5-Year): \${roi5yr.toFixed(1)}%
+
+MARKET DATA:
+\${property.marketStats ? JSON.stringify(property.marketStats, null, 2) : 'Market data not available'}
+
+DATA SOURCE: \${property.realTimeData ? 'Real-time RentCast API data' : 'Manual/estimated data'}
+Last Updated: \${property.lastRentCastUpdate ? new Date(property.lastRentCastUpdate).toLocaleDateString() : 'N/A'}
+
+Please provide a comprehensive analysis covering:
+
+1. **INVESTMENT GRADE** (A+ to F): Overall rating with brief explanation
+2. **FINANCIAL PERFORMANCE**: Analysis of cash flow, returns, and key ratios
+3. **MARKET POSITION**: How this property compares to market averages
+4. **RISK ASSESSMENT**: Identify potential risks and concerns
+5. **GROWTH POTENTIAL**: Long-term appreciation and income growth prospects
+6. **RECOMMENDATIONS**: Specific actionable advice (buy, hold, pass, negotiate)
+7. **OPTIMIZATION OPPORTUNITIES**: Ways to improve returns
+8. **RED FLAGS**: Any concerning aspects that need attention
+
+Format your response in clear sections with bullet points where appropriate. Be specific and actionable in your recommendations.\`;
+
+                // Send to AI for analysis
+                const response = await fetch('/api/ai-analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(\`AI Analysis failed: \${response.status}\`);
+                }
+                
+                const aiData = await response.json();
+                if (!aiData.success) {
+                    throw new Error(aiData.error || 'AI analysis failed');
+                }
+                
+                // Format and display the analysis
+                const analysisText = aiData.analysis || 'No analysis returned';
+                document.getElementById('aiAnalysisContent').innerHTML = formatAIResponse(analysisText);
+                
+                console.log('✅ AI analysis completed successfully');
+                
+            } catch (error) {
+                console.error('❌ Error generating property AI analysis:', error);
+                document.getElementById('aiAnalysisContent').innerHTML = \`
+                    <div style="color: var(--accent-danger); padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; border: 1px solid var(--accent-danger);">
+                        <h4 style="margin-top: 0;">❌ Analysis Failed</h4>
+                        <p><strong>Error:</strong> \${error.message}</p>
+                        
+                        <p><strong>Troubleshooting:</strong></p>
+                        <ul style="margin: 10px 0;">
+                            <li>Make sure the server is running (npm start)</li>
+                            <li>Check that you're accessing http://localhost:3000</li>
+                            <li>Verify Gemini API key is configured</li>
+                            <li>Check server console for detailed errors</li>
+                        </ul>
+                        
+                        <button class="btn btn-secondary" onclick="generatePropertyAIAnalysis(\${propertyIndex})" style="margin-top: 10px;">
+                            <i class="fas fa-redo"></i> Retry Analysis
+                        </button>
+                    </div>
+                \`;
             }
         }
 

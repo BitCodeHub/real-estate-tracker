@@ -292,16 +292,47 @@ app.get('/api/properties', async (req, res) => {
         
         // Merge rentcast_data JSONB fields back into the property objects
         const expandedProperties = properties.map(prop => {
+            // Map database column names to application field names
+            const mappedProp = {
+                ...prop,
+                // Map snake_case database columns to camelCase
+                beds: prop.bedrooms || 0,
+                baths: prop.bathrooms || 0,
+                sqft: prop.square_footage || 0,
+                yearBuilt: prop.year_built || prop.yearBuilt,
+                monthlyRent: prop.monthly_rent || prop.monthlyRent || 0,
+                rentEstimate: prop.rent_estimate || prop.rentEstimate || 0,
+                estimatedValue: prop.value_estimate || prop.estimatedValue || 0,
+                currentValue: prop.value_estimate || prop.current_value || prop.currentValue || prop.purchase_price || 0,
+                cashFlow: prop.cash_flow,
+                cocReturn: prop.coc_return,
+                capRate: prop.cap_rate,
+                propertyTax: prop.property_tax,
+                managementFees: prop.management_fees,
+                rentToValue: prop.rent_to_value,
+                crimeScore: prop.crime_score,
+                floodRisk: prop.flood_risk,
+                marketRisk: prop.market_risk,
+                lotSize: prop.lot_size,
+                propertyType: prop.property_type || prop.propertyType,
+                lastUpdated: prop.last_updated,
+                dataSource: prop.data_source,
+                soldDate: prop.sold_date,
+                soldPrice: prop.sold_price,
+                createdAt: prop.created_at,
+                updatedAt: prop.updated_at
+            };
+            
             if (prop.rentcast_data && typeof prop.rentcast_data === 'object') {
                 // Merge the JSONB data back into the main object
-                const { rentcast_data, ...mainProps } = prop;
+                const { rentcast_data, ...mainProps } = mappedProp;
                 console.log(`Expanding RentCast data for ${mainProps.address}:`, Object.keys(rentcast_data));
                 return {
                     ...mainProps,
                     ...rentcast_data
                 };
             }
-            return prop;
+            return mappedProp;
         });
         
         res.json({ success: true, data: expandedProperties });
@@ -324,12 +355,25 @@ app.get('/api/properties/:id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
         
-        // Merge rentcast_data JSONB fields back into the property object
+        // Map database fields and merge rentcast_data JSONB fields
+        const mappedProp = {
+            ...property,
+            // Map snake_case database columns to camelCase
+            beds: property.bedrooms || 0,
+            baths: property.bathrooms || 0,
+            sqft: property.square_footage || 0,
+            yearBuilt: property.year_built || property.yearBuilt,
+            monthlyRent: property.monthly_rent || property.monthlyRent || 0,
+            rentEstimate: property.rent_estimate || property.rentEstimate || 0,
+            estimatedValue: property.value_estimate || property.estimatedValue || 0,
+            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0
+        };
+        
         if (property.rentcast_data && typeof property.rentcast_data === 'object') {
-            const { rentcast_data, ...mainProps } = property;
+            const { rentcast_data, ...mainProps } = mappedProp;
             res.json({ success: true, data: { ...mainProps, ...rentcast_data } });
         } else {
-            res.json({ success: true, data: property });
+            res.json({ success: true, data: mappedProp });
         }
     } catch (error) {
         console.error('Error fetching property:', error);
@@ -356,12 +400,24 @@ app.post('/api/properties', async (req, res) => {
         }
         const property = await db.createProperty(req.body);
         
-        // Merge rentcast_data back into response
+        // Map database fields and merge rentcast_data back into response
+        const mappedProp = {
+            ...property,
+            beds: property.bedrooms || 0,
+            baths: property.bathrooms || 0,
+            sqft: property.square_footage || 0,
+            yearBuilt: property.year_built || property.yearBuilt,
+            monthlyRent: property.monthly_rent || property.monthlyRent || 0,
+            rentEstimate: property.rent_estimate || property.rentEstimate || 0,
+            estimatedValue: property.value_estimate || property.estimatedValue || 0,
+            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0
+        };
+        
         if (property.rentcast_data && typeof property.rentcast_data === 'object') {
-            const { rentcast_data, ...mainProps } = property;
+            const { rentcast_data, ...mainProps } = mappedProp;
             res.status(201).json({ success: true, data: { ...mainProps, ...rentcast_data } });
         } else {
-            res.status(201).json({ success: true, data: property });
+            res.status(201).json({ success: true, data: mappedProp });
         }
     } catch (error) {
         console.error('Error creating property:', error);
@@ -398,13 +454,25 @@ app.put('/api/properties/:id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
         
-        // Merge rentcast_data back into response
+        // Map database fields and merge rentcast_data back into response
+        const mappedProp = {
+            ...property,
+            beds: property.bedrooms || 0,
+            baths: property.bathrooms || 0,
+            sqft: property.square_footage || 0,
+            yearBuilt: property.year_built || property.yearBuilt,
+            monthlyRent: property.monthly_rent || property.monthlyRent || 0,
+            rentEstimate: property.rent_estimate || property.rentEstimate || 0,
+            estimatedValue: property.value_estimate || property.estimatedValue || 0,
+            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0
+        };
+        
         if (property.rentcast_data && typeof property.rentcast_data === 'object') {
-            const { rentcast_data, ...mainProps } = property;
+            const { rentcast_data, ...mainProps } = mappedProp;
             console.log('Returning merged property with RentCast data');
             res.json({ success: true, data: { ...mainProps, ...rentcast_data } });
         } else {
-            res.json({ success: true, data: property });
+            res.json({ success: true, data: mappedProp });
         }
     } catch (error) {
         console.error('Error updating property:', error);
