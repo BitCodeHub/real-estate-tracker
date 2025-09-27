@@ -3187,6 +3187,9 @@
         async function fetchRentCastData(addressComponents) {
             const { streetAddress, city, state, zip } = addressComponents;
             
+            console.log('=== fetchRentCastData called ===');
+            console.log('Address components:', { streetAddress, city, state, zip });
+            
             try {
                 // Use server-side proxy endpoint to protect API key
                 const queryParams = new URLSearchParams({
@@ -3197,6 +3200,7 @@
                 });
                 
                 console.log('Fetching property data via server proxy...');
+                console.log('URL:', `/api/rentcast/properties?${queryParams}`);
                 
                 const response = await fetch(`/api/rentcast/properties?${queryParams}`, {
                     method: 'GET',
@@ -3205,17 +3209,28 @@
                     }
                 });
                 
+                console.log('Response status:', response.status);
+                
                 if (!response.ok) {
                     const errorData = await response.json();
+                    console.error('RentCast API Error:', errorData);
+                    
+                    // Check if it's the API key not configured error
+                    if (response.status === 503 && errorData.error && errorData.error.includes('not configured')) {
+                        console.error('❌ RentCast API key not configured on server!');
+                        console.error('Server message:', errorData.message);
+                    }
+                    
                     throw new Error(errorData.message || `API error: ${response.status}`);
                 }
                 
                 const responseData = await response.json();
+                console.log('RentCast API response:', responseData);
                 
                 // Check if server returned success
                 if (!responseData.success) {
                     console.error('Server API Error:', responseData.error);
-                    return { success: false };
+                    return { success: false, error: responseData.error };
                 }
                 
                 const data = responseData.data;
@@ -3702,19 +3717,30 @@
             document.getElementById('analysisResults').style.display = 'none';
             
             try {
-                // Fetch real property data - This calls RentCast API when adding new property
-                const propertyData = await fetchRealPropertyData(address);
+                console.log('=== Starting property analysis for:', address);
                 
-                if (propertyData.success) {
-                    console.log('RentCast data fetched for new property:', propertyData.data);
+                // Check API status first
+                const apiStatus = await fetch('/api/status').then(r => r.json()).catch(() => ({ apiKeyConfigured: false }));
+                console.log('API Key Status:', apiStatus.apiKeyConfigured ? 'Configured' : 'Not configured');
+                
+                // Fetch real property data - This calls RentCast API when adding new property
+                console.log('Calling fetchRealPropertyData...');
+                const propertyData = await fetchRealPropertyData(address);
+                console.log('fetchRealPropertyData result:', propertyData);
+                
+                if (propertyData.success && propertyData.source === 'RentCast API') {
+                    console.log('✅ RentCast data fetched successfully for new property');
+                    console.log('Property data:', propertyData.data);
                     generateEnhancedPropertyAnalysis(address, propertyData.data);
                 } else {
-                    console.log('RentCast data not available, using estimates');
+                    console.log('⚠️ RentCast data not available, using estimates');
+                    console.log('Reason:', propertyData.error || 'Unknown');
                     // Fallback to original parsing
                     generatePropertyAnalysis(address);
                 }
             } catch (error) {
                 console.error('Error analyzing property:', error);
+                alert('Error analyzing property. Using estimated data instead.');
                 // Fallback to original parsing
                 generatePropertyAnalysis(address);
             }
@@ -4796,6 +4822,7 @@
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span data-action="show-property" 
                                   data-index="${index}"
+                                  onclick="showPropertyDetail(${index})"
                                   class="${prop.isSold ? 'address-sold' : ''}"
                                   style="cursor: pointer; ${prop.isSold ? '' : 'color: #667eea; text-decoration: underline;'}"
                                   title="${prop.isSold ? 'Property SOLD - Click for details' : 'Click to view property details'}">${prop.address}</span>
@@ -4804,6 +4831,7 @@
                             <span class="refresh-icon" 
                                   data-action="refresh-property" 
                                   data-index="${index}"
+                                  onclick="refreshSingleProperty(${index})"
                                   style="cursor: pointer; font-size: 14px; opacity: 0.7; transition: opacity 0.2s;" 
                                   title="Refresh real-time data for this property">🔄</span>
                         </div>

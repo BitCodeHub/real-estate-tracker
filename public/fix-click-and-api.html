@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fix Click Handler and API</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+        }
+        .section {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .warning { color: orange; font-weight: bold; }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix Click Handler & RentCast API</h1>
+        
+        <div class="section">
+            <h2>1. Inspect Current State</h2>
+            <button onclick="inspectTable()">Inspect Table Structure</button>
+            <button onclick="checkAPI()">Check API Status</button>
+            <div id="inspectOutput"></div>
+        </div>
+        
+        <div class="section">
+            <h2>2. Apply Comprehensive Fix</h2>
+            <button onclick="applyClickFix()">Fix Click Handler</button>
+            <button onclick="fixAPIIntegration()">Fix RentCast API</button>
+            <button onclick="applyBothFixes()">Apply Both Fixes</button>
+            <div id="fixOutput"></div>
+        </div>
+        
+        <div class="section">
+            <h2>3. Test Fixes</h2>
+            <button onclick="testClickHandler()">Test Click Handler</button>
+            <button onclick="testAPICall()">Test RentCast API</button>
+            <div id="testOutput"></div>
+        </div>
+        
+        <div class="section">
+            <h2>4. Live Console</h2>
+            <div id="console" style="background: black; color: #00ff00; padding: 10px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+    </div>
+    
+    <iframe id="appFrame" src="/" style="display: none;"></iframe>
+    
+    <script>
+        const logs = [];
+        
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff0000' : type === 'success' ? '#00ff00' : '#ffffff';
+            const entry = `<div style="color: ${color}">[${time}] ${message}</div>`;
+            
+            const consoleEl = document.getElementById('console');
+            consoleEl.innerHTML += entry;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+            
+            logs.push({ time, message, type });
+        }
+        
+        async function inspectTable() {
+            const output = document.getElementById('inspectOutput');
+            output.innerHTML = '<div class="warning">Inspecting table structure...</div>';
+            
+            const iframe = document.getElementById('appFrame');
+            iframe.style.display = 'block';
+            iframe.style.width = '100%';
+            iframe.style.height = '400px';
+            iframe.style.border = '2px solid #667eea';
+            
+            iframe.onload = function() {
+                try {
+                    const doc = iframe.contentDocument;
+                    const win = iframe.contentWindow;
+                    
+                    // Check table structure
+                    const tbody = doc.getElementById('propertyTableBody');
+                    const rows = tbody ? tbody.querySelectorAll('tr') : [];
+                    
+                    let html = '<h3>Table Structure Analysis:</h3>';
+                    html += `<div>Table rows found: ${rows.length}</div>`;
+                    
+                    if (rows.length > 0) {
+                        const firstRow = rows[0];
+                        const firstCell = firstRow.querySelector('td');
+                        
+                        html += '<h4>First Address Cell HTML:</h4>';
+                        html += `<pre>${escapeHtml(firstCell ? firstCell.innerHTML : 'No cell found')}</pre>`;
+                        
+                        // Look for address elements
+                        const addressElements = tbody.querySelectorAll('[data-action="show-property"]');
+                        html += `<div>Elements with data-action="show-property": ${addressElements.length}</div>`;
+                        
+                        // Check if any onclick attributes exist
+                        const onclickElements = tbody.querySelectorAll('[onclick]');
+                        html += `<div>Elements with onclick attribute: ${onclickElements.length}</div>`;
+                        
+                        // Check event listeners
+                        html += '<h4>Event Delegation Status:</h4>';
+                        const hasDelegation = tbody.hasAttribute('data-delegation-setup');
+                        html += `<div class="${hasDelegation ? 'success' : 'error'}">Table delegation: ${hasDelegation ? '✓ Set' : '✗ Not set'}</div>`;
+                        
+                        // Check wrapper
+                        const wrapper = doc.querySelector('.table-wrapper');
+                        html += `<div>Table wrapper found: ${wrapper ? '✓ Yes' : '✗ No'}</div>`;
+                    }
+                    
+                    output.innerHTML = html;
+                    log('Table inspection complete', 'success');
+                    
+                } catch (error) {
+                    output.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                    log(`Inspection error: ${error.message}`, 'error');
+                }
+            };
+            
+            iframe.src = '/';
+        }
+        
+        async function checkAPI() {
+            const output = document.getElementById('inspectOutput');
+            output.innerHTML = '<div class="warning">Checking API status...</div>';
+            
+            try {
+                // Check API status endpoint
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                let html = '<h3>API Status:</h3>';
+                html += `<div>API Key Configured: <span class="${status.apiKeyConfigured ? 'success' : 'error'}">${status.apiKeyConfigured ? '✓ Yes' : '✗ No'}</span></div>`;
+                html += `<div>Environment: ${status.environment || 'Unknown'}</div>`;
+                
+                // Check .env file
+                const envResponse = await fetch('/.env').catch(() => null);
+                if (envResponse && envResponse.ok) {
+                    html += '<div class="warning">⚠️ .env file is publicly accessible (security risk)</div>';
+                }
+                
+                output.innerHTML = html;
+                log(`API check complete. Key configured: ${status.apiKeyConfigured}`, status.apiKeyConfigured ? 'success' : 'error');
+                
+            } catch (error) {
+                output.innerHTML = `<div class="error">API Check Error: ${error.message}</div>`;
+                log(`API check error: ${error.message}`, 'error');
+            }
+        }
+        
+        function applyClickFix() {
+            const output = document.getElementById('fixOutput');
+            output.innerHTML = '<div class="warning">Applying click handler fix...</div>';
+            
+            const iframe = document.getElementById('appFrame');
+            const doc = iframe.contentDocument;
+            const win = iframe.contentWindow;
+            
+            try {
+                // Fix 1: Direct onclick attribute approach
+                const addressSpans = doc.querySelectorAll('[data-action="show-property"]');
+                log(`Found ${addressSpans.length} address spans to fix`);
+                
+                addressSpans.forEach((span, i) => {
+                    const index = span.getAttribute('data-index');
+                    // Add onclick attribute directly
+                    span.setAttribute('onclick', `showPropertyDetail(${index})`);
+                    // Also add event listener
+                    span.onclick = function() {
+                        console.log('Direct onclick triggered for index:', index);
+                        if (win.showPropertyDetail) {
+                            win.showPropertyDetail(parseInt(index));
+                        }
+                    };
+                });
+                
+                // Fix 2: Global click handler on document
+                if (!doc._globalClickHandler) {
+                    doc._globalClickHandler = true;
+                    doc.addEventListener('click', function(e) {
+                        if (e.target.hasAttribute('data-action') && e.target.getAttribute('data-action') === 'show-property') {
+                            const index = parseInt(e.target.getAttribute('data-index'));
+                            console.log('[GLOBAL] Property clicked:', index);
+                            if (win.showPropertyDetail) {
+                                win.showPropertyDetail(index);
+                            }
+                        }
+                    }, true);
+                    log('Added global click handler', 'success');
+                }
+                
+                output.innerHTML = '<div class="success">✓ Click handler fix applied!</div>';
+                output.innerHTML += '<div>Now click on any address in the main app to test.</div>';
+                
+            } catch (error) {
+                output.innerHTML = `<div class="error">Fix Error: ${error.message}</div>`;
+                log(`Click fix error: ${error.message}`, 'error');
+            }
+        }
+        
+        function fixAPIIntegration() {
+            const output = document.getElementById('fixOutput');
+            output.innerHTML = '<div class="warning">Fixing RentCast API integration...</div>';
+            
+            const iframe = document.getElementById('appFrame');
+            const win = iframe.contentWindow;
+            
+            try {
+                // Check if fetchRealPropertyData exists
+                if (win.fetchRealPropertyData) {
+                    log('fetchRealPropertyData function found', 'success');
+                    
+                    // Wrap the function to add logging
+                    const originalFetch = win.fetchRealPropertyData;
+                    win.fetchRealPropertyData = async function(address) {
+                        console.log('[API FIX] Fetching property data for:', address);
+                        try {
+                            const result = await originalFetch(address);
+                            console.log('[API FIX] Result:', result);
+                            return result;
+                        } catch (error) {
+                            console.error('[API FIX] Error:', error);
+                            throw error;
+                        }
+                    };
+                    
+                    output.innerHTML = '<div class="success">✓ API integration wrapped with logging</div>';
+                } else {
+                    output.innerHTML = '<div class="error">fetchRealPropertyData function not found!</div>';
+                }
+                
+                // Also check analyzeNewProperty
+                if (win.analyzeNewProperty) {
+                    log('analyzeNewProperty function found', 'success');
+                } else {
+                    log('analyzeNewProperty function NOT found!', 'error');
+                }
+                
+            } catch (error) {
+                output.innerHTML = `<div class="error">API Fix Error: ${error.message}</div>`;
+                log(`API fix error: ${error.message}`, 'error');
+            }
+        }
+        
+        function applyBothFixes() {
+            applyClickFix();
+            setTimeout(() => {
+                fixAPIIntegration();
+            }, 500);
+        }
+        
+        function testClickHandler() {
+            const output = document.getElementById('testOutput');
+            const iframe = document.getElementById('appFrame');
+            const doc = iframe.contentDocument;
+            
+            const firstAddress = doc.querySelector('[data-action="show-property"]');
+            if (firstAddress) {
+                output.innerHTML = `<div class="warning">Clicking on: ${firstAddress.textContent}</div>`;
+                firstAddress.click();
+                
+                setTimeout(() => {
+                    const modal = doc.getElementById('propertyModal');
+                    if (modal && modal.style.display === 'block') {
+                        output.innerHTML += '<div class="success">✓ Modal opened successfully!</div>';
+                    } else {
+                        output.innerHTML += '<div class="error">✗ Modal did not open</div>';
+                    }
+                }, 500);
+            } else {
+                output.innerHTML = '<div class="error">No address elements found!</div>';
+            }
+        }
+        
+        async function testAPICall() {
+            const output = document.getElementById('testOutput');
+            output.innerHTML = '<div class="warning">Testing RentCast API...</div>';
+            
+            try {
+                const testAddress = '123 Main St, Las Vegas, NV 89101';
+                const response = await fetch('/api/property/details', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: '123 Main St',
+                        city: 'Las Vegas', 
+                        state: 'NV',
+                        zip: '89101'
+                    })
+                });
+                
+                const data = await response.json();
+                output.innerHTML = '<h3>API Response:</h3>';
+                output.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                if (data.success) {
+                    log('API test successful', 'success');
+                } else {
+                    log(`API test failed: ${data.error}`, 'error');
+                }
+                
+            } catch (error) {
+                output.innerHTML = `<div class="error">Test Error: ${error.message}</div>`;
+                log(`API test error: ${error.message}`, 'error');
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Auto-inspect on load
+        window.onload = function() {
+            log('Fix tool loaded and ready');
+            setTimeout(inspectTable, 1000);
+        };
+    </script>
+</body>
+</html>
