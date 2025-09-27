@@ -255,7 +255,21 @@ app.get('/api/properties', async (req, res) => {
             });
         }
         const properties = await db.getAllProperties(req.query);
-        res.json({ success: true, data: properties });
+        
+        // Merge rentcast_data JSONB fields back into the property objects
+        const expandedProperties = properties.map(prop => {
+            if (prop.rentcast_data && typeof prop.rentcast_data === 'object') {
+                // Merge the JSONB data back into the main object
+                const { rentcast_data, ...mainProps } = prop;
+                return {
+                    ...mainProps,
+                    ...rentcast_data
+                };
+            }
+            return prop;
+        });
+        
+        res.json({ success: true, data: expandedProperties });
     } catch (error) {
         console.error('Error fetching properties:', error);
         // Return empty array instead of error when database is down
@@ -274,7 +288,14 @@ app.get('/api/properties/:id', async (req, res) => {
         if (!property) {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
-        res.json({ success: true, data: property });
+        
+        // Merge rentcast_data JSONB fields back into the property object
+        if (property.rentcast_data && typeof property.rentcast_data === 'object') {
+            const { rentcast_data, ...mainProps } = property;
+            res.json({ success: true, data: { ...mainProps, ...rentcast_data } });
+        } else {
+            res.json({ success: true, data: property });
+        }
     } catch (error) {
         console.error('Error fetching property:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -299,7 +320,14 @@ app.post('/api/properties', async (req, res) => {
             });
         }
         const property = await db.createProperty(req.body);
-        res.status(201).json({ success: true, data: property });
+        
+        // Merge rentcast_data back into response
+        if (property.rentcast_data && typeof property.rentcast_data === 'object') {
+            const { rentcast_data, ...mainProps } = property;
+            res.status(201).json({ success: true, data: { ...mainProps, ...rentcast_data } });
+        } else {
+            res.status(201).json({ success: true, data: property });
+        }
     } catch (error) {
         console.error('Error creating property:', error);
         if (error.code === '23505') { // Unique constraint violation
@@ -333,7 +361,14 @@ app.put('/api/properties/:id', async (req, res) => {
         if (!property) {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
-        res.json({ success: true, data: property });
+        
+        // Merge rentcast_data back into response
+        if (property.rentcast_data && typeof property.rentcast_data === 'object') {
+            const { rentcast_data, ...mainProps } = property;
+            res.json({ success: true, data: { ...mainProps, ...rentcast_data } });
+        } else {
+            res.json({ success: true, data: property });
+        }
     } catch (error) {
         console.error('Error updating property:', error);
         res.status(500).json({ success: false, error: error.message });

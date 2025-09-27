@@ -128,8 +128,50 @@ const db = {
                 vacancy, capex, mortgage, cocReturn, rentToValue, capRate,
                 crimeScore, floodRisk, marketRisk, bedrooms, bathrooms,
                 squareFootage, yearBuilt, lotSize, propertyType, county,
-                rentEstimate, valueEstimate, status, notes, lastUpdated, dataSource
+                rentEstimate, valueEstimate, status, notes, lastUpdated, dataSource,
+                // Extract all other data for JSONB storage
+                ...otherData
             } = propertyData;
+
+            // Prepare comprehensive RentCast data for JSONB storage
+            const rentcastData = {
+                // Property features
+                stories: otherData.stories,
+                garage: otherData.garage,
+                pool: otherData.pool,
+                fireplace: otherData.fireplace,
+                basement: otherData.basement,
+                airConditioning: otherData.airConditioning,
+                heating: otherData.heating,
+                // Construction details
+                foundation: otherData.foundation,
+                roofType: otherData.roofType,
+                exteriorWall: otherData.exteriorWall,
+                architecturalStyle: otherData.architecturalStyle,
+                // Owner info
+                ownerName: otherData.ownerName,
+                ownerType: otherData.ownerType,
+                ownerOccupied: otherData.ownerOccupied,
+                // Tax data
+                taxAssessedValue: otherData.taxAssessedValue,
+                taxAssessedYear: otherData.taxAssessedYear,
+                // Market data
+                marketData: otherData.marketData,
+                // Any other real-time data
+                realTimeData: otherData.realTimeData,
+                lastUpdated: lastUpdated || new Date().toISOString(),
+                dataSource: dataSource || 'manual',
+                // Store any additional fields not explicitly defined in schema
+                ...Object.keys(otherData).reduce((acc, key) => {
+                    if (!['stories', 'garage', 'pool', 'fireplace', 'basement', 'airConditioning', 
+                          'heating', 'foundation', 'roofType', 'exteriorWall', 'architecturalStyle',
+                          'ownerName', 'ownerType', 'ownerOccupied', 'taxAssessedValue', 
+                          'taxAssessedYear', 'marketData', 'realTimeData'].includes(key)) {
+                        acc[key] = otherData[key];
+                    }
+                    return acc;
+                }, {})
+            };
 
             const result = await pool.query(`
                 INSERT INTO properties (
@@ -138,7 +180,8 @@ const db = {
                     vacancy, capex, mortgage, coc_return, rent_to_value, cap_rate,
                     crime_score, flood_risk, market_risk, bedrooms, bathrooms,
                     square_footage, year_built, lot_size, property_type, county,
-                    rent_estimate, value_estimate, status, notes, last_updated, data_source
+                    rent_estimate, value_estimate, status, notes, last_updated, data_source,
+                    rentcast_data
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
                     $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26,
@@ -151,7 +194,8 @@ const db = {
                     cocReturn, rentToValue, capRate, crimeScore, floodRisk,
                     marketRisk, bedrooms, bathrooms, squareFootage, yearBuilt,
                     lotSize, propertyType, county, rentEstimate, valueEstimate,
-                    status || 'active', notes, lastUpdated, dataSource
+                    status || 'active', notes, lastUpdated, dataSource,
+                    JSON.stringify(rentcastData) // PostgreSQL will convert to JSONB
                 ]
             );
 
@@ -168,19 +212,46 @@ const db = {
             const updateFields = [];
             const values = [];
             let paramCount = 1;
+            
+            // Separate RentCast-specific data
+            const rentcastFields = ['stories', 'garage', 'pool', 'fireplace', 'basement', 
+                                  'airConditioning', 'heating', 'foundation', 'roofType', 
+                                  'exteriorWall', 'architecturalStyle', 'ownerName', 'ownerType', 
+                                  'ownerOccupied', 'taxAssessedValue', 'taxAssessedYear', 
+                                  'marketData', 'realTimeData'];
+            
+            const rentcastData = {};
+            const regularFields = {};
 
-            // Build dynamic update query
+            // Separate fields
             Object.keys(propertyData).forEach(key => {
-                // Convert camelCase to snake_case
-                const dbField = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-                
-                // Skip id and timestamps
-                if (!['id', 'created_at', 'updated_at'].includes(dbField)) {
-                    updateFields.push(`${dbField} = $${paramCount}`);
-                    values.push(propertyData[key]);
-                    paramCount++;
+                if (rentcastFields.includes(key)) {
+                    rentcastData[key] = propertyData[key];
+                } else if (!['id', 'created_at', 'updated_at', 'createdAt', 'updatedAt'].includes(key)) {
+                    regularFields[key] = propertyData[key];
                 }
             });
+
+            // Build dynamic update query for regular fields
+            Object.keys(regularFields).forEach(key => {
+                // Convert camelCase to snake_case
+                const dbField = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+                updateFields.push(`${dbField} = $${paramCount}`);
+                values.push(regularFields[key]);
+                paramCount++;
+            });
+            
+            // Add rentcast_data if there's any RentCast-specific data
+            if (Object.keys(rentcastData).length > 0) {
+                // Merge with existing rentcast_data
+                updateFields.push(`rentcast_data = 
+                    CASE 
+                        WHEN rentcast_data IS NULL THEN $${paramCount}::jsonb
+                        ELSE rentcast_data || $${paramCount}::jsonb
+                    END`);
+                values.push(JSON.stringify(rentcastData));
+                paramCount++;
+            }
 
             values.push(id); // Add id as last parameter
 

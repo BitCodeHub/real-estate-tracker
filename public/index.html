@@ -1646,11 +1646,61 @@
         }
         
         // Save properties to localStorage and server
-        async function saveProperties() {
+        async function saveProperties(propertyIndex = -1) {
             localStorage.setItem('properties', JSON.stringify(properties));
             
+            // If a specific property index is provided, update that property
+            if (propertyIndex >= 0 && propertyIndex < properties.length) {
+                const property = properties[propertyIndex];
+                
+                // If property has a database ID, update it
+                if (property.id && typeof property.id === 'number') {
+                    try {
+                        const response = await fetch(`/api/properties/${property.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(property)
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.data) {
+                            // Update the property with server response
+                            properties[propertyIndex] = { ...property, ...data.data };
+                            localStorage.setItem('properties', JSON.stringify(properties));
+                            console.log('Property updated on server');
+                        }
+                    } catch (error) {
+                        console.error('Error updating property on server:', error);
+                    }
+                } else {
+                    // Property doesn't have an ID, try to create it
+                    try {
+                        const response = await fetch('/api/properties', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(property)
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.data) {
+                            // Update the property with server-generated ID
+                            properties[propertyIndex] = { ...property, ...data.data };
+                            localStorage.setItem('properties', JSON.stringify(properties));
+                            console.log('Property saved to server');
+                        }
+                    } catch (error) {
+                        console.error('Error saving property to server:', error);
+                    }
+                }
+            }
             // Try to save to server if it's a new property
-            if (currentEditIndex === -1 && properties.length > 0) {
+            else if (currentEditIndex === -1 && properties.length > 0) {
                 const latestProperty = properties[properties.length - 1];
                 try {
                     const response = await fetch('/api/properties', {
@@ -1985,8 +2035,8 @@
                         }
                     };
                     
-                    // Save to localStorage and server
-                    await saveProperties();
+                    // Save to localStorage and server with specific property index
+                    await saveProperties(index);
                     
                     // Update display
                     updateDisplay();
