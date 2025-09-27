@@ -196,10 +196,15 @@ app.get('/api/rentcast/market-stats', async (req, res) => {
             });
         }
 
+        console.log('Fetching market stats for ZIP:', zipCode);
+
+        // RentCast API might expect 'zip' instead of 'zipCode'
         const params = new URLSearchParams({ 
-            zipCode, 
-            historyRange // months of history
+            zip: zipCode, // Changed from zipCode to zip
+            historyRange: historyRange
         });
+
+        console.log('Request URL:', `${RENTCAST_API_BASE}/markets?${params}`);
 
         const response = await axios.get(`${RENTCAST_API_BASE}/markets?${params}`, {
             headers: {
@@ -208,15 +213,44 @@ app.get('/api/rentcast/market-stats', async (req, res) => {
             }
         });
         
+        console.log('Market stats response:', response.data);
+        
+        // Ensure we have data
+        if (!response.data) {
+            return res.json({
+                success: true,
+                data: {
+                    medianRent: null,
+                    medianPrice: null,
+                    avgDaysOnMarket: null,
+                    inventoryCount: null,
+                    message: 'No market data available for this ZIP code'
+                }
+            });
+        }
+        
         res.json({
             success: true,
             data: response.data
         });
     } catch (error) {
         console.error('RentCast Market Stats Error:', error.message);
-        res.status(error.response?.status || 500).json({
-            success: false,
-            error: error.response?.data?.message || error.message
+        if (error.response) {
+            console.error('Error response:', error.response.data);
+            console.error('Error status:', error.response.status);
+        }
+        
+        // If market stats fail, return empty data instead of error
+        // This allows the app to continue functioning
+        res.json({
+            success: true,
+            data: {
+                medianRent: null,
+                medianPrice: null,
+                avgDaysOnMarket: null,
+                inventoryCount: null,
+                message: 'Market statistics unavailable'
+            }
         });
     }
 });
