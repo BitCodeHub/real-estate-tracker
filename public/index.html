@@ -336,6 +336,117 @@
             gap: 15px;
         }
         
+        /* Property features styles */
+        .property-features {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .feature-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        /* Construction details styles */
+        .construction-details {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        /* Owner section styles */
+        .owner-section {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        /* Tax section styles */
+        .tax-section {
+            background: #fef5e7;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #f39c12;
+        }
+        
+        /* Neighborhood stats styles */
+        .neighborhood-stats {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .neighborhood-stats h4 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+        }
+        
+        /* Range display styles */
+        .range-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f4f8;
+            border-radius: 8px;
+        }
+        
+        .range-section h4 {
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .range-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .range-low {
+            color: #e53e3e;
+        }
+        
+        .range-high {
+            color: #38a169;
+        }
+        
+        .range-divider {
+            color: #a0aec0;
+        }
+        
+        .percentile-badge {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+        
         /* Form styles for adding properties */
         .form-container {
             background: white;
@@ -789,37 +900,79 @@
             color: #4a5568;
         }
         
-        /* API status indicator */
+        /* API status indicator - redesigned to prevent overlap */
         .api-status {
             position: fixed;
-            bottom: 30px;
-            left: 30px;
-            background: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
+            gap: 8px;
+            font-size: 0.85rem;
             z-index: 100;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            max-width: 200px;
+        }
+        
+        .api-status:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            transform: translateY(-1px);
+        }
+        
+        .api-status.collapsed {
+            padding: 8px 12px;
+            max-width: 40px;
+            overflow: hidden;
+        }
+        
+        .api-status.collapsed #apiStatusText {
+            display: none;
         }
         
         .api-status-indicator {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             display: inline-block;
+            flex-shrink: 0;
         }
         
         .api-status-indicator.connected {
             background: #10b981;
-            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+            animation: pulse-green 2s infinite;
         }
         
         .api-status-indicator.disconnected {
             background: #ef4444;
-            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+            animation: pulse-red 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
+            50% { box-shadow: 0 0 12px rgba(16, 185, 129, 0.8); }
+            100% { box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
+        }
+        
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+            50% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.8); }
+            100% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+        }
+        
+        #apiStatusText {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #4b5563;
+            font-weight: 500;
         }
         
         /* Property analysis form styles */
@@ -1220,7 +1373,7 @@
     </div>
     
     <!-- API Status Indicator -->
-    <div class="api-status" id="apiStatus">
+    <div class="api-status" id="apiStatus" onclick="toggleApiStatus()" title="Click to expand/collapse">
         <span class="api-status-indicator" id="apiStatusIndicator"></span>
         <span id="apiStatusText">Checking API...</span>
     </div>
@@ -1280,11 +1433,17 @@
             
             if (isConfigured) {
                 indicator.className = 'api-status-indicator connected';
-                text.textContent = 'RentCast API Connected';
+                text.textContent = 'RentCast Connected';
             } else {
                 indicator.className = 'api-status-indicator disconnected';
-                text.textContent = 'RentCast API Not Configured';
+                text.textContent = 'RentCast Not Setup';
             }
+        }
+        
+        // Toggle API status indicator collapse/expand
+        function toggleApiStatus() {
+            const apiStatus = document.getElementById('apiStatus');
+            apiStatus.classList.toggle('collapsed');
         }
         
         // Load properties from localStorage and server
@@ -1374,7 +1533,7 @@
             console.log('Address components:', { streetAddress, city, state, zip });
             
             try {
-                // Use server-side proxy endpoint to protect API key
+                // 1. First fetch basic property data
                 const queryParams = new URLSearchParams({
                     address: streetAddress,
                     city: city,
@@ -1383,7 +1542,6 @@
                 });
                 
                 console.log('Fetching property data via server proxy...');
-                console.log('URL:', `/api/rentcast/properties?${queryParams}`);
                 
                 const response = await fetch(`/api/rentcast/properties?${queryParams}`, {
                     method: 'GET',
@@ -1392,13 +1550,10 @@
                     }
                 });
                 
-                console.log('Response status:', response.status);
-                
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('RentCast API Error:', errorData);
                     
-                    // Check if it's the API key not configured error
                     if (response.status === 503 && errorData.error && errorData.error.includes('not configured')) {
                         console.error('❌ RentCast API key not configured on server!');
                         console.error('Server message:', errorData.message);
@@ -1408,9 +1563,7 @@
                 }
                 
                 const responseData = await response.json();
-                console.log('RentCast API response:', responseData);
                 
-                // Check if server returned success
                 if (!responseData.success) {
                     console.error('Server API Error:', responseData.error);
                     return { success: false, error: responseData.error };
@@ -1418,24 +1571,14 @@
                 
                 const data = responseData.data;
                 
-                // Debug: Log the full RentCast response
-                console.log('RentCast API Response:', data);
-                console.log('Query params:', {
-                    address: streetAddress,
-                    city: city,
-                    state: state,
-                    zipcode: zip
-                });
-                
-                // Process RentCast response - handle both array and single object responses
+                // Process RentCast response
                 let properties = Array.isArray(data) ? data : (data.properties || [data]);
                 
                 if (properties && properties.length > 0) {
-                    const property = properties[0]; // Take the first match
-                    console.log('First property match:', property);
+                    const property = properties[0];
+                    console.log('Property data received:', property);
                     
-                    // FIX: Handle the actual RentCast API response format correctly
-                    // RentCast uses different field names than we expect
+                    // Basic property data
                     const extractedData = {
                         // Address info
                         streetAddress: property.addressLine1 || property.address || streetAddress,
@@ -1443,11 +1586,12 @@
                         city: property.city || city,
                         state: property.state || state,
                         zip: property.zipCode || property.zip || zip,
+                        county: property.county || '',
                         lat: property.latitude || property.lat || 0,
                         lon: property.longitude || property.lng || 0,
                         formattedAddress: property.formattedAddress || `${streetAddress}, ${city}, ${state} ${zip}`,
                         
-                        // Property details - FIXED field mapping
+                        // Property details
                         beds: property.bedrooms || property.beds || 3,
                         baths: property.bathrooms || property.baths || 2,
                         sqft: property.squareFootage || property.buildingSize || property.livingArea || 1500,
@@ -1455,7 +1599,7 @@
                         propertyType: property.propertyType || 'Single Family',
                         lotSize: property.lotSize || property.lotSquareFootage || 6000,
                         
-                        // Financial data - FIXED to use tax assessment properly
+                        // Financial data
                         price: property.price || property.lastSoldPrice || 
                                (property.taxAssessedValue ? Math.round(property.taxAssessedValue * 1.1) : null) ||
                                property.lastSalePrice || 500000,
@@ -1464,7 +1608,7 @@
                                      Math.round((property.rentRangeLow + property.rentRangeHigh) / 2) : null) ||
                                     (property.squareFootage ? Math.round(property.squareFootage * 1.5) : 2500),
                         
-                        // Additional financial details
+                        // Additional details
                         taxRate: property.taxRate || 0.012,
                         insuranceRate: 0.004,
                         hoaMonthly: property.hoaFee || 0,
@@ -1479,10 +1623,99 @@
                         
                         // Tax assessment data
                         taxAssessedValue: property.taxAssessedValue || 0,
-                        taxAssessedYear: property.taxAssessedYear || new Date().getFullYear()
+                        taxAssessedYear: property.taxAssessedYear || new Date().getFullYear(),
+                        
+                        // Owner info
+                        ownerName: property.ownerName || '',
+                        ownerType: property.ownerType || '',
+                        ownerOccupied: property.ownerOccupied || false,
+                        
+                        // Property characteristics
+                        stories: property.stories || 1,
+                        garage: property.garage || 0,
+                        pool: property.pool || false,
+                        fireplace: property.fireplace || false,
+                        airConditioning: property.airConditioning || 'Central',
+                        heating: property.heating || 'Central',
+                        basement: property.basement || false,
+                        
+                        // Construction details
+                        foundation: property.foundation || '',
+                        roofType: property.roofType || '',
+                        exteriorWall: property.exteriorWall || '',
+                        architecturalStyle: property.architecturalStyle || ''
                     };
                     
-                    console.log('✅ Extracted property data:', extractedData);
+                    // 2. Fetch rent estimate with additional details
+                    try {
+                        console.log('Fetching rent estimate...');
+                        const rentParams = new URLSearchParams({
+                            address: streetAddress,
+                            city: city,
+                            state: state,
+                            zipcode: zip,
+                            bedrooms: extractedData.beds,
+                            bathrooms: extractedData.baths,
+                            squareFootage: extractedData.sqft
+                        });
+                        
+                        const rentResponse = await fetch(`/api/rentcast/rent-estimate?${rentParams}`);
+                        if (rentResponse.ok) {
+                            const rentData = await rentResponse.json();
+                            if (rentData.success && rentData.data) {
+                                console.log('Rent estimate data:', rentData.data);
+                                extractedData.rentEstimate = rentData.data.rent || extractedData.rentEstimate;
+                                extractedData.rentRangeLow = rentData.data.rentRangeLow || 0;
+                                extractedData.rentRangeHigh = rentData.data.rentRangeHigh || 0;
+                                extractedData.rentPercentile = rentData.data.percentile || 50;
+                            }
+                        }
+                    } catch (err) {
+                        console.log('Could not fetch rent estimate:', err.message);
+                    }
+                    
+                    // 3. Fetch value estimate
+                    try {
+                        console.log('Fetching value estimate...');
+                        const valueResponse = await fetch(`/api/rentcast/value-estimate?${queryParams}`);
+                        if (valueResponse.ok) {
+                            const valueData = await valueResponse.json();
+                            if (valueData.success && valueData.data) {
+                                console.log('Value estimate data:', valueData.data);
+                                extractedData.estimatedValue = valueData.data.price || extractedData.price;
+                                extractedData.priceRangeLow = valueData.data.priceRangeLow || 0;
+                                extractedData.priceRangeHigh = valueData.data.priceRangeHigh || 0;
+                                extractedData.confidence = valueData.data.confidence || 'Medium';
+                            }
+                        }
+                    } catch (err) {
+                        console.log('Could not fetch value estimate:', err.message);
+                    }
+                    
+                    // 4. Fetch market statistics
+                    try {
+                        console.log('Fetching market statistics...');
+                        const marketResponse = await fetch(`/api/rentcast/market-stats?zipCode=${zip}&historyRange=12`);
+                        if (marketResponse.ok) {
+                            const marketData = await marketResponse.json();
+                            if (marketData.success && marketData.data) {
+                                console.log('Market statistics:', marketData.data);
+                                extractedData.marketStats = {
+                                    medianRent: marketData.data.medianRent || 0,
+                                    medianPrice: marketData.data.medianPrice || 0,
+                                    avgDaysOnMarket: marketData.data.averageDaysOnMarket || 0,
+                                    inventoryCount: marketData.data.inventoryCount || 0,
+                                    medianPricePerSqft: marketData.data.medianPricePerSquareFoot || 0,
+                                    yearOverYearChange: marketData.data.yearOverYearPriceChange || 0,
+                                    monthlyTrends: marketData.data.history || []
+                                };
+                            }
+                        }
+                    } catch (err) {
+                        console.log('Could not fetch market statistics:', err.message);
+                    }
+                    
+                    console.log('✅ Comprehensive property data:', extractedData);
                     
                     return {
                         success: true,
@@ -1541,7 +1774,7 @@
                     
                     console.log(`✅ RentCast data received for ${fullAddress}:`, data);
                     
-                    // Update property with real-time data
+                    // Update property with comprehensive real-time data
                     properties[index] = {
                         ...properties[index],
                         realTimeData: true,
@@ -1552,16 +1785,48 @@
                         sqft: data.sqft || properties[index].sqft,
                         yearBuilt: data.year || properties[index].yearBuilt,
                         lotSize: data.lotSize || properties[index].lotSize,
+                        propertyType: data.propertyType || properties[index].propertyType,
+                        county: data.county || properties[index].county,
                         // Update financial data if available
-                        currentValue: data.price || properties[index].currentValue,
+                        currentValue: data.estimatedValue || data.price || properties[index].currentValue,
                         monthlyRent: data.rentEstimate || properties[index].monthlyRent,
-                        // Store additional market data
+                        // Property characteristics
+                        stories: data.stories || properties[index].stories,
+                        garage: data.garage || properties[index].garage,
+                        pool: data.pool || properties[index].pool,
+                        fireplace: data.fireplace || properties[index].fireplace,
+                        airConditioning: data.airConditioning || properties[index].airConditioning,
+                        heating: data.heating || properties[index].heating,
+                        basement: data.basement || properties[index].basement,
+                        // Construction details
+                        foundation: data.foundation || properties[index].foundation,
+                        roofType: data.roofType || properties[index].roofType,
+                        exteriorWall: data.exteriorWall || properties[index].exteriorWall,
+                        architecturalStyle: data.architecturalStyle || properties[index].architecturalStyle,
+                        // Owner info
+                        ownerName: data.ownerName || properties[index].ownerName,
+                        ownerType: data.ownerType || properties[index].ownerType,
+                        ownerOccupied: data.ownerOccupied || properties[index].ownerOccupied,
+                        // Tax data
+                        taxAssessedValue: data.taxAssessedValue || properties[index].taxAssessedValue,
+                        taxAssessedYear: data.taxAssessedYear || properties[index].taxAssessedYear,
+                        // Store comprehensive market data
                         marketData: {
                             lastSaleDate: data.lastSaleDate,
                             lastSalePrice: data.lastSalePrice,
                             pricePerSqft: data.pricePerSqft,
                             rentPerSqft: data.rentPerSqft,
-                            comparables: data.comparables
+                            // Value estimates
+                            estimatedValue: data.estimatedValue,
+                            priceRangeLow: data.priceRangeLow,
+                            priceRangeHigh: data.priceRangeHigh,
+                            confidence: data.confidence,
+                            // Rent estimates
+                            rentRangeLow: data.rentRangeLow,
+                            rentRangeHigh: data.rentRangeHigh,
+                            rentPercentile: data.rentPercentile,
+                            // Market statistics
+                            marketStats: data.marketStats || {}
                         }
                     };
                     
@@ -1950,7 +2215,6 @@
                     <div class="detail-item">
                         <div class="detail-label">Property Type</div>
                         <div class="detail-value">${prop.propertyType || 'Single Family'}</div>
-                        ${prop.propertyType ? '<span class="property-type-badge">' + prop.propertyType + '</span>' : ''}
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Bedrooms</div>
@@ -1965,14 +2229,69 @@
                         <div class="detail-value">${prop.sqft ? prop.sqft.toLocaleString() : 'N/A'}</div>
                     </div>
                     <div class="detail-item">
+                        <div class="detail-label">Lot Size</div>
+                        <div class="detail-value">${prop.lotSize ? prop.lotSize.toLocaleString() + ' sqft' : 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
                         <div class="detail-label">Year Built</div>
                         <div class="detail-value">${prop.yearBuilt || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">County</div>
+                        <div class="detail-value">${prop.county || 'N/A'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Purchase Date</div>
                         <div class="detail-value">${prop.purchaseDate ? new Date(prop.purchaseDate).toLocaleDateString() : 'N/A'}</div>
                     </div>
                 </div>
+                
+                ${prop.stories || prop.garage || prop.pool !== undefined || prop.fireplace !== undefined || prop.basement !== undefined ? `
+                <div class="property-features">
+                    <h3>Property Features</h3>
+                    <div class="features-grid">
+                        ${prop.stories ? `<div class="feature-item">📐 ${prop.stories} ${prop.stories > 1 ? 'Stories' : 'Story'}</div>` : ''}
+                        ${prop.garage ? `<div class="feature-item">🚗 ${prop.garage}-Car Garage</div>` : ''}
+                        ${prop.pool ? '<div class="feature-item">🏊 Pool</div>' : ''}
+                        ${prop.fireplace ? '<div class="feature-item">🔥 Fireplace</div>' : ''}
+                        ${prop.basement ? '<div class="feature-item">🏠 Basement</div>' : ''}
+                        ${prop.airConditioning ? `<div class="feature-item">❄️ ${prop.airConditioning} A/C</div>` : ''}
+                        ${prop.heating ? `<div class="feature-item">🔥 ${prop.heating} Heating</div>` : ''}
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${prop.foundation || prop.roofType || prop.exteriorWall || prop.architecturalStyle ? `
+                <div class="construction-details">
+                    <h3>Construction Details</h3>
+                    <div class="detail-grid">
+                        ${prop.foundation ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Foundation</div>
+                                <div class="detail-value">${prop.foundation}</div>
+                            </div>
+                        ` : ''}
+                        ${prop.roofType ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Roof Type</div>
+                                <div class="detail-value">${prop.roofType}</div>
+                            </div>
+                        ` : ''}
+                        ${prop.exteriorWall ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Exterior</div>
+                                <div class="detail-value">${prop.exteriorWall}</div>
+                            </div>
+                        ` : ''}
+                        ${prop.architecturalStyle ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Style</div>
+                                <div class="detail-value">${prop.architecturalStyle}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
                 
                 <div class="financial-details">
                     <h3>Financial Overview</h3>
@@ -2017,11 +2336,63 @@
                 </div>
             `;
             
-            // Add market data section if available
+            // Add owner information if available
+            if (prop.ownerName || prop.ownerType || prop.ownerOccupied !== undefined) {
+                modalContent += `
+                    <div class="owner-section">
+                        <h3>Owner Information</h3>
+                        <div class="detail-grid">
+                            ${prop.ownerName ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Owner</div>
+                                    <div class="detail-value">${prop.ownerName}</div>
+                                </div>
+                            ` : ''}
+                            ${prop.ownerType ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Type</div>
+                                    <div class="detail-value">${prop.ownerType}</div>
+                                </div>
+                            ` : ''}
+                            ${prop.ownerOccupied !== undefined ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Occupancy</div>
+                                    <div class="detail-value">${prop.ownerOccupied ? 'Owner Occupied' : 'Non-Owner Occupied'}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Add tax assessment data
+            if (prop.taxAssessedValue || prop.taxAssessedYear) {
+                modalContent += `
+                    <div class="tax-section">
+                        <h3>Tax Assessment</h3>
+                        <div class="detail-grid">
+                            ${prop.taxAssessedValue ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Assessed Value</div>
+                                    <div class="detail-value">${formatCurrency(prop.taxAssessedValue)}</div>
+                                </div>
+                            ` : ''}
+                            ${prop.taxAssessedYear ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Assessment Year</div>
+                                    <div class="detail-value">${prop.taxAssessedYear}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Add comprehensive market data section
             if (prop.marketData) {
                 modalContent += `
                     <div class="analysis-section">
-                        <h3>Market Data</h3>
+                        <h3>Market Analysis</h3>
                         <div class="metric-grid">
                             ${prop.marketData.lastSaleDate ? `
                                 <div class="metric-item">
@@ -2035,6 +2406,88 @@
                                     <div class="metric-label">Last Sale Price</div>
                                 </div>
                             ` : ''}
+                            ${prop.marketData.estimatedValue ? `
+                                <div class="metric-item">
+                                    <div class="metric-value">${formatCurrency(prop.marketData.estimatedValue)}</div>
+                                    <div class="metric-label">Est. Market Value</div>
+                                </div>
+                            ` : ''}
+                            ${prop.marketData.confidence ? `
+                                <div class="metric-item">
+                                    <div class="metric-value">${prop.marketData.confidence}</div>
+                                    <div class="metric-label">Confidence</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${prop.marketData.priceRangeLow && prop.marketData.priceRangeHigh ? `
+                        <div class="range-section">
+                            <h4>Value Range</h4>
+                            <div class="range-display">
+                                <span class="range-low">${formatCurrency(prop.marketData.priceRangeLow)}</span>
+                                <span class="range-divider">-</span>
+                                <span class="range-high">${formatCurrency(prop.marketData.priceRangeHigh)}</span>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${prop.marketData.rentRangeLow && prop.marketData.rentRangeHigh ? `
+                        <div class="range-section">
+                            <h4>Rent Estimate Range</h4>
+                            <div class="range-display">
+                                <span class="range-low">${formatCurrency(prop.marketData.rentRangeLow)}/mo</span>
+                                <span class="range-divider">-</span>
+                                <span class="range-high">${formatCurrency(prop.marketData.rentRangeHigh)}/mo</span>
+                                ${prop.marketData.rentPercentile ? `<div class="percentile-badge">${prop.marketData.rentPercentile}th Percentile</div>` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${prop.marketData.marketStats && Object.keys(prop.marketData.marketStats).length > 0 ? `
+                        <div class="neighborhood-stats">
+                            <h4>Neighborhood Statistics (${prop.zip})</h4>
+                            <div class="metric-grid">
+                                ${prop.marketData.marketStats.medianRent ? `
+                                    <div class="metric-item">
+                                        <div class="metric-value">${formatCurrency(prop.marketData.marketStats.medianRent)}</div>
+                                        <div class="metric-label">Median Rent</div>
+                                    </div>
+                                ` : ''}
+                                ${prop.marketData.marketStats.medianPrice ? `
+                                    <div class="metric-item">
+                                        <div class="metric-value">${formatCurrency(prop.marketData.marketStats.medianPrice)}</div>
+                                        <div class="metric-label">Median Price</div>
+                                    </div>
+                                ` : ''}
+                                ${prop.marketData.marketStats.avgDaysOnMarket ? `
+                                    <div class="metric-item">
+                                        <div class="metric-value">${prop.marketData.marketStats.avgDaysOnMarket}</div>
+                                        <div class="metric-label">Avg Days on Market</div>
+                                    </div>
+                                ` : ''}
+                                ${prop.marketData.marketStats.inventoryCount ? `
+                                    <div class="metric-item">
+                                        <div class="metric-value">${prop.marketData.marketStats.inventoryCount}</div>
+                                        <div class="metric-label">Active Listings</div>
+                                    </div>
+                                ` : ''}
+                                ${prop.marketData.marketStats.yearOverYearChange ? `
+                                    <div class="metric-item">
+                                        <div class="metric-value ${prop.marketData.marketStats.yearOverYearChange >= 0 ? 'positive' : 'negative'}">${prop.marketData.marketStats.yearOverYearChange > 0 ? '+' : ''}${prop.marketData.marketStats.yearOverYearChange}%</div>
+                                        <div class="metric-label">YoY Price Change</div>
+                                    </div>
+                                ` : ''}
+                                ${prop.marketData.marketStats.medianPricePerSqft ? `
+                                    <div class="metric-item">
+                                        <div class="metric-value">${formatCurrency(prop.marketData.marketStats.medianPricePerSqft)}/sqft</div>
+                                        <div class="metric-label">Median $/sqft</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="metric-grid">
                             ${prop.marketData.pricePerSqft ? `
                                 <div class="metric-item">
                                     <div class="metric-value">${formatCurrency(prop.marketData.pricePerSqft)}/sqft</div>
@@ -2752,6 +3205,24 @@
             const cashOnCashReturn = (annualCashFlow / downPayment) * 100;
             const capRate = ((monthlyRent * 12 - totalExpenses * 12) / purchasePrice) * 100;
             
+            // Create comprehensive property data object
+            const comprehensiveData = {
+                ...propertyData,
+                purchasePrice,
+                monthlyRent,
+                monthlyMortgage,
+                monthlyCashFlow,
+                cashOnCashReturn,
+                capRate,
+                downPayment,
+                totalExpenses,
+                propertyTax,
+                insurance,
+                hoa,
+                maintenance,
+                propertyManagement
+            };
+            
             // Display results
             document.getElementById('analysisResults').innerHTML = `
                 <div class="analysis-section">
@@ -2765,6 +3236,12 @@
                             <div class="detail-label">City, State ZIP</div>
                             <div class="detail-value">${city}, ${state} ${zip}</div>
                         </div>
+                        ${propertyData.county ? `
+                        <div class="detail-item">
+                            <div class="detail-label">County</div>
+                            <div class="detail-value">${propertyData.county}</div>
+                        </div>
+                        ` : ''}
                         <div class="detail-item">
                             <div class="detail-label">Property Type</div>
                             <div class="detail-value">${propertyType || 'Single Family'}</div>
@@ -2781,16 +3258,43 @@
                             <div class="detail-label">Square Feet</div>
                             <div class="detail-value">${sqft ? sqft.toLocaleString() : 'N/A'}</div>
                         </div>
+                        ${propertyData.lotSize ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Lot Size</div>
+                            <div class="detail-value">${propertyData.lotSize.toLocaleString()} sqft</div>
+                        </div>
+                        ` : ''}
                         <div class="detail-item">
                             <div class="detail-label">Year Built</div>
                             <div class="detail-value">${year || 'N/A'}</div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">Estimated Value</div>
-                            <div class="detail-value">${formatCurrency(purchasePrice)}</div>
+                            <div class="detail-label">${propertyData.estimatedValue ? 'Market Value' : 'Estimated Value'}</div>
+                            <div class="detail-value">${formatCurrency(propertyData.estimatedValue || purchasePrice)}</div>
                         </div>
+                        ${propertyData.confidence ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Confidence</div>
+                            <div class="detail-value">${propertyData.confidence}</div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
+                
+                ${propertyData.stories || propertyData.garage || propertyData.pool !== undefined || propertyData.fireplace !== undefined ? `
+                <div class="analysis-section">
+                    <h3>🏠 Property Features</h3>
+                    <div class="features-grid">
+                        ${propertyData.stories ? `<div class="feature-item">📐 ${propertyData.stories} ${propertyData.stories > 1 ? 'Stories' : 'Story'}</div>` : ''}
+                        ${propertyData.garage ? `<div class="feature-item">🚗 ${propertyData.garage}-Car Garage</div>` : ''}
+                        ${propertyData.pool ? '<div class="feature-item">🏊 Pool</div>' : ''}
+                        ${propertyData.fireplace ? '<div class="feature-item">🔥 Fireplace</div>' : ''}
+                        ${propertyData.basement ? '<div class="feature-item">🏠 Basement</div>' : ''}
+                        ${propertyData.airConditioning ? `<div class="feature-item">❄️ ${propertyData.airConditioning}</div>` : ''}
+                        ${propertyData.heating ? `<div class="feature-item">🔥 ${propertyData.heating}</div>` : ''}
+                    </div>
+                </div>
+                ` : ''}
                 
                 <div class="analysis-section">
                     <h3>💰 Investment Analysis</h3>
@@ -2866,8 +3370,109 @@
                     </div>
                 </div>
                 
+                ${propertyData.marketStats && Object.keys(propertyData.marketStats).length > 0 ? `
+                <div class="analysis-section">
+                    <h3>📊 Market Statistics (${zip})</h3>
+                    <div class="metric-grid">
+                        ${propertyData.marketStats.medianRent ? `
+                            <div class="metric-item">
+                                <div class="metric-value">${formatCurrency(propertyData.marketStats.medianRent)}</div>
+                                <div class="metric-label">Median Rent</div>
+                            </div>
+                        ` : ''}
+                        ${propertyData.marketStats.medianPrice ? `
+                            <div class="metric-item">
+                                <div class="metric-value">${formatCurrency(propertyData.marketStats.medianPrice)}</div>
+                                <div class="metric-label">Median Price</div>
+                            </div>
+                        ` : ''}
+                        ${propertyData.marketStats.avgDaysOnMarket ? `
+                            <div class="metric-item">
+                                <div class="metric-value">${propertyData.marketStats.avgDaysOnMarket}</div>
+                                <div class="metric-label">Avg Days on Market</div>
+                            </div>
+                        ` : ''}
+                        ${propertyData.marketStats.inventoryCount ? `
+                            <div class="metric-item">
+                                <div class="metric-value">${propertyData.marketStats.inventoryCount}</div>
+                                <div class="metric-label">Active Listings</div>
+                            </div>
+                        ` : ''}
+                        ${propertyData.marketStats.yearOverYearChange ? `
+                            <div class="metric-item">
+                                <div class="metric-value ${propertyData.marketStats.yearOverYearChange >= 0 ? 'positive' : 'negative'}">${propertyData.marketStats.yearOverYearChange > 0 ? '+' : ''}${propertyData.marketStats.yearOverYearChange}%</div>
+                                <div class="metric-label">YoY Price Change</div>
+                            </div>
+                        ` : ''}
+                        ${propertyData.marketStats.medianPricePerSqft ? `
+                            <div class="metric-item">
+                                <div class="metric-value">${formatCurrency(propertyData.marketStats.medianPricePerSqft)}/sqft</div>
+                                <div class="metric-label">Median $/sqft</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${propertyData.priceRangeLow && propertyData.priceRangeHigh ? `
+                <div class="analysis-section">
+                    <h3>💵 Value & Rent Estimates</h3>
+                    <div class="range-section">
+                        <h4>Estimated Value Range</h4>
+                        <div class="range-display">
+                            <span class="range-low">${formatCurrency(propertyData.priceRangeLow)}</span>
+                            <span class="range-divider">-</span>
+                            <span class="range-high">${formatCurrency(propertyData.priceRangeHigh)}</span>
+                        </div>
+                    </div>
+                    ${propertyData.rentRangeLow && propertyData.rentRangeHigh ? `
+                    <div class="range-section">
+                        <h4>Rent Estimate Range</h4>
+                        <div class="range-display">
+                            <span class="range-low">${formatCurrency(propertyData.rentRangeLow)}/mo</span>
+                            <span class="range-divider">-</span>
+                            <span class="range-high">${formatCurrency(propertyData.rentRangeHigh)}/mo</span>
+                            ${propertyData.rentPercentile ? `<div class="percentile-badge">${propertyData.rentPercentile}th Percentile</div>` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                ` : ''}
+                
+                ${propertyData.lastSaleDate || propertyData.lastSalePrice || propertyData.taxAssessedValue ? `
+                <div class="analysis-section">
+                    <h3>🏢 Property History</h3>
+                    <div class="detail-grid">
+                        ${propertyData.lastSaleDate ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Last Sale Date</div>
+                                <div class="detail-value">${new Date(propertyData.lastSaleDate).toLocaleDateString()}</div>
+                            </div>
+                        ` : ''}
+                        ${propertyData.lastSalePrice ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Last Sale Price</div>
+                                <div class="detail-value">${formatCurrency(propertyData.lastSalePrice)}</div>
+                            </div>
+                        ` : ''}
+                        ${propertyData.taxAssessedValue ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Tax Assessed Value</div>
+                                <div class="detail-value">${formatCurrency(propertyData.taxAssessedValue)}</div>
+                            </div>
+                        ` : ''}
+                        ${propertyData.taxAssessedYear ? `
+                            <div class="detail-item">
+                                <div class="detail-label">Assessment Year</div>
+                                <div class="detail-value">${propertyData.taxAssessedYear}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+                
                 <div style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button class="btn btn-success" onclick="addAnalyzedProperty('${fullAddress}', '${city}', '${state}', '${zip}', ${purchasePrice}, ${monthlyRent}, ${monthlyMortgage}, '${propertyType}', ${beds}, ${baths}, ${sqft}, ${year})">
+                    <button class="btn btn-success" onclick='addComprehensiveProperty(${JSON.stringify(comprehensiveData).replace(/'/g, "\\x27")})'>
                         ➕ Add to Portfolio
                     </button>
                     <button class="btn btn-primary" onclick="document.getElementById('propertyAddressInput').value=''; document.getElementById('analysisResults').style.display='none';">
@@ -2990,7 +3595,80 @@
             return Math.round(payment);
         }
         
-        // Add analyzed property to portfolio
+        // Add comprehensive property with all RentCast data
+        function addComprehensiveProperty(comprehensiveData) {
+            const property = {
+                id: Date.now(),
+                address: comprehensiveData.address || comprehensiveData.streetAddress,
+                city: comprehensiveData.city,
+                state: comprehensiveData.state,
+                zip: comprehensiveData.zip,
+                county: comprehensiveData.county,
+                purchasePrice: comprehensiveData.purchasePrice,
+                currentValue: comprehensiveData.estimatedValue || comprehensiveData.purchasePrice,
+                monthlyRent: comprehensiveData.monthlyRent,
+                monthlyMortgage: comprehensiveData.monthlyMortgage,
+                propertyType: comprehensiveData.propertyType || 'Single Family',
+                beds: comprehensiveData.beds || null,
+                baths: comprehensiveData.baths || null,
+                sqft: comprehensiveData.sqft || null,
+                yearBuilt: comprehensiveData.year || comprehensiveData.yearBuilt || null,
+                lotSize: comprehensiveData.lotSize || null,
+                purchaseDate: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString(),
+                lastModified: new Date().toISOString(),
+                realTimeData: true,
+                // Property features
+                stories: comprehensiveData.stories,
+                garage: comprehensiveData.garage,
+                pool: comprehensiveData.pool,
+                fireplace: comprehensiveData.fireplace,
+                basement: comprehensiveData.basement,
+                airConditioning: comprehensiveData.airConditioning,
+                heating: comprehensiveData.heating,
+                // Construction details
+                foundation: comprehensiveData.foundation,
+                roofType: comprehensiveData.roofType,
+                exteriorWall: comprehensiveData.exteriorWall,
+                architecturalStyle: comprehensiveData.architecturalStyle,
+                // Owner info
+                ownerName: comprehensiveData.ownerName,
+                ownerType: comprehensiveData.ownerType,
+                ownerOccupied: comprehensiveData.ownerOccupied,
+                // Tax data
+                taxAssessedValue: comprehensiveData.taxAssessedValue,
+                taxAssessedYear: comprehensiveData.taxAssessedYear,
+                // Market data
+                marketData: {
+                    lastSaleDate: comprehensiveData.lastSaleDate,
+                    lastSalePrice: comprehensiveData.lastSalePrice,
+                    pricePerSqft: comprehensiveData.pricePerSqft,
+                    rentPerSqft: comprehensiveData.rentPerSqft,
+                    estimatedValue: comprehensiveData.estimatedValue,
+                    priceRangeLow: comprehensiveData.priceRangeLow,
+                    priceRangeHigh: comprehensiveData.priceRangeHigh,
+                    confidence: comprehensiveData.confidence,
+                    rentRangeLow: comprehensiveData.rentRangeLow,
+                    rentRangeHigh: comprehensiveData.rentRangeHigh,
+                    rentPercentile: comprehensiveData.rentPercentile,
+                    marketStats: comprehensiveData.marketStats || {}
+                }
+            };
+            
+            properties.push(property);
+            saveProperties();
+            updateDisplay();
+            updateStats();
+            debouncedUpdateCharts();
+            
+            // Clear form and hide results
+            document.getElementById('propertyAddressInput').value = '';
+            document.getElementById('analysisResults').style.display = 'none';
+            
+            showMessage('Property added to portfolio with comprehensive RentCast data!', 'success');
+        }
+        
+        // Legacy function for backward compatibility
         function addAnalyzedProperty(address, city, state, zip, purchasePrice, monthlyRent, monthlyMortgage, propertyType, beds, baths, sqft, yearBuilt) {
             const property = {
                 id: Date.now(),

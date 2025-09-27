@@ -107,6 +107,120 @@ app.get('/api/rentcast/properties', async (req, res) => {
     }
 });
 
+// Get rent estimates from RentCast
+app.get('/api/rentcast/rent-estimate', async (req, res) => {
+    if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
+        return res.status(503).json({
+            success: false,
+            error: 'RentCast API key not configured'
+        });
+    }
+
+    try {
+        const { address, city, state, zipcode, bedrooms, bathrooms, squareFootage } = req.query;
+        const params = new URLSearchParams({ address, city, state, zipcode });
+        
+        if (bedrooms) params.append('bedrooms', bedrooms);
+        if (bathrooms) params.append('bathrooms', bathrooms);
+        if (squareFootage) params.append('squareFootage', squareFootage);
+
+        const response = await axios.get(`${RENTCAST_API_BASE}/avm/rent/long-term?${params}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Api-Key': RENTCAST_API_KEY
+            }
+        });
+        
+        res.json({
+            success: true,
+            data: response.data
+        });
+    } catch (error) {
+        console.error('RentCast Rent Estimate Error:', error.message);
+        res.status(error.response?.status || 500).json({
+            success: false,
+            error: error.response?.data?.message || error.message
+        });
+    }
+});
+
+// Get value estimates from RentCast
+app.get('/api/rentcast/value-estimate', async (req, res) => {
+    if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
+        return res.status(503).json({
+            success: false,
+            error: 'RentCast API key not configured'
+        });
+    }
+
+    try {
+        const { address, city, state, zipcode } = req.query;
+        const params = new URLSearchParams({ address, city, state, zipcode });
+
+        const response = await axios.get(`${RENTCAST_API_BASE}/avm/value?${params}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Api-Key': RENTCAST_API_KEY
+            }
+        });
+        
+        res.json({
+            success: true,
+            data: response.data
+        });
+    } catch (error) {
+        console.error('RentCast Value Estimate Error:', error.message);
+        res.status(error.response?.status || 500).json({
+            success: false,
+            error: error.response?.data?.message || error.message
+        });
+    }
+});
+
+// Get market statistics from RentCast
+app.get('/api/rentcast/market-stats', async (req, res) => {
+    if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
+        return res.status(503).json({
+            success: false,
+            error: 'RentCast API key not configured'
+        });
+    }
+
+    try {
+        const { zipCode, historyRange = '12' } = req.query;
+        
+        if (!zipCode) {
+            return res.status(400).json({
+                success: false,
+                error: 'Zip code is required for market statistics'
+            });
+        }
+
+        const params = new URLSearchParams({ 
+            zipCode, 
+            historyRange // months of history
+        });
+
+        const response = await axios.get(`${RENTCAST_API_BASE}/markets?${params}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Api-Key': RENTCAST_API_KEY
+            }
+        });
+        
+        res.json({
+            success: true,
+            data: response.data
+        });
+    } catch (error) {
+        console.error('RentCast Market Stats Error:', error.message);
+        res.status(error.response?.status || 500).json({
+            success: false,
+            error: error.response?.data?.message || error.message
+        });
+    }
+});
+
 // Health check endpoint for Render
 app.get('/health', async (req, res) => {
     let dbStatus = 'disconnected';
