@@ -296,6 +296,26 @@
             font-size: 14px;
         }
         
+        /* Sticky first column (Address) */
+        thead th:first-child,
+        tbody td:first-child {
+            position: sticky;
+            left: 0;
+            background: var(--bg-card);
+            z-index: 5;
+            box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        thead th:first-child {
+            background: var(--bg-secondary);
+            z-index: 11;
+        }
+        
+        /* Ensure proper hover state for sticky column */
+        tbody tr:hover td:first-child {
+            background: var(--bg-hover);
+        }
+        
         tr:hover {
             background: var(--bg-hover);
             cursor: pointer;
