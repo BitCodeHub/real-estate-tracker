@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Property Display</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background: #1a1a1a; color: white; }
+        button { margin: 10px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .section { background: #242424; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        pre { background: #0a0a0a; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Property Display Issue</h1>
+    
+    <div class="section">
+        <h2>Quick Diagnostics</h2>
+        <button onclick="checkProperties()">Check Properties Array</button>
+        <button onclick="checkFilters()">Check Filter Values</button>
+        <button onclick="testTableDisplay()">Test Table Display</button>
+        <button onclick="checkCalculations()">Check Calculations</button>
+        <button onclick="fixIssue()">Apply Fix</button>
+    </div>
+    
+    <div class="section">
+        <h2>Debug Output:</h2>
+        <pre id="output"></pre>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, data = null) {
+            const timestamp = new Date().toISOString().split('T')[1];
+            output.innerHTML += `[${timestamp}] ${message}\n`;
+            if (data) {
+                output.innerHTML += JSON.stringify(data, null, 2) + '\n';
+            }
+            output.innerHTML += '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        async function checkProperties() {
+            log('=== CHECKING PROPERTIES ARRAY ===');
+            
+            // Get the parent window (main app)
+            const mainWindow = window.opener || window.parent || window;
+            
+            if (mainWindow.properties) {
+                log(`Properties array has ${mainWindow.properties.length} items`);
+                
+                // Check first 3 properties
+                mainWindow.properties.slice(0, 3).forEach((prop, index) => {
+                    log(`Property ${index + 1}:`, {
+                        id: prop.id,
+                        address: prop.address,
+                        city: prop.city,
+                        state: prop.state,
+                        zip: prop.zip,
+                        purchasePrice: prop.purchasePrice,
+                        monthlyRent: prop.monthlyRent,
+                        monthlyCashFlow: prop.monthlyCashFlow,
+                        hasAddress: !!prop.address,
+                        hasCity: !!prop.city
+                    });
+                });
+                
+                // Check for properties with missing required fields
+                const invalidProps = mainWindow.properties.filter(p => !p.address || !p.city);
+                if (invalidProps.length > 0) {
+                    log(`⚠️ Found ${invalidProps.length} properties with missing address or city`);
+                    invalidProps.forEach(p => log('Invalid property:', p));
+                }
+            } else {
+                log('❌ Cannot access properties array from parent window');
+            }
+        }
+        
+        function checkFilters() {
+            log('=== CHECKING FILTER VALUES ===');
+            
+            const mainWindow = window.opener || window.parent || window;
+            const doc = mainWindow.document;
+            
+            if (doc) {
+                const filters = {
+                    city: doc.getElementById('filterCity')?.value || 'NOT FOUND',
+                    status: doc.getElementById('filterStatus')?.value || 'NOT FOUND',
+                    minCashFlow: doc.getElementById('filterMinCashFlow')?.value || 'NOT FOUND',
+                    search: doc.getElementById('searchInput')?.value || 'NOT FOUND'
+                };
+                
+                log('Current filter values:', filters);
+                
+                // Check if minCashFlow is causing issues
+                if (filters.minCashFlow && filters.minCashFlow !== 'NOT FOUND') {
+                    const minCashFlowNum = parseFloat(filters.minCashFlow);
+                    log(`Min cash flow filter: ${minCashFlowNum}`);
+                    
+                    if (mainWindow.properties) {
+                        const passingProps = mainWindow.properties.filter(p => (p.monthlyCashFlow || 0) >= minCashFlowNum);
+                        log(`Properties passing cash flow filter: ${passingProps.length}`);
+                    }
+                }
+            } else {
+                log('❌ Cannot access document from parent window');
+            }
+        }
+        
+        function testTableDisplay() {
+            log('=== TESTING TABLE DISPLAY ===');
+            
+            const mainWindow = window.opener || window.parent || window;
+            
+            if (mainWindow.properties && mainWindow.getFilteredProperties) {
+                // Call getFilteredProperties
+                const filtered = mainWindow.getFilteredProperties();
+                log(`getFilteredProperties returns ${filtered.length} items`);
+                
+                if (filtered.length > 0) {
+                    log('First filtered property:', filtered[0]);
+                } else {
+                    log('⚠️ No properties returned by getFilteredProperties');
+                    
+                    // Test filtering manually
+                    log('Testing manual filtering...');
+                    const allProps = [...mainWindow.properties];
+                    log(`Starting with ${allProps.length} properties`);
+                    
+                    // Test each filter step by step
+                    const doc = mainWindow.document;
+                    if (doc) {
+                        const cityFilter = doc.getElementById('filterCity')?.value;
+                        if (cityFilter) {
+                            const afterCity = allProps.filter(p => p.city === cityFilter);
+                            log(`After city filter (${cityFilter}): ${afterCity.length} properties`);
+                        }
+                        
+                        const statusFilter = doc.getElementById('filterStatus')?.value;
+                        if (statusFilter) {
+                            const afterStatus = allProps.filter(p => p.status === statusFilter);
+                            log(`After status filter (${statusFilter}): ${afterStatus.length} properties`);
+                        }
+                        
+                        const minCashFlow = parseFloat(doc.getElementById('filterMinCashFlow')?.value) || null;
+                        if (minCashFlow !== null) {
+                            const afterCashFlow = allProps.filter(p => (p.monthlyCashFlow || 0) >= minCashFlow);
+                            log(`After cash flow filter (${minCashFlow}): ${afterCashFlow.length} properties`);
+                        }
+                    }
+                }
+            } else {
+                log('❌ Cannot access properties or getFilteredProperties from parent window');
+            }
+        }
+        
+        function checkCalculations() {
+            log('=== CHECKING CALCULATIONS ===');
+            
+            const mainWindow = window.opener || window.parent || window;
+            
+            if (mainWindow.properties) {
+                mainWindow.properties.forEach((prop, index) => {
+                    if (!prop.monthlyCashFlow && prop.monthlyRent) {
+                        log(`Property ${index + 1} missing monthlyCashFlow calculation:`, {
+                            address: prop.address,
+                            monthlyRent: prop.monthlyRent,
+                            monthlyCashFlow: prop.monthlyCashFlow
+                        });
+                    }
+                });
+                
+                // Check for NaN values
+                const hasNaN = mainWindow.properties.some(p => 
+                    isNaN(p.purchasePrice) || 
+                    isNaN(p.monthlyRent) || 
+                    isNaN(p.monthlyCashFlow)
+                );
+                
+                if (hasNaN) {
+                    log('⚠️ Found properties with NaN values');
+                }
+            }
+        }
+        
+        function fixIssue() {
+            log('=== APPLYING FIX ===');
+            
+            const mainWindow = window.opener || window.parent || window;
+            
+            if (mainWindow) {
+                // Reset filters
+                const doc = mainWindow.document;
+                if (doc) {
+                    // Clear all filters
+                    const filterCity = doc.getElementById('filterCity');
+                    const filterStatus = doc.getElementById('filterStatus');
+                    const filterMinCashFlow = doc.getElementById('filterMinCashFlow');
+                    const searchInput = doc.getElementById('searchInput');
+                    
+                    if (filterCity) filterCity.value = '';
+                    if (filterStatus) filterStatus.value = '';
+                    if (filterMinCashFlow) filterMinCashFlow.value = '';
+                    if (searchInput) searchInput.value = '';
+                    
+                    log('✅ Reset all filters');
+                    
+                    // Recalculate metrics for all properties
+                    if (mainWindow.properties && mainWindow.calculatePropertyMetrics) {
+                        mainWindow.properties.forEach(prop => {
+                            mainWindow.calculatePropertyMetrics(prop);
+                        });
+                        log('✅ Recalculated metrics for all properties');
+                    }
+                    
+                    // Update display
+                    if (mainWindow.updateDisplay) {
+                        mainWindow.updateDisplay();
+                        log('✅ Called updateDisplay');
+                    }
+                } else {
+                    log('❌ Cannot access document');
+                }
+            } else {
+                log('❌ Cannot access main window');
+            }
+        }
+        
+        // Auto-run diagnostics
+        setTimeout(() => {
+            log('Running automatic diagnostics...');
+            checkProperties();
+        }, 500);
+    </script>
+</body>
+</html>

@@ -1200,6 +1200,9 @@
             
             // Setup UI
             setupEventListeners();
+            
+            // Update display after everything is loaded
+            updateDisplay();
         });
         
         // Check API and database connection status
@@ -1273,6 +1276,13 @@
                         
                         console.log(`✅ Loaded ${properties.length} properties from server and synced to localStorage`);
                         
+                        // Calculate metrics for all properties after loading
+                        properties.forEach(prop => {
+                            if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
+                                calculatePropertyMetrics(prop);
+                            }
+                        });
+                        
                         // Debug: Check first 2 properties
                         if (properties.length > 0) {
                             console.log('🔍 Sample properties:');
@@ -1281,7 +1291,8 @@
                                     id: p.id,
                                     purchasePrice: p.purchasePrice,
                                     monthlyRent: p.monthlyRent,
-                                    cashFlow: p.cashFlow
+                                    cashFlow: p.cashFlow,
+                                    monthlyCashFlow: p.monthlyCashFlow
                                 });
                             });
                         }
@@ -1292,6 +1303,12 @@
                         if (saved) {
                             properties = JSON.parse(saved);
                             console.log(`📱 Loaded ${properties.length} properties from localStorage (database offline)`);
+                            // Calculate metrics for properties loaded from localStorage
+                            properties.forEach(prop => {
+                                if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
+                                    calculatePropertyMetrics(prop);
+                                }
+                            });
                         } else {
                             properties = [];
                         }
@@ -1303,6 +1320,12 @@
                     if (saved) {
                         properties = JSON.parse(saved);
                         console.log(`📱 Loaded ${properties.length} properties from localStorage (server error)`);
+                        // Calculate metrics for properties loaded from localStorage
+                        properties.forEach(prop => {
+                            if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
+                                calculatePropertyMetrics(prop);
+                            }
+                        });
                     } else {
                         properties = [];
                     }
@@ -1314,6 +1337,12 @@
                 if (saved) {
                     properties = JSON.parse(saved);
                     console.log(`📱 Loaded ${properties.length} properties from localStorage (network error)`);
+                    // Calculate metrics for properties loaded from localStorage
+                    properties.forEach(prop => {
+                        if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
+                            calculatePropertyMetrics(prop);
+                        }
+                    });
                 } else {
                     properties = [];
                     console.log('📱 No properties in localStorage');
@@ -3822,9 +3851,16 @@
         function getFilteredProperties() {
             let filtered = [...properties];
             
+            // Ensure all properties have metrics calculated before filtering
+            filtered.forEach(prop => {
+                if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined && !prop.monthlyCashFlow) {
+                    calculatePropertyMetrics(prop);
+                }
+            });
+            
             const cityFilter = document.getElementById('filterCity').value;
             const statusFilter = document.getElementById('filterStatus').value;
-            const minCashFlow = parseFloat(document.getElementById('filterMinCashFlow').value) || null;
+            const minCashFlowValue = document.getElementById('filterMinCashFlow').value;
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             
             if (cityFilter) {
@@ -3835,15 +3871,19 @@
                 filtered = filtered.filter(p => p.status === statusFilter);
             }
             
-            if (minCashFlow !== null) {
-                filtered = filtered.filter(p => (p.monthlyCashFlow || 0) >= minCashFlow);
+            // Only apply cash flow filter if a value is explicitly entered
+            if (minCashFlowValue !== '' && minCashFlowValue !== null) {
+                const minCashFlow = parseFloat(minCashFlowValue);
+                if (!isNaN(minCashFlow)) {
+                    filtered = filtered.filter(p => (p.monthlyCashFlow || 0) >= minCashFlow);
+                }
             }
             
             if (searchText) {
                 filtered = filtered.filter(p => 
-                    p.address.toLowerCase().includes(searchText) ||
-                    p.city.toLowerCase().includes(searchText) ||
-                    (p.zip || '').includes(searchText)
+                    (p.address && p.address.toLowerCase().includes(searchText)) ||
+                    (p.city && p.city.toLowerCase().includes(searchText)) ||
+                    (p.zip && p.zip.includes(searchText))
                 );
             }
             
