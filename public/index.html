@@ -765,6 +765,29 @@
                 opacity: 0;
             }
         }
+        
+        /* Notification animations */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -901,8 +924,20 @@
             </div>
             <div class="modal-body">
                 <form id="addPropertyForm">
+                    <!-- New full address field -->
+                    <div class="form-group" style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <label for="fullAddress" style="font-weight: 600; color: var(--accent-primary);">Quick Add: Paste Full Address</label>
+                        <input type="text" id="fullAddress" 
+                               placeholder="e.g. 1613 Capistrano Ave Las Vegas, NV 89169" 
+                               style="background: var(--bg-primary); border: 2px solid var(--border-light);" 
+                               oninput="parseAndFillAddress()">
+                        <small style="color: var(--text-muted); display: block; margin-top: 5px;">
+                            <i class="fas fa-info-circle"></i> Paste or type a complete address to auto-fill the fields below
+                        </small>
+                    </div>
+                    
                     <div class="form-group">
-                        <label for="address">Address *</label>
+                        <label for="address">Street Address *</label>
                         <input type="text" id="address" name="address" required placeholder="123 Main St">
                     </div>
                     
@@ -913,13 +948,12 @@
                     
                     <div class="form-group">
                         <label for="state">State *</label>
-                        <input type="text" id="state" name="state" required placeholder="NV" maxlength="2">
+                        <input type="text" id="state" name="state" required placeholder="NV" maxlength="2" style="text-transform: uppercase;">
                     </div>
                     
                     <div class="form-group">
                         <label for="zip">ZIP Code *</label>
                         <input type="text" id="zip" name="zip" required placeholder="89101">
-                    </div>
                     
                     <div class="form-group">
                         <label for="propertyType">Property Type</label>
@@ -932,13 +966,15 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="purchasePrice">Purchase Price *</label>
-                        <input type="number" id="purchasePrice" name="purchasePrice" required placeholder="500000">
+                        <label for="purchasePrice">Purchase Price</label>
+                        <input type="number" id="purchasePrice" name="purchasePrice" placeholder="500000">
+                        <small style="color: var(--text-muted);">Optional - Leave blank to fetch from RentCast</small>
                     </div>
                     
                     <div class="form-group">
-                        <label for="monthlyRent">Monthly Rent *</label>
-                        <input type="number" id="monthlyRent" name="monthlyRent" required placeholder="2500">
+                        <label for="monthlyRent">Monthly Rent</label>
+                        <input type="number" id="monthlyRent" name="monthlyRent" placeholder="2500">
+                        <small style="color: var(--text-muted);">Optional - Leave blank to fetch from RentCast</small>
                     </div>
                     
                     <div class="form-group">
@@ -2551,8 +2587,42 @@
             document.getElementById(modalId).style.display = 'none';
         }
 
+        // Show notification message
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                background: ${type === 'success' ? 'var(--accent-success)' : type === 'error' ? 'var(--accent-danger)' : 'var(--accent-info)'};
+                color: white;
+                box-shadow: var(--shadow-lg);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                max-width: 400px;
+            `;
+            
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
         function openAddPropertyModal() {
             document.getElementById('addPropertyForm').reset();
+            document.getElementById('fullAddress').value = ''; // Clear the full address field
             openModal('addPropertyModal');
         }
 
@@ -2567,53 +2637,95 @@
         async function handleAddProperty(e) {
             e.preventDefault();
             
-            const formData = new FormData(e.target);
-            const property = {};
+            // Show loading state
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Property...';
+            submitBtn.disabled = true;
             
-            for (let [key, value] of formData.entries()) {
-                property[key] = value;
+            try {
+                const formData = new FormData(e.target);
+                const property = {};
+                
+                for (let [key, value] of formData.entries()) {
+                    property[key] = value;
+                }
+                
+                // Convert numeric fields
+                property.purchasePrice = parseFloat(property.purchasePrice) || 0;
+                property.monthlyRent = parseFloat(property.monthlyRent) || 0;
+                property.beds = parseInt(property.beds) || 0;
+                property.baths = parseFloat(property.baths) || 0;
+                property.sqft = parseInt(property.sqft) || 0;
+                
+                // Set defaults
+                property.status = 'available';
+                property.dateAdded = new Date().toISOString();
+                
+                // Try to fetch additional data from RentCast
+                const rentcastData = await fetchRentCastData(property);
+                if (rentcastData && rentcastData.success && rentcastData.data) {
+                    // Merge with proper field mapping
+                    const mappedData = {
+                        ...rentcastData.data,
+                        // Ensure we have both sets of field names
+                        beds: rentcastData.data.beds || rentcastData.data.bedrooms || property.beds,
+                        baths: rentcastData.data.baths || rentcastData.data.bathrooms || property.baths,
+                        sqft: rentcastData.data.sqft || rentcastData.data.squareFootage || property.sqft,
+                        // Database column names
+                        bedrooms: rentcastData.data.beds || rentcastData.data.bedrooms || property.beds,
+                        bathrooms: rentcastData.data.baths || rentcastData.data.bathrooms || property.baths,
+                        square_footage: rentcastData.data.sqft || rentcastData.data.squareFootage || property.sqft
+                    };
+                    Object.assign(property, mappedData);
+                    
+                    // If user didn't provide purchase price or rent, use RentCast estimates
+                    if (!property.purchasePrice && rentcastData.data.estimatedValue) {
+                        property.purchasePrice = rentcastData.data.estimatedValue;
+                        property.currentValue = rentcastData.data.estimatedValue;
+                        console.log('Using RentCast estimated value:', property.purchasePrice);
+                    }
+                    
+                    if (!property.monthlyRent && rentcastData.data.rentEstimate) {
+                        property.monthlyRent = rentcastData.data.rentEstimate;
+                        console.log('Using RentCast rent estimate:', property.monthlyRent);
+                    }
+                }
+                
+                // Set current value if not already set
+                if (!property.currentValue) {
+                    property.currentValue = property.purchasePrice || 0;
+                }
+                
+                // Validate that we have minimum required data
+                if (!property.address || !property.city || !property.state || !property.zip) {
+                    throw new Error('Please provide complete address information');
+                }
+                
+                // Calculate metrics
+                calculatePropertyMetrics(property);
+                
+                // Add to properties array
+                properties.push(property);
+                
+                // Save and update display
+                await saveProperties();
+                updateDisplay();
+                closeModal('addPropertyModal');
+                
+                // Show success message if we don't have showNotification
+                if (typeof showNotification === 'function') {
+                    showNotification(`Property "${property.address}" added successfully!`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('Error adding property:', error);
+                alert(error.message || 'Error adding property. Please try again.');
+            } finally {
+                // Reset button state
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
             }
-            
-            // Convert numeric fields
-            property.purchasePrice = parseFloat(property.purchasePrice) || 0;
-            property.monthlyRent = parseFloat(property.monthlyRent) || 0;
-            property.beds = parseInt(property.beds) || 0;
-            property.baths = parseFloat(property.baths) || 0;
-            property.sqft = parseInt(property.sqft) || 0;
-            
-            // Set defaults
-            property.currentValue = property.purchasePrice;
-            property.status = 'available';
-            property.dateAdded = new Date().toISOString();
-            
-            // Try to fetch additional data from RentCast
-            const rentcastData = await fetchRentCastData(property);
-            if (rentcastData && rentcastData.success && rentcastData.data) {
-                // Merge with proper field mapping
-                const mappedData = {
-                    ...rentcastData.data,
-                    // Ensure we have both sets of field names
-                    beds: rentcastData.data.beds || rentcastData.data.bedrooms || property.beds,
-                    baths: rentcastData.data.baths || rentcastData.data.bathrooms || property.baths,
-                    sqft: rentcastData.data.sqft || rentcastData.data.squareFootage || property.sqft,
-                    // Database column names
-                    bedrooms: rentcastData.data.beds || rentcastData.data.bedrooms || property.beds,
-                    bathrooms: rentcastData.data.baths || rentcastData.data.bathrooms || property.baths,
-                    square_footage: rentcastData.data.sqft || rentcastData.data.squareFootage || property.sqft
-                };
-                Object.assign(property, mappedData);
-            }
-            
-            // Calculate metrics
-            calculatePropertyMetrics(property);
-            
-            // Add to properties array
-            properties.push(property);
-            
-            // Save and update display
-            await saveProperties();
-            updateDisplay();
-            closeModal('addPropertyModal');
         }
 
         // Analyze new property
@@ -2798,12 +2910,15 @@
             });
         }
 
-        // Parse address components
+        // Parse address components - enhanced to handle various formats
         function parseAddressComponents(address) {
-            const parts = address.split(',').map(s => s.trim());
             let streetAddress = '', city = '', state = '', zip = '';
             
+            // First try comma-separated format
+            let parts = address.split(',').map(s => s.trim());
+            
             if (parts.length >= 3) {
+                // Format: "123 Main St, Las Vegas, NV 89169"
                 streetAddress = parts[0];
                 city = parts[1];
                 
@@ -2814,9 +2929,96 @@
                 } else if (stateZip.length === 1) {
                     state = stateZip[0];
                 }
+            } else {
+                // Try parsing without commas: "123 Main St Las Vegas NV 89169"
+                // Look for ZIP code pattern
+                const zipMatch = address.match(/(\d{5}(?:-\d{4})?)$/);
+                if (zipMatch) {
+                    zip = zipMatch[1];
+                    address = address.replace(zipMatch[0], '').trim();
+                }
+                
+                // Look for state abbreviation (2 uppercase letters at the end)
+                const stateMatch = address.match(/\b([A-Z]{2})\s*$/);
+                if (stateMatch) {
+                    state = stateMatch[1];
+                    address = address.replace(stateMatch[0], '').trim();
+                }
+                
+                // Split remaining address
+                const words = address.split(' ');
+                if (words.length >= 3) {
+                    // Assume last part is city, rest is street address
+                    // Common patterns: city names can be 1-3 words
+                    // Check for common multi-word city patterns
+                    const addressLower = address.toLowerCase();
+                    const multiWordCities = ['las vegas', 'los angeles', 'san francisco', 'san diego', 'new york', 'salt lake city', 'san antonio', 'santa monica', 'san jose'];
+                    
+                    let cityFound = false;
+                    for (const cityName of multiWordCities) {
+                        if (addressLower.includes(cityName)) {
+                            const cityIndex = addressLower.indexOf(cityName);
+                            streetAddress = address.substring(0, cityIndex).trim();
+                            city = address.substring(cityIndex, cityIndex + cityName.length).trim();
+                            // Preserve original case
+                            city = words.slice(-cityName.split(' ').length).join(' ');
+                            cityFound = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!cityFound) {
+                        // Default: assume last 1-2 words are city
+                        const possibleCityWords = Math.min(2, Math.max(1, words.length - 2));
+                        city = words.slice(-possibleCityWords).join(' ');
+                        streetAddress = words.slice(0, -possibleCityWords).join(' ');
+                    }
+                }
             }
             
-            return { streetAddress, city, state, zip };
+            // Clean up state abbreviation to uppercase
+            if (state) {
+                state = state.toUpperCase();
+            }
+            
+            return { streetAddress: streetAddress || address, city, state, zip };
+        }
+        
+        // Parse and fill address fields in Add Property form
+        function parseAndFillAddress() {
+            const fullAddress = document.getElementById('fullAddress').value.trim();
+            
+            if (!fullAddress) {
+                return;
+            }
+            
+            const parsed = parseAddressComponents(fullAddress);
+            
+            // Fill in the individual fields
+            if (parsed.streetAddress) {
+                document.getElementById('address').value = parsed.streetAddress;
+            }
+            if (parsed.city) {
+                document.getElementById('city').value = parsed.city;
+            }
+            if (parsed.state) {
+                document.getElementById('state').value = parsed.state;
+            }
+            if (parsed.zip) {
+                document.getElementById('zip').value = parsed.zip;
+            }
+            
+            // Visual feedback - briefly highlight filled fields
+            ['address', 'city', 'state', 'zip'].forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field.value) {
+                    field.style.border = '2px solid var(--accent-success)';
+                    field.style.transition = 'border 0.3s ease';
+                    setTimeout(() => {
+                        field.style.border = '';
+                    }, 1000);
+                }
+            });
         }
 
         // Export analysis report
