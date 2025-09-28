@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Function Scope</title>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: monospace; padding: 20px; }
+        .found { color: #0f0; }
+        .missing { color: #f00; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Function Scope Check</h1>
+    
+    <button onclick="checkFunctions()">Check Functions Now</button>
+    <button onclick="tryCallFunctions()">Try Calling Functions</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        function checkFunctions() {
+            const output = document.getElementById('output');
+            const funcs = [
+                'openModal',
+                'closeModal',
+                'openAddPropertyModal',
+                'openAnalyzeModal',
+                'generateMarketInsights',
+                'generateAIInsights',
+                'analyzeNewProperty',
+                'calculatePropertyMetrics',
+                'updateDisplay'
+            ];
+            
+            let html = '<h2>Function Check Results:</h2>';
+            
+            funcs.forEach(func => {
+                const exists = typeof window[func] === 'function';
+                html += `<div class="${exists ? 'found' : 'missing'}">`;
+                html += `window.${func}: ${exists ? 'FOUND' : 'MISSING'}`;
+                if (exists) {
+                    try {
+                        html += ` (${window[func].toString().substring(0, 50)}...)`;
+                    } catch (e) {}
+                }
+                html += '</div>';
+            });
+            
+            // Also check for modal elements
+            html += '<h2>Modal Elements:</h2>';
+            const modalIds = ['analyzeModal', 'marketInsightsModal', 'addPropertyModal', 'propertyModal'];
+            modalIds.forEach(id => {
+                const elem = document.getElementById(id);
+                html += `<div class="${elem ? 'found' : 'missing'}">${id}: ${elem ? 'FOUND' : 'MISSING'}</div>`;
+            });
+            
+            output.innerHTML = html;
+        }
+        
+        function tryCallFunctions() {
+            const output = document.getElementById('output');
+            let html = '<h2>Function Call Tests:</h2>';
+            
+            // Try openModal
+            try {
+                if (typeof window.openModal === 'function') {
+                    html += '<div class="found">openModal exists - trying to call it...</div>';
+                    // Don't actually open modal, just test
+                    html += '<div>openModal function: ' + window.openModal.toString().substring(0, 100) + '...</div>';
+                } else {
+                    html += '<div class="missing">openModal does not exist as a function</div>';
+                }
+            } catch (e) {
+                html += '<div class="missing">Error testing openModal: ' + e.message + '</div>';
+            }
+            
+            // Try direct property access
+            html += '<h2>Direct Property Access:</h2>';
+            html += '<div>typeof openModal: ' + typeof openModal + '</div>';
+            html += '<div>typeof window.openModal: ' + typeof window.openModal + '</div>';
+            html += '<div>typeof window["openModal"]: ' + typeof window["openModal"] + '</div>';
+            
+            // Check if functions might be in a different scope
+            html += '<h2>Global Object Keys (modal-related):</h2>';
+            const modalKeys = Object.keys(window).filter(k => k.toLowerCase().includes('modal') || k.toLowerCase().includes('open') || k.toLowerCase().includes('close'));
+            html += '<div>Found keys: ' + (modalKeys.length > 0 ? modalKeys.join(', ') : 'NONE') + '</div>';
+            
+            output.innerHTML += html;
+        }
+        
+        // Auto-check on load
+        window.onload = function() {
+            setTimeout(checkFunctions, 500);
+        };
+    </script>
+</body>
+</html>
