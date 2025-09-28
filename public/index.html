@@ -977,6 +977,20 @@
                     const data = await response.json();
                     if (data.success && data.data.length > 0) {
                         properties = data.data;
+                        
+                        // Debug: Check first 2 properties
+                        console.log('🔍 Loaded properties from server:');
+                        properties.slice(0, 3).forEach((p, i) => {
+                            console.log(`Property ${i+1}: ${p.address}`, {
+                                id: p.id,
+                                beds: p.beds,
+                                bedrooms: p.bedrooms,
+                                realTimeData: p.realTimeData,
+                                rentcast_data: p.rentcast_data,
+                                estimatedValue: p.estimatedValue,
+                                rentEstimate: p.rentEstimate
+                            });
+                        });
                     } else {
                         // Load from localStorage if server returns empty
                         const saved = localStorage.getItem('properties');
@@ -1027,13 +1041,38 @@
                         }
                     } else {
                         // Existing property, update it
+                        // Debug: Log what we're sending for first 2 properties
+                        if (property.address === '1613 Capistrano Ave' || property.address === '1701 Canosa Ave') {
+                            console.log(`📤 Saving property: ${property.address}`, {
+                                id: property.id,
+                                beds: property.beds,
+                                bedrooms: property.bedrooms,
+                                realTimeData: property.realTimeData,
+                                estimatedValue: property.estimatedValue,
+                                rentEstimate: property.rentEstimate,
+                                lastRentCastUpdate: property.lastRentCastUpdate
+                            });
+                        }
+                        
                         const response = await fetch(`/api/properties/${property.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(property)
                         });
                         if (response.ok) {
+                            const updatedData = await response.json();
                             console.log(`✅ Updated property ${property.id}: ${property.address}, ${property.city}`);
+                            
+                            // Debug: Check what the server returned for first 2 properties
+                            if (property.address === '1613 Capistrano Ave' || property.address === '1701 Canosa Ave') {
+                                console.log(`📥 Server returned for ${property.address}:`, {
+                                    beds: updatedData.data.beds,
+                                    bedrooms: updatedData.data.bedrooms,
+                                    realTimeData: updatedData.data.realTimeData,
+                                    estimatedValue: updatedData.data.estimatedValue
+                                });
+                            }
+                            
                             updatedCount++;
                         } else {
                             console.error(`Failed to update property ${property.id}:`, await response.text());
@@ -1087,6 +1126,14 @@
             tbody.innerHTML = '';
             
             const filteredProperties = getFilteredProperties();
+            
+            // Debug: Check order of properties in table
+            if (filteredProperties.length > 0) {
+                console.log('📊 Table order - First 3 properties:');
+                filteredProperties.slice(0, 3).forEach((p, i) => {
+                    console.log(`Row ${i+1}: ${p.address}, ${p.city} - beds: ${p.beds || p.bedrooms || 0}`);
+                });
+            }
             
             filteredProperties.forEach((property, index) => {
                 const row = createPropertyRow(property, properties.indexOf(property));

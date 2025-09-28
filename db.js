@@ -223,6 +223,18 @@ const db = {
     // Update property
     async updateProperty(id, propertyData) {
         try {
+            // Debug logging for specific properties
+            if (propertyData.address === '1613 Capistrano Ave' || propertyData.address === '1701 Canosa Ave') {
+                console.log(`🔍 DB: Updating property ${propertyData.address}:`, {
+                    id: id,
+                    beds: propertyData.beds,
+                    bedrooms: propertyData.bedrooms,
+                    estimatedValue: propertyData.estimatedValue,
+                    rentEstimate: propertyData.rentEstimate,
+                    realTimeData: propertyData.realTimeData
+                });
+            }
+            
             const updateFields = [];
             const values = [];
             let paramCount = 1;
@@ -244,9 +256,12 @@ const db = {
                 'sqft': 'square_footage',
                 'yearBuilt': 'year_built',
                 'currentValue': 'value_estimate',
+                'estimatedValue': 'value_estimate',  // Add this mapping
+                'rentEstimate': 'rent_estimate',     // Add this mapping
                 'monthlyRent': 'monthly_rent',
                 'lastUpdated': 'last_updated',
-                'dataSource': 'data_source'
+                'dataSource': 'data_source',
+                'lastRentCastUpdate': 'last_updated' // Map this too
             };
             
             // Separate fields
@@ -292,6 +307,17 @@ const db = {
             `;
 
             const result = await pool.query(query, values);
+            
+            // Debug log for specific properties
+            if (propertyData.address === '1613 Capistrano Ave' || propertyData.address === '1701 Canosa Ave') {
+                console.log(`✅ DB: Updated ${propertyData.address} result:`, {
+                    bedrooms: result.rows[0].bedrooms,
+                    value_estimate: result.rows[0].value_estimate,
+                    rent_estimate: result.rows[0].rent_estimate,
+                    rentcast_data: result.rows[0].rentcast_data
+                });
+            }
+            
             return result.rows[0];
         } catch (error) {
             console.error('Error updating property:', error);
