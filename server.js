@@ -43,6 +43,7 @@ app.get('/api/status', (req, res) => {
     res.json({
         status: 'ok',
         apiKeyConfigured: RENTCAST_API_KEY !== 'YOUR_RENTCAST_API_KEY',
+        databaseConnected: databaseConnected,
         message: RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY' ? 
             'RentCast API key not configured. Set RENTCAST_API_KEY environment variable.' : 
             'API key configured'

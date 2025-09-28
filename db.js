@@ -203,20 +203,36 @@ const db = {
                 }, {})
             };
 
-            // Log the values being inserted
-            console.log('📊 DB: Insert values:', {
-                address: address,
-                city: city,
-                state: state,
-                zip: zip,
-                purchasePrice: purchasePrice,
-                monthlyRent: monthlyRent,
-                bedrooms: bedrooms,
-                bathrooms: bathrooms,
-                squareFootage: squareFootage
-            });
+            // Count columns and values for debugging
+            const columns = [
+                'address', 'city', 'state', 'zip', 'purchase_price', 'monthly_rent',
+                'hoa', 'property_tax', 'insurance', 'management_fees', 'repairs',
+                'vacancy', 'capex', 'mortgage', 'coc_return', 'rent_to_value', 'cap_rate',
+                'crime_score', 'flood_risk', 'market_risk', 'bedrooms', 'bathrooms',
+                'square_footage', 'year_built', 'lot_size', 'property_type', 'county',
+                'rent_estimate', 'value_estimate', 'status', 'notes', 'last_updated', 
+                'data_source', 'rentcast_data'
+            ];
             
-            const result = await pool.query(`
+            const values = [
+                address, city, state, zip, purchasePrice || null, monthlyRent || null,
+                hoa || 0, propertyTax || 0, insurance || 0, managementFees || 0,
+                repairs || 0, vacancy || 0, capex || 0, mortgage || 0,
+                cocReturn || null, rentToValue || null, capRate || null, 
+                crimeScore || null, floodRisk || null, marketRisk || null, 
+                bedrooms || null, bathrooms || null, squareFootage || null, 
+                yearBuilt || null, lotSize || null, propertyType || null, 
+                county || null, rentEstimate || null, valueEstimate || null,
+                status || 'active', notes || null, lastUpdated || null, 
+                dataSource || null, JSON.stringify(rentcastData)
+            ];
+            
+            console.log(`📊 DB: Columns count: ${columns.length}, Values count: ${values.length}`);
+            console.log('📊 DB: First 10 values:', values.slice(0, 10));
+            
+            // Build query with placeholders
+            const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+            const query = `
                 INSERT INTO properties (
                     address, city, state, zip, purchase_price, monthly_rent,
                     hoa, property_tax, insurance, management_fees, repairs,
@@ -225,21 +241,12 @@ const db = {
                     square_footage, year_built, lot_size, property_type, county,
                     rent_estimate, value_estimate, status, notes, last_updated, data_source,
                     rentcast_data
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                    $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26,
-                    $27, $28, $29, $30, $31, $32, $33
-                ) RETURNING *`,
-                [
-                    address, city, state, zip, purchasePrice, monthlyRent,
-                    hoa || 0, propertyTax || 0, insurance || 0, managementFees || 0,
-                    repairs || 0, vacancy || 0, capex || 0, mortgage || 0,
-                    cocReturn, rentToValue, capRate, crimeScore, floodRisk,
-                    marketRisk, bedrooms, bathrooms, squareFootage, yearBuilt,
-                    lotSize, propertyType, county, rentEstimate, valueEstimate,
-                    status || 'active', notes, lastUpdated, dataSource,
-                    JSON.stringify(rentcastData) // PostgreSQL will convert to JSONB
-                ]
+                ) VALUES (${placeholders}) RETURNING *`;
+            
+            console.log('🔍 DB: Placeholders count:', placeholders.split(',').length);
+            console.log('🔍 DB: Query length:', query.length);
+            
+            const result = await pool.query(query, values
             );
 
             console.log('✅ DB: Property created successfully:', {
