@@ -4264,6 +4264,242 @@
                 throw error;
             }
         }
+                const dscr = monthlyRent / monthlyMortgage;
+                
+                // 5-year projections
+                const rentGrowth = 0.03;
+                const appreciationRate = 0.04;
+                const projectedValue5yr = purchasePrice * Math.pow(1 + appreciationRate, 5);
+                const projectedRent5yr = monthlyRent * Math.pow(1 + rentGrowth, 5);
+                const totalReturn5yr = (projectedValue5yr - purchasePrice) + (annualCashFlow * 5);
+                const roi5yr = (totalReturn5yr / downPayment) * 100;
+                
+                // Create AI analysis request data
+                const aiPromptData = {
+                    addressInfo: `${propertyData.formattedAddress}`,
+                    propertyDetails: {
+                        type: propertyData.propertyType || 'Single Family',
+                        bedrooms: propertyData.beds || 3,
+                        bathrooms: propertyData.baths || 2,
+                        sqft: propertyData.sqft || 1500,
+                        yearBuilt: propertyData.yearBuilt || 'Unknown'
+                    },
+                    financialMetrics: {
+                        purchasePrice: purchasePrice,
+                        monthlyRent: monthlyRent,
+                        monthlyCashFlow: monthlyCashFlow,
+                        cashOnCashReturn: cashOnCashReturn,
+                        capRate: capRate,
+                        dscr: dscr
+                    },
+                    marketData: propertyData.marketStats || {},
+                    projections: {
+                        value5yr: projectedValue5yr,
+                        rent5yr: projectedRent5yr,
+                        roi5yr: roi5yr
+                    }
+                };
+                
+                // Send to server for AI analysis
+                const response = await fetch('/api/ai-analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: `You are an experienced real estate investor and realtor. Analyze this property investment and provide comprehensive insights.
+
+Property: ${JSON.stringify(aiPromptData, null, 2)}
+
+Provide:
+1. Overall Investment Rating (Excellent/Good/Fair/Poor)
+2. Key Strengths (3 bullet points)
+3. Risk Assessment including:
+   - Crime risk level
+   - Flood/natural disaster risk
+   - Market volatility risk
+4. Profitability Analysis
+5. 5-Year ROI Assessment (Current projection: ${roi5yr.toFixed(1)}%)
+6. Specific Buy/Hold/Pass recommendation with reasoning
+7. Suggestions to improve ROI
+
+Be specific and data-driven. Act as an experienced investor who has analyzed thousands of properties.`
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate AI insights');
+                }
+                
+                const aiData = await response.json();
+                const aiAnalysis = aiData.analysis;
+                
+                // Display results
+                const insightsHTML = `
+                    <div class="analysis-section">
+                        <h3>📍 Property Overview</h3>
+                        <div class="property-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Address</div>
+                                <div class="detail-value">${propertyData.formattedAddress}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Property Type</div>
+                                <div class="detail-value">${propertyData.propertyType || 'Single Family'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Specifications</div>
+                                <div class="detail-value">${propertyData.beds || 3} bed / ${propertyData.baths || 2} bath / ${(propertyData.sqft || 1500).toLocaleString()} sqft</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-section">
+                        <h3>💰 Financial Metrics</h3>
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-label">Monthly Cash Flow</div>
+                                <div class="metric-value ${monthlyCashFlow >= 0 ? 'positive' : 'negative'}">${formatCurrency(monthlyCashFlow)}</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Annual Cash Flow</div>
+                                <div class="metric-value ${annualCashFlow >= 0 ? 'positive' : 'negative'}">${formatCurrency(annualCashFlow)}</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Cash-on-Cash Return</div>
+                                <div class="metric-value ${cashOnCashReturn >= 8 ? 'positive' : cashOnCashReturn >= 6 ? 'warning' : 'negative'}">${cashOnCashReturn.toFixed(1)}%</div>
+                                <div class="metric-subtext">Target: 8%+</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Cap Rate</div>
+                                <div class="metric-value ${capRate >= 6 ? 'positive' : 'warning'}">${capRate.toFixed(1)}%</div>
+                                <div class="metric-subtext">Good: 6%+</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">DSCR</div>
+                                <div class="metric-value ${dscr >= 1.25 ? 'positive' : 'warning'}">${dscr.toFixed(2)}</div>
+                                <div class="metric-subtext">Preferred: 1.25+</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">5-Year ROI</div>
+                                <div class="metric-value ${roi5yr >= 100 ? 'positive' : 'warning'}">${roi5yr.toFixed(1)}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-section">
+                        <h3>📊 Investment Calculator</h3>
+                        <table class="investment-table">
+                            <tr>
+                                <th>Income</th>
+                                <th>Monthly</th>
+                                <th>Annual</th>
+                            </tr>
+                            <tr>
+                                <td>Rental Income</td>
+                                <td class="positive">${formatCurrency(monthlyRent)}</td>
+                                <td class="positive">${formatCurrency(monthlyRent * 12)}</td>
+                            </tr>
+                            <tr>
+                                <th>Expenses</th>
+                                <th>Monthly</th>
+                                <th>Annual</th>
+                            </tr>
+                            <tr>
+                                <td>Mortgage (P&I)</td>
+                                <td class="negative">${formatCurrency(monthlyMortgage)}</td>
+                                <td class="negative">${formatCurrency(monthlyMortgage * 12)}</td>
+                            </tr>
+                            <tr>
+                                <td>Property Tax</td>
+                                <td class="negative">${formatCurrency(propertyTax)}</td>
+                                <td class="negative">${formatCurrency(propertyTax * 12)}</td>
+                            </tr>
+                            <tr>
+                                <td>Insurance</td>
+                                <td class="negative">${formatCurrency(insurance)}</td>
+                                <td class="negative">${formatCurrency(insurance * 12)}</td>
+                            </tr>
+                            <tr>
+                                <td>Maintenance</td>
+                                <td class="negative">${formatCurrency(maintenance)}</td>
+                                <td class="negative">${formatCurrency(maintenance * 12)}</td>
+                            </tr>
+                            <tr>
+                                <td>Management (10%)</td>
+                                <td class="negative">${formatCurrency(management)}</td>
+                                <td class="negative">${formatCurrency(management * 12)}</td>
+                            </tr>
+                            <tr style="font-weight: bold; border-top: 2px solid var(--border-color);">
+                                <td>Net Cash Flow</td>
+                                <td class="${monthlyCashFlow >= 0 ? 'positive' : 'negative'}">${formatCurrency(monthlyCashFlow)}</td>
+                                <td class="${annualCashFlow >= 0 ? 'positive' : 'negative'}">${formatCurrency(annualCashFlow)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="analysis-section">
+                        <h3>🔮 5-Year Projection</h3>
+                        <table class="investment-table">
+                            <tr>
+                                <th>Year</th>
+                                <th>Property Value</th>
+                                <th>Monthly Rent</th>
+                                <th>Annual Cash Flow</th>
+                            </tr>
+                            ${[1, 2, 3, 4, 5].map(year => {
+                                const value = purchasePrice * Math.pow(1 + appreciationRate, year);
+                                const rent = monthlyRent * Math.pow(1 + rentGrowth, year);
+                                const mortgage = monthlyMortgage; // Fixed
+                                const expenses = totalExpenses * Math.pow(1.02, year); // 2% inflation
+                                const cashFlow = (rent - mortgage - expenses) * 12;
+                                return `
+                                    <tr>
+                                        <td>Year ${year}</td>
+                                        <td>${formatCurrency(value)}</td>
+                                        <td>${formatCurrency(rent)}</td>
+                                        <td class="${cashFlow >= 0 ? 'positive' : 'negative'}">${formatCurrency(cashFlow)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </table>
+                    </div>
+                    
+                    <div class="analysis-section">
+                        <h3>🤖 AI Investment Analysis</h3>
+                        <div class="ai-content">
+                            ${formatAIResponse(aiAnalysis)}
+                        </div>
+                    </div>
+                    
+                    <div class="export-controls">
+                        <button class="btn btn-export" onclick="exportAIInsightsReport('${addressInput}', ${JSON.stringify(propertyData).replace(/"/g, '&quot;')}, '${aiAnalysis.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">
+                            <i class="fas fa-download"></i> Export AI Report
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('marketInsightsContent').innerHTML = insightsHTML;
+                document.getElementById('marketInsightsLoading').style.display = 'none';
+                document.getElementById('marketInsightsContent').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error generating AI insights:', error);
+                document.getElementById('marketInsightsContent').innerHTML = `
+                    <div class="analysis-section">
+                        <h3>Error Generating AI Insights</h3>
+                        <p>Error: ${error.message}</p>
+                        <div class="ai-content">
+                            <h4>Troubleshooting Tips:</h4>
+                            <ul>
+                                <li>Make sure the server is running (npm start or node server.js)</li>
+                                <li>Check that you're accessing the app through http://localhost:3000</li>
+                                <li>Verify the Gemini API key is valid</li>
+                                <li>Check the server console for error messages</li>
+                                <li>Open browser DevTools (F12) for detailed error logs</li>
+                            </ul>
+                        </div>
+
         // Generate AI analysis for individual property
         async function generatePropertyAIAnalysis(propertyIndex) {
             const property = properties[propertyIndex];
