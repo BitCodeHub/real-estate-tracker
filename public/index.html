@@ -1822,19 +1822,19 @@
                     <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                         <div class="metric-card">
                             <div class="metric-label">Median Rent</div>
-                            <div class="metric-value">${stats.medianRent ? formatCurrency(stats.medianRent) : 'N/A'}</div>
+                            <div class="metric-value">${stats.rentalData?.medianRent ? formatCurrency(stats.rentalData.medianRent) : 'N/A'}</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-label">Median Sale Price</div>
-                            <div class="metric-value">${stats.medianPrice ? formatCurrency(stats.medianPrice) : 'N/A'}</div>
+                            <div class="metric-value">${stats.saleData?.medianPrice ? formatCurrency(stats.saleData.medianPrice) : 'N/A'}</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-label">Avg Days on Market</div>
-                            <div class="metric-value">${stats.avgDaysOnMarket || 'N/A'} days</div>
+                            <div class="metric-value">${stats.rentalData?.averageDaysOnMarket ? Math.round(stats.rentalData.averageDaysOnMarket) : 'N/A'} days</div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-label">Active Inventory</div>
-                            <div class="metric-value">${stats.inventoryCount || 'N/A'}</div>
+                            <div class="metric-label">Active Rentals</div>
+                            <div class="metric-value">${stats.rentalData?.totalListings || 'N/A'}</div>
                         </div>
                     </div>
                 </div>
@@ -1843,19 +1843,19 @@
                 <div style="margin-top: 20px;">
                     <h4 style="margin-bottom: 15px; color: var(--text-secondary);">Historical Trends</h4>
                     <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
-                        ${stats.rentalData && stats.rentalData.length > 0 ? `
+                        ${stats.rentalData && stats.rentalData.history ? `
                             <div style="margin-bottom: 10px;">
-                                <strong>Rental Market:</strong> 
-                                ${stats.rentalData.slice(0, 3).map(item => 
-                                    `${item.month}/${item.year}: ${formatCurrency(item.medianRent)}`
+                                <strong>Rental Market (Last 3 months):</strong><br>
+                                ${Object.entries(stats.rentalData.history).slice(-3).map(([key, data]) => 
+                                    `${key}: ${formatCurrency(data.medianRent)} (${data.totalListings} listings)`
                                 ).join(', ')}
                             </div>
                         ` : ''}
-                        ${stats.salesData && stats.salesData.length > 0 ? `
+                        ${stats.saleData && stats.saleData.history ? `
                             <div>
-                                <strong>Sales Market:</strong> 
-                                ${stats.salesData.slice(0, 3).map(item => 
-                                    `${item.month}/${item.year}: ${formatCurrency(item.medianSalePrice)}`
+                                <strong>Sales Market (Last 3 months):</strong><br>
+                                ${Object.entries(stats.saleData.history).slice(-3).map(([key, data]) => 
+                                    `${key}: ${formatCurrency(data.medianPrice)} (${data.totalListings} listings)`
                                 ).join(', ')}
                             </div>
                         ` : ''}
@@ -1876,9 +1876,9 @@
         
         // Get market context message
         function getMarketContext(stats, property) {
-            if (!stats.medianRent) return 'Limited market data available for this ZIP code.';
+            if (!stats.rentalData?.medianRent) return 'Limited market data available for this ZIP code.';
             
-            const rentRatio = property.rentEstimate / stats.medianRent;
+            const rentRatio = property.rentEstimate / stats.rentalData.medianRent;
             if (rentRatio > 1.1) {
                 return `This property's estimated rent is ${((rentRatio - 1) * 100).toFixed(0)}% above the ZIP code median. This could indicate premium features or a desirable location within the area.`;
             } else if (rentRatio < 0.9) {

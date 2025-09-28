@@ -214,18 +214,23 @@ app.get('/api/rentcast/rental-listings', async (req, res) => {
         
         console.log('Fetching rental listings:', params.toString());
         
-        const response = await axios.get(`${RENTCAST_API_BASE}/listings/rentals/long-term?${params}`, {
+        const response = await axios.get(`${RENTCAST_API_BASE}/listings/rental/long-term?${params}`, {
             headers: {
                 'Accept': 'application/json',
                 'X-Api-Key': RENTCAST_API_KEY
             }
         });
         
-        console.log('Rental listings response:', response.data ? `${response.data.length || 0} listings found` : 'No data');
+        console.log('Rental listings response:', response.data);
+        console.log('Response type:', typeof response.data, Array.isArray(response.data) ? 'is array' : 'not array');
+        
+        // RentCast API returns array directly
+        const listings = Array.isArray(response.data) ? response.data : (response.data?.listings || response.data?.data || []);
+        console.log(`Found ${listings.length} rental listings`);
         
         res.json({
             success: true,
-            data: response.data || []
+            data: listings
         });
     } catch (error) {
         console.error('RentCast Rental Listings Error:', error.message);
