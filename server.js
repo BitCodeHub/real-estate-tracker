@@ -177,6 +177,75 @@ app.get('/api/rentcast/value-estimate', async (req, res) => {
     }
 });
 
+// Get rental listings from RentCast
+app.get('/api/rentcast/rental-listings', async (req, res) => {
+    if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
+        return res.status(503).json({
+            success: false,
+            error: 'RentCast API key not configured'
+        });
+    }
+
+    try {
+        const { city, state, zip, radius = 1, limit = 10, bedrooms, bathrooms, maxRent } = req.query;
+        
+        // Build query params
+        const params = new URLSearchParams();
+        
+        // Location parameters
+        if (zip) {
+            params.append('zipcode', zip);
+        } else if (city && state) {
+            params.append('city', city);
+            params.append('state', state);
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: 'Either zipcode or city/state is required'
+            });
+        }
+        
+        // Optional filters
+        if (radius) params.append('radius', radius);
+        if (limit) params.append('limit', limit);
+        if (bedrooms) params.append('bedrooms', bedrooms);
+        if (bathrooms) params.append('bathrooms', bathrooms);
+        if (maxRent) params.append('maxRent', maxRent);
+        
+        console.log('Fetching rental listings:', params.toString());
+        
+        const response = await axios.get(`${RENTCAST_API_BASE}/listings/rentals/long-term?${params}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Api-Key': RENTCAST_API_KEY
+            }
+        });
+        
+        console.log('Rental listings response:', response.data ? `${response.data.length || 0} listings found` : 'No data');
+        
+        res.json({
+            success: true,
+            data: response.data || []
+        });
+    } catch (error) {
+        console.error('RentCast Rental Listings Error:', error.message);
+        
+        if (error.response) {
+            console.error('Error response:', error.response.data);
+            res.status(error.response.status).json({
+                success: false,
+                error: error.response.data?.message || `RentCast API error: ${error.response.status}`
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: 'Failed to fetch rental listings',
+                message: error.message
+            });
+        }
+    }
+});
+
 // Get market statistics from RentCast
 app.get('/api/rentcast/market-stats', async (req, res) => {
     if (RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY') {
