@@ -1158,11 +1158,49 @@
             }, 3000);
         }
 
+        // Check and sync properties between localStorage and server
+        async function checkAndSyncProperties() {
+            console.log('🔄 Checking property sync...');
+            
+            try {
+                // Get server status
+                const statusResponse = await fetch('/api/status');
+                const status = await statusResponse.json();
+                
+                if (status.databaseConnected) {
+                    console.log('✅ Database is connected');
+                    
+                    // Clear localStorage to force fresh load from database
+                    // This prevents stale localStorage data from overriding database
+                    const localProps = localStorage.getItem('properties');
+                    if (localProps) {
+                        const parsed = JSON.parse(localProps);
+                        console.log(`📱 Found ${parsed.length} properties in localStorage`);
+                        
+                        // Clear localStorage to ensure we use fresh database data
+                        localStorage.removeItem('properties');
+                        console.log('🗑️ Cleared localStorage to sync with database');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking sync:', error);
+            }
+        }
+
         // Initialize the application
         document.addEventListener('DOMContentLoaded', async function() {
-            // Check API and database status first
+            console.log('🚀 Initializing Real Estate Tracker...');
+            
+            // Check and sync properties first
+            await checkAndSyncProperties();
+            
+            // Check API and database status
             await checkAPIStatus();
+            
+            // Load properties
             await loadProperties();
+            
+            // Setup UI
             setupEventListeners();
         });
         
@@ -1201,74 +1239,62 @@
 
         // Load properties from server/localStorage
         async function loadProperties() {
+            console.log('📥 Loading properties...');
             try {
                 // Try to load from server first
                 const response = await fetch('/api/properties');
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success && data.data.length > 0) {
-                        // Load localStorage data first to preserve any unsaved updates
-                        const saved = localStorage.getItem('properties');
-                        const localProperties = saved ? JSON.parse(saved) : [];
+                    console.log(`📊 Server response: success=${data.success}, properties=${data.data?.length || 0}`);
+                    
+                    if (data.success && data.data) {
+                        // Always use server data when available, even if empty
+                        properties = data.data;
                         
-                        // Merge server data with local data, preferring local data for RentCast fields
-                        properties = data.data.map(serverProp => {
-                            // Find matching property in localStorage by address
-                            const localProp = localProperties.find(p => 
-                                p.address === serverProp.address && 
-                                p.city === serverProp.city
-                            );
-                            
-                            if (localProp) {
-                                // Merge, keeping local RentCast data if server doesn't have it
-                                return {
-                                    ...serverProp,
-                                    // Preserve RentCast data from localStorage if server data is missing
-                                    beds: serverProp.beds || serverProp.bedrooms || localProp.beds,
-                                    baths: serverProp.baths || serverProp.bathrooms || localProp.baths,
-                                    sqft: serverProp.sqft || serverProp.square_footage || localProp.sqft,
-                                    estimatedValue: serverProp.estimatedValue || serverProp.value_estimate || localProp.estimatedValue,
-                                    rentEstimate: serverProp.rentEstimate || serverProp.rent_estimate || localProp.rentEstimate,
-                                    realTimeData: serverProp.realTimeData || localProp.realTimeData,
-                                    lastRentCastUpdate: serverProp.lastRentCastUpdate || localProp.lastRentCastUpdate
-                                };
-                            }
-                            return serverProp;
-                        });
+                        // After loading from server, update localStorage to sync
+                        localStorage.setItem('properties', JSON.stringify(properties));
+                        
+                        console.log(`✅ Loaded ${properties.length} properties from server`);
                         
                         // Debug: Check first 2 properties
-                        console.log('🔍 Loaded properties from server (merged with localStorage):');
-                        properties.slice(0, 3).forEach((p, i) => {
-                            console.log(`Property ${i+1}: ${p.address}`, {
-                                id: p.id,
-                                beds: p.beds,
-                                bedrooms: p.bedrooms,
-                                realTimeData: p.realTimeData,
-                                rentcast_data: p.rentcast_data,
-                                estimatedValue: p.estimatedValue,
-                                rentEstimate: p.rentEstimate
+                        if (properties.length > 0) {
+                            console.log('🔍 Sample properties:');
+                            properties.slice(0, 2).forEach((p, i) => {
+                                console.log(`Property ${i+1}: ${p.address}`, {
+                                    id: p.id,
+                                    purchasePrice: p.purchasePrice || p.purchase_price,
+                                    monthlyRent: p.monthlyRent || p.monthly_rent
+                                });
                             });
-                        });
-                    } else {
-                        // Load from localStorage if server returns empty
+                        }
+                    } else if (data.warning) {
+                        // Server is not connected, use localStorage
+                        console.warn('⚠️', data.warning);
                         const saved = localStorage.getItem('properties');
                         if (saved) {
                             properties = JSON.parse(saved);
+                            console.log(`📱 Loaded ${properties.length} properties from localStorage (database offline)`);
                         }
                     }
                 } else {
-                    // Fallback to localStorage
+                    // Server error, fallback to localStorage
+                    console.error('❌ Server response not OK');
                     const saved = localStorage.getItem('properties');
                     if (saved) {
                         properties = JSON.parse(saved);
+                        console.log(`📱 Loaded ${properties.length} properties from localStorage (server error)`);
                     }
                 }
             } catch (error) {
-                console.error('Error loading properties:', error);
-                // Fallback to localStorage
+                console.error('❌ Error loading properties:', error);
+                // Network error, fallback to localStorage
                 const saved = localStorage.getItem('properties');
                 if (saved) {
                     properties = JSON.parse(saved);
+                    console.log(`📱 Loaded ${properties.length} properties from localStorage (network error)`);
+                } else {
+                    properties = [];
+                    console.log('📱 No properties in localStorage');
                 }
             }
             

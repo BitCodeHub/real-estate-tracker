@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Property Loading</title>
+</head>
+<body>
+    <h1>Testing Property Loading</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testLoad() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Test 1: Fetch from API
+                results.innerHTML += '<h2>Test 1: Fetching from API</h2>';
+                const response = await fetch('/api/properties');
+                const data = await response.json();
+                
+                results.innerHTML += `<p>Response OK: ${response.ok}</p>`;
+                results.innerHTML += `<p>Data Success: ${data.success}</p>`;
+                results.innerHTML += `<p>Number of properties: ${data.data.length}</p>`;
+                results.innerHTML += `<p>First property: ${data.data[0]?.address || 'None'}</p>`;
+                
+                // Test 2: Check localStorage
+                results.innerHTML += '<h2>Test 2: Checking localStorage</h2>';
+                const saved = localStorage.getItem('properties');
+                const localProps = saved ? JSON.parse(saved) : [];
+                results.innerHTML += `<p>localStorage has ${localProps.length} properties</p>`;
+                if (localProps.length > 0) {
+                    results.innerHTML += `<p>First localStorage property: ${localProps[0]?.address || 'None'}</p>`;
+                }
+                
+                // Test 3: Check condition logic
+                results.innerHTML += '<h2>Test 3: Condition Logic</h2>';
+                const shouldUseServer = data.success && data.data.length > 0;
+                results.innerHTML += `<p>Should use server data: ${shouldUseServer}</p>`;
+                
+                // Show raw response
+                results.innerHTML += '<h2>Raw API Response:</h2>';
+                results.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+            } catch (error) {
+                results.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        testLoad();
+    </script>
+</body>
+</html>
