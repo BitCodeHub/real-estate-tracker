@@ -505,6 +505,10 @@ app.get('/api/properties/:id', async (req, res) => {
 // Create new property
 app.post('/api/properties', async (req, res) => {
     try {
+        console.log('\n📝 Creating new property:', req.body.address);
+        console.log('Request body keys:', Object.keys(req.body));
+        console.log('Purchase price:', req.body.purchasePrice, 'Monthly rent:', req.body.monthlyRent);
+        
         if (!databaseConnected) {
             // Return the property with a temporary ID when no database
             const tempProperty = {
@@ -513,6 +517,7 @@ app.post('/api/properties', async (req, res) => {
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
+            console.log('⚠️ Database not connected, returning temp property');
             return res.status(201).json({ 
                 success: true, 
                 data: tempProperty,
@@ -520,6 +525,7 @@ app.post('/api/properties', async (req, res) => {
             });
         }
         const property = await db.createProperty(req.body);
+        console.log('✅ Property created successfully with ID:', property.id);
         
         // Map database fields and merge rentcast_data back into response
         const mappedProp = {
@@ -536,6 +542,7 @@ app.post('/api/properties', async (req, res) => {
         
         if (property.rentcast_data && typeof property.rentcast_data === 'object') {
             const { rentcast_data, ...mainProps } = mappedProp;
+            console.log('📦 Returning property with merged RentCast data');
             res.status(201).json({ success: true, data: { ...mainProps, ...rentcast_data } });
         } else {
             res.status(201).json({ success: true, data: mappedProp });

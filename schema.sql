@@ -80,6 +80,9 @@ CREATE TABLE properties (
     data_source VARCHAR(50),
     notes TEXT,
     
+    -- Comprehensive RentCast data storage
+    rentcast_data JSONB,
+    
     -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -91,6 +94,8 @@ CREATE INDEX idx_properties_city_state ON properties(city, state);
 CREATE INDEX idx_properties_cash_flow ON properties(cash_flow);
 CREATE INDEX idx_properties_status ON properties(status);
 CREATE INDEX idx_properties_created_at ON properties(created_at);
+-- Index for JSONB queries
+CREATE INDEX idx_properties_rentcast_data ON properties USING GIN (rentcast_data);
 
 -- Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

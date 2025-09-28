@@ -54,6 +54,21 @@ async function initializeDatabase() {
             console.log('Database schema created successfully');
         } else {
             console.log('Database schema already exists');
+            
+            // Check if rentcast_data column exists (for existing databases)
+            const columnCheck = await pool.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'properties' 
+                AND column_name = 'rentcast_data'
+            `);
+            
+            if (columnCheck.rows.length === 0) {
+                console.log('Adding missing rentcast_data column...');
+                await pool.query('ALTER TABLE properties ADD COLUMN IF NOT EXISTS rentcast_data JSONB');
+                await pool.query('CREATE INDEX IF NOT EXISTS idx_properties_rentcast_data ON properties USING GIN (rentcast_data)');
+                console.log('✅ rentcast_data column added successfully');
+            }
         }
     } catch (error) {
         console.error('Database initialization error:', error);
@@ -121,6 +136,7 @@ const db = {
 
     // Create new property
     async createProperty(propertyData) {
+        console.log('\n🔧 DB: Creating property:', propertyData.address);
         try {
             // Handle field name variations
             const normalizedData = {
@@ -187,6 +203,19 @@ const db = {
                 }, {})
             };
 
+            // Log the values being inserted
+            console.log('📊 DB: Insert values:', {
+                address: address,
+                city: city,
+                state: state,
+                zip: zip,
+                purchasePrice: purchasePrice,
+                monthlyRent: monthlyRent,
+                bedrooms: bedrooms,
+                bathrooms: bathrooms,
+                squareFootage: squareFootage
+            });
+            
             const result = await pool.query(`
                 INSERT INTO properties (
                     address, city, state, zip, purchase_price, monthly_rent,
@@ -213,9 +242,20 @@ const db = {
                 ]
             );
 
+            console.log('✅ DB: Property created successfully:', {
+                id: result.rows[0].id,
+                address: result.rows[0].address,
+                city: result.rows[0].city,
+                state: result.rows[0].state
+            });
+            
             return result.rows[0];
         } catch (error) {
-            console.error('Error creating property:', error);
+            console.error('❌ DB: Error creating property:', error.message);
+            console.error('Full error details:', error);
+            if (error.code === '23505') {
+                console.error('Duplicate key violation - address already exists');
+            }
             throw error;
         }
     },
