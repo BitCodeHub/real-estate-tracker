@@ -4845,6 +4845,83 @@ Format your response in clear sections with bullet points where appropriate. Be 
             console.log(`📍 Address: ${testProperty.address}, ${testProperty.city}, ${testProperty.state} ${testProperty.zip}`);
             console.log(`💡 This address is known to work with RentCast API for testing!`);
         }
+        // Debug: Log that we reached the end of script
+        console.log('✅ Main script loaded completely');
+        
+        // Debug: Check if functions exist
+        console.log('Function check:', {
+            openModal: typeof openModal,
+            closeModal: typeof closeModal,
+            openAddPropertyModal: typeof openAddPropertyModal,
+            openAnalyzeModal: typeof openAnalyzeModal,
+            generateMarketInsights: typeof generateMarketInsights
+        });
+    </script>
+    <script>
+        // Backup modal functions in case they're not defined
+        window.addEventListener('load', function() {
+            console.log('🔍 Window loaded, checking modal functions...');
+            
+            if (typeof openModal !== 'function') {
+                console.error('❌ openModal is not defined! Creating backup...');
+                window.openModal = function(modalId) {
+                    console.log(`Backup openModal called for: ${modalId}`);
+                    const modal = document.getElementById(modalId);
+                    if (modal) {
+                        modal.style.display = 'block';
+                    } else {
+                        console.error(`Modal not found: ${modalId}`);
+                    }
+                };
+            }
+            
+            if (typeof closeModal !== 'function') {
+                console.error('❌ closeModal is not defined! Creating backup...');
+                window.closeModal = function(modalId) {
+                    const modal = document.getElementById(modalId);
+                    if (modal) {
+                        modal.style.display = 'none';
+                    }
+                };
+            }
+            
+            if (typeof openAnalyzeModal !== 'function') {
+                console.error('❌ openAnalyzeModal is not defined! Creating backup...');
+                window.openAnalyzeModal = function() {
+                    console.log('Backup openAnalyzeModal called');
+                    const input = document.getElementById('propertyAddressInput');
+                    if (input) input.value = '';
+                    const results = document.getElementById('analysisResults');
+                    if (results) results.innerHTML = '';
+                    const loading = document.getElementById('analysisLoading');
+                    if (loading) loading.style.display = 'none';
+                    openModal('analyzeModal');
+                };
+            }
+            
+            if (typeof generateMarketInsights !== 'function') {
+                console.error('❌ generateMarketInsights is not defined! Creating backup...');
+                window.generateMarketInsights = async function() {
+                    console.log('Backup generateMarketInsights called');
+                    openModal('marketInsightsModal');
+                    document.getElementById('marketInsightsLoading').style.display = 'block';
+                    document.getElementById('marketInsightsContent').style.display = 'none';
+                    
+                    setTimeout(() => {
+                        document.getElementById('marketInsightsContent').innerHTML = `
+                            <div class="analysis-section">
+                                <h3>📊 Market Overview</h3>
+                                <p>Market insights feature is being initialized...</p>
+                            </div>
+                        `;
+                        document.getElementById('marketInsightsLoading').style.display = 'none';
+                        document.getElementById('marketInsightsContent').style.display = 'block';
+                    }, 1000);
+                };
+            }
+            
+            console.log('✅ Modal function check complete');
+        });
     </script>
 </body>
 </html>

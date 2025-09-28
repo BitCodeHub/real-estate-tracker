@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagnose JS Errors</title>
+    <style>
+        body { font-family: monospace; margin: 20px; background: #1a1a1a; color: #0f0; }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .warning { color: #ff0; }
+        pre { background: #000; padding: 10px; border: 1px solid #333; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>JavaScript Error Diagnostics</h1>
+    <p>Open the browser console (F12) and reload the main app to see any errors.</p>
+    
+    <h2>Error Log:</h2>
+    <pre id="errorLog"></pre>
+    
+    <h2>Function Check:</h2>
+    <pre id="functionCheck"></pre>
+
+    <script>
+        const errorLog = document.getElementById('errorLog');
+        const functionCheck = document.getElementById('functionCheck');
+        
+        // Capture all errors
+        window.addEventListener('error', function(e) {
+            const msg = `[ERROR] ${e.message}\n  File: ${e.filename}\n  Line: ${e.lineno}, Column: ${e.colno}\n\n`;
+            errorLog.textContent += msg;
+            console.error('Captured error:', e);
+        });
+        
+        // Check parent window for errors
+        if (window.parent && window.parent !== window) {
+            window.parent.addEventListener('error', function(e) {
+                const msg = `[PARENT ERROR] ${e.message}\n  File: ${e.filename}\n  Line: ${e.lineno}, Column: ${e.colno}\n\n`;
+                errorLog.textContent += msg;
+            });
+        }
+        
+        // Check functions periodically
+        function checkFunctions() {
+            const functionsToCheck = [
+                'openModal',
+                'closeModal',
+                'openAddPropertyModal',
+                'openAnalyzeModal',
+                'generateMarketInsights',
+                'generateAIInsights',
+                'analyzeNewProperty'
+            ];
+            
+            let report = `Checking at ${new Date().toLocaleTimeString()}\n\n`;
+            
+            functionsToCheck.forEach(func => {
+                if (typeof window[func] === 'function') {
+                    report += `✓ ${func} - FOUND\n`;
+                } else {
+                    report += `✗ ${func} - NOT FOUND\n`;
+                }
+            });
+            
+            // Check if main app window exists
+            if (window.parent && window.parent !== window) {
+                report += '\nChecking parent window:\n';
+                functionsToCheck.forEach(func => {
+                    if (typeof window.parent[func] === 'function') {
+                        report += `✓ parent.${func} - FOUND\n`;
+                    } else {
+                        report += `✗ parent.${func} - NOT FOUND\n`;
+                    }
+                });
+            }
+            
+            functionCheck.textContent = report;
+        }
+        
+        // Check immediately and every 2 seconds
+        checkFunctions();
+        setInterval(checkFunctions, 2000);
+        
+        // Add console override to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            errorLog.textContent += `[LOG] ${args.join(' ')}\n`;
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            errorLog.textContent += `[ERROR] ${args.join(' ')}\n`;
+        };
+    </script>
+</body>
+</html>

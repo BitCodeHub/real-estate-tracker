@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Modal Buttons</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background: #1a1a1a; color: white; }
+        button { margin: 10px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result { margin-top: 20px; padding: 20px; background: #242424; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Test Modal Buttons Directly</h1>
+    
+    <div class="result">
+        <h2>Direct Function Tests:</h2>
+        <button onclick="testOpenModal()">Test openModal</button>
+        <button onclick="testOpenAddPropertyModal()">Test openAddPropertyModal</button>
+        <button onclick="testOpenAnalyzeModal()">Test openAnalyzeModal</button>
+        <button onclick="testGenerateMarketInsights()">Test generateMarketInsights</button>
+        
+        <h2>Console Output:</h2>
+        <pre id="output" style="background: #0a0a0a; padding: 10px; border-radius: 5px; margin-top: 10px;"></pre>
+    </div>
+
+    <iframe id="mainFrame" src="/index.html" style="width: 100%; height: 400px; margin-top: 20px; border: 1px solid #333;"></iframe>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += message + '\n';
+            console.log(message);
+        }
+        
+        function getMainWindow() {
+            return document.getElementById('mainFrame').contentWindow;
+        }
+        
+        function testOpenModal() {
+            try {
+                const win = getMainWindow();
+                log('Testing openModal...');
+                if (win.openModal) {
+                    log('✅ openModal found');
+                    // Try to open a modal
+                    win.openModal('analyzeModal');
+                    log('✅ Called openModal("analyzeModal")');
+                } else {
+                    log('❌ openModal not found');
+                }
+            } catch (e) {
+                log('❌ Error: ' + e.message);
+            }
+        }
+        
+        function testOpenAddPropertyModal() {
+            try {
+                const win = getMainWindow();
+                log('Testing openAddPropertyModal...');
+                if (win.openAddPropertyModal) {
+                    log('✅ openAddPropertyModal found');
+                    win.openAddPropertyModal();
+                    log('✅ Called openAddPropertyModal()');
+                } else {
+                    log('❌ openAddPropertyModal not found');
+                }
+            } catch (e) {
+                log('❌ Error: ' + e.message);
+            }
+        }
+        
+        function testOpenAnalyzeModal() {
+            try {
+                const win = getMainWindow();
+                log('Testing openAnalyzeModal...');
+                if (win.openAnalyzeModal) {
+                    log('✅ openAnalyzeModal found');
+                    win.openAnalyzeModal();
+                    log('✅ Called openAnalyzeModal()');
+                } else {
+                    log('❌ openAnalyzeModal not found');
+                }
+            } catch (e) {
+                log('❌ Error: ' + e.message);
+            }
+        }
+        
+        function testGenerateMarketInsights() {
+            try {
+                const win = getMainWindow();
+                log('Testing generateMarketInsights...');
+                if (win.generateMarketInsights) {
+                    log('✅ generateMarketInsights found');
+                    win.generateMarketInsights();
+                    log('✅ Called generateMarketInsights()');
+                } else {
+                    log('❌ generateMarketInsights not found');
+                }
+            } catch (e) {
+                log('❌ Error: ' + e.message);
+            }
+        }
+        
+        // Wait for iframe to load
+        document.getElementById('mainFrame').onload = function() {
+            log('Main page loaded. Ready to test.');
+            
+            // Try to list all functions
+            try {
+                const win = getMainWindow();
+                const funcs = Object.keys(win).filter(k => typeof win[k] === 'function' && (k.includes('Modal') || k.includes('open') || k.includes('generate')));
+                log('\nAvailable functions: ' + funcs.join(', '));
+            } catch (e) {
+                log('Could not list functions: ' + e.message);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Modal Buttons</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background: #1a1a1a; color: white; }
+        button { margin: 10px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .section { background: #242424; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        pre { background: #0a0a0a; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Modal Buttons</h1>
+    
+    <div class="section">
+        <h2>Test Modal Functions</h2>
+        <button onclick="testFunctions()">Test All Functions</button>
+        <button onclick="testModals()">Test Modal Elements</button>
+        <button onclick="checkConsoleErrors()">Check Console Errors</button>
+    </div>
+    
+    <div class="section">
+        <h2>Results:</h2>
+        <pre id="output"></pre>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, data = null) {
+            const timestamp = new Date().toISOString().split('T')[1];
+            output.innerHTML += `[${timestamp}] ${message}\n`;
+            if (data) {
+                output.innerHTML += JSON.stringify(data, null, 2) + '\n';
+            }
+            output.innerHTML += '\n';
+        }
+        
+        function testFunctions() {
+            log('=== TESTING MODAL FUNCTIONS ===');
+            
+            // Get the parent window
+            const mainWindow = window.opener || window.parent || window;
+            
+            // Check if functions exist
+            const functions = [
+                'openModal',
+                'closeModal',
+                'openAddPropertyModal',
+                'openAnalyzeModal',
+                'generateMarketInsights',
+                'generateAIInsights',
+                'analyzeNewProperty'
+            ];
+            
+            functions.forEach(func => {
+                if (mainWindow[func]) {
+                    log(`✅ ${func}: FOUND`, typeof mainWindow[func]);
+                } else if (mainWindow.window && mainWindow.window[func]) {
+                    log(`✅ ${func}: FOUND (in window)`, typeof mainWindow.window[func]);
+                } else {
+                    log(`❌ ${func}: NOT FOUND`);
+                }
+            });
+            
+            // Try to list all functions starting with 'open' or 'generate'
+            log('\n=== ALL FUNCTIONS ===');
+            try {
+                const allFuncs = Object.keys(mainWindow).filter(key => 
+                    (key.startsWith('open') || key.startsWith('generate') || key.includes('Modal')) && 
+                    typeof mainWindow[key] === 'function'
+                );
+                log('Functions found:', allFuncs);
+            } catch (e) {
+                log('Error listing functions:', e.message);
+            }
+        }
+        
+        function testModals() {
+            log('=== TESTING MODAL ELEMENTS ===');
+            
+            const mainWindow = window.opener || window.parent || window;
+            const doc = mainWindow.document;
+            
+            if (doc) {
+                const modalIds = [
+                    'addPropertyModal',
+                    'analyzeModal',
+                    'marketInsightsModal',
+                    'propertyModal'
+                ];
+                
+                modalIds.forEach(id => {
+                    const modal = doc.getElementById(id);
+                    if (modal) {
+                        log(`✅ ${id}: FOUND`, {
+                            display: modal.style.display,
+                            className: modal.className,
+                            hasContent: modal.innerHTML.length > 0
+                        });
+                    } else {
+                        log(`❌ ${id}: NOT FOUND`);
+                    }
+                });
+                
+                // Check if there are any script errors
+                log('\n=== CHECKING FOR SCRIPT TAGS ===');
+                const scripts = doc.getElementsByTagName('script');
+                log(`Found ${scripts.length} script tags`);
+                
+                // Check last script for errors
+                if (scripts.length > 0) {
+                    const lastScript = scripts[scripts.length - 1];
+                    log('Last script info:', {
+                        src: lastScript.src || 'inline',
+                        async: lastScript.async,
+                        defer: lastScript.defer
+                    });
+                }
+            } else {
+                log('❌ Cannot access document');
+            }
+        }
+        
+        function checkConsoleErrors() {
+            log('=== CHECKING CONSOLE ===');
+            log('Open the browser console (F12) to check for JavaScript errors');
+            log('Common issues to look for:');
+            log('- Uncaught ReferenceError: function is not defined');
+            log('- Syntax errors');
+            log('- Cannot read property of null/undefined');
+            
+            // Try to catch any errors
+            const mainWindow = window.opener || window.parent || window;
+            
+            // Add error listener
+            mainWindow.addEventListener('error', function(e) {
+                log('❌ ERROR CAUGHT:', {
+                    message: e.message,
+                    filename: e.filename,
+                    lineno: e.lineno,
+                    colno: e.colno
+                });
+            });
+            
+            log('\nTry clicking the buttons in the main window and check back here for errors');
+        }
+        
+        // Auto-run tests
+        setTimeout(() => {
+            testFunctions();
+            setTimeout(() => {
+                testModals();
+            }, 500);
+        }, 500);
+    </script>
+</body>
+</html>
