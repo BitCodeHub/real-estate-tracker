@@ -1009,6 +1009,8 @@
             localStorage.setItem('properties', JSON.stringify(properties));
             
             // Try to save to server
+            let updatedCount = 0;
+            let createdCount = 0;
             try {
                 for (const property of properties) {
                     if (!property.id) {
@@ -1021,8 +1023,27 @@
                         if (response.ok) {
                             const data = await response.json();
                             property.id = data.data.id;
+                            createdCount++;
+                        }
+                    } else {
+                        // Existing property, update it
+                        const response = await fetch(`/api/properties/${property.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(property)
+                        });
+                        if (response.ok) {
+                            console.log(`✅ Updated property ${property.id}: ${property.address}, ${property.city}`);
+                            updatedCount++;
+                        } else {
+                            console.error(`Failed to update property ${property.id}:`, await response.text());
                         }
                     }
+                }
+                
+                // Log summary of save operation
+                if (createdCount > 0 || updatedCount > 0) {
+                    console.log(`💾 Save complete: ${createdCount} created, ${updatedCount} updated`);
                 }
             } catch (error) {
                 console.error('Error saving to server:', error);
