@@ -2715,7 +2715,7 @@
             document.getElementById('marketInsightsContent').style.display = 'none';
             
             try {
-                const addressInput = prompt('Enter property address for AI analysis:');
+                const addressInput = window.prompt('Enter property address for AI analysis:');
                 if (!addressInput) {
                     closeModal('marketInsightsModal');
                     return;
@@ -2757,8 +2757,8 @@
                 const totalReturn5yr = (projectedValue5yr - purchasePrice) + (annualCashFlow * 5);
                 const roi5yr = (totalReturn5yr / downPayment) * 100;
                 
-                // Create prompt for AI
-                const prompt = {
+                // Create AI analysis request data
+                const aiPromptData = {
                     addressInfo: `${propertyData.formattedAddress}`,
                     propertyDetails: {
                         type: propertyData.propertyType || 'Single Family',
@@ -2792,7 +2792,7 @@
                     body: JSON.stringify({
                         prompt: `You are an experienced real estate investor and realtor. Analyze this property investment and provide comprehensive insights.
 
-Property: ${JSON.stringify(prompt, null, 2)}
+Property: ${JSON.stringify(aiPromptData, null, 2)}
 
 Provide:
 1. Overall Investment Rating (Excellent/Good/Fair/Poor)
