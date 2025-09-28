@@ -1290,6 +1290,9 @@
             
             // Fetch and display rental listings
             await fetchAndDisplayRentalListings(property);
+            
+            // Fetch and display market statistics
+            await fetchAndDisplayMarketStats(property);
         }
 
         // Generate property details HTML
@@ -1751,34 +1754,190 @@
         }
 
         // Fetch and display rental listings
+        // Fetch and display market statistics
+        async function fetchAndDisplayMarketStats(property) {
+            try {
+                console.log('📈 Fetching market stats for:', property.zip);
+                
+                // Add market stats section
+                const marketStatsHTML = `
+                    <div class="property-section">
+                        <h3><i class="fas fa-chart-line"></i> Market Statistics</h3>
+                        <div id="marketStatsLoading" style="text-align: center; padding: 20px;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--accent-primary);"></i>
+                            <p style="margin-top: 10px;">Loading market data...</p>
+                        </div>
+                        <div id="marketStatsContent" style="display: none;"></div>
+                    </div>
+                `;
+                
+                // Add to modal after rental listings
+                const rentalSection = document.querySelector('#rentalListingsContent').parentElement.parentElement;
+                if (rentalSection) {
+                    rentalSection.insertAdjacentHTML('afterend', marketStatsHTML);
+                }
+                
+                // Fetch market stats
+                const response = await fetch(`/api/rentcast/market-stats?zipCode=${property.zip}`);
+                const data = await response.json();
+                
+                console.log('📈 Market stats response:', data);
+                
+                if (data.success && data.data) {
+                    displayMarketStats(data.data, property);
+                } else {
+                    document.getElementById('marketStatsLoading').style.display = 'none';
+                    document.getElementById('marketStatsContent').style.display = 'block';
+                    document.getElementById('marketStatsContent').innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                            <i class="fas fa-chart-bar" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
+                            <p>Market statistics unavailable for this area.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error fetching market stats:', error);
+                const statsLoading = document.getElementById('marketStatsLoading');
+                const statsContent = document.getElementById('marketStatsContent');
+                if (statsLoading && statsContent) {
+                    statsLoading.style.display = 'none';
+                    statsContent.style.display = 'block';
+                    statsContent.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: var(--accent-danger);">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
+                            <p>Unable to fetch market statistics.</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // Display market statistics
+        function displayMarketStats(stats, property) {
+            document.getElementById('marketStatsLoading').style.display = 'none';
+            document.getElementById('marketStatsContent').style.display = 'block';
+            
+            const html = `
+                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                        <div class="metric-card">
+                            <div class="metric-label">Median Rent</div>
+                            <div class="metric-value">${stats.medianRent ? formatCurrency(stats.medianRent) : 'N/A'}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Median Sale Price</div>
+                            <div class="metric-value">${stats.medianPrice ? formatCurrency(stats.medianPrice) : 'N/A'}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Avg Days on Market</div>
+                            <div class="metric-value">${stats.avgDaysOnMarket || 'N/A'} days</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Active Inventory</div>
+                            <div class="metric-value">${stats.inventoryCount || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${stats.rentalData || stats.salesData ? `
+                <div style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 15px; color: var(--text-secondary);">Historical Trends</h4>
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
+                        ${stats.rentalData && stats.rentalData.length > 0 ? `
+                            <div style="margin-bottom: 10px;">
+                                <strong>Rental Market:</strong> 
+                                ${stats.rentalData.slice(0, 3).map(item => 
+                                    `${item.month}/${item.year}: ${formatCurrency(item.medianRent)}`
+                                ).join(', ')}
+                            </div>
+                        ` : ''}
+                        ${stats.salesData && stats.salesData.length > 0 ? `
+                            <div>
+                                <strong>Sales Market:</strong> 
+                                ${stats.salesData.slice(0, 3).map(item => 
+                                    `${item.month}/${item.year}: ${formatCurrency(item.medianSalePrice)}`
+                                ).join(', ')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div style="margin-top: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px; border-left: 4px solid var(--accent-primary);">
+                    <p style="margin: 0; font-size: 0.9em;">
+                        <strong>📊 Market Context:</strong> 
+                        ${getMarketContext(stats, property)}
+                    </p>
+                </div>
+            `;
+            
+            document.getElementById('marketStatsContent').innerHTML = html;
+        }
+        
+        // Get market context message
+        function getMarketContext(stats, property) {
+            if (!stats.medianRent) return 'Limited market data available for this ZIP code.';
+            
+            const rentRatio = property.rentEstimate / stats.medianRent;
+            if (rentRatio > 1.1) {
+                return `This property's estimated rent is ${((rentRatio - 1) * 100).toFixed(0)}% above the ZIP code median. This could indicate premium features or a desirable location within the area.`;
+            } else if (rentRatio < 0.9) {
+                return `This property's estimated rent is ${((1 - rentRatio) * 100).toFixed(0)}% below the ZIP code median. Consider evaluating if improvements could justify higher rent.`;
+            } else {
+                return 'This property aligns well with the median rental rates in the ZIP code.';
+            }
+        }
+
         async function fetchAndDisplayRentalListings(property) {
             try {
                 console.log('🏠 Fetching rental listings for:', property.address);
+                console.log('Property data:', {
+                    address: property.address,
+                    city: property.city,
+                    state: property.state,
+                    zip: property.zip,
+                    beds: property.beds || property.bedrooms,
+                    baths: property.baths || property.bathrooms
+                });
                 
                 // Build query parameters
                 const params = new URLSearchParams({
                     zip: property.zip,
-                    radius: 2, // 2 mile radius
-                    limit: 10,
-                    bedrooms: property.beds || property.bedrooms,
-                    bathrooms: Math.floor(property.baths || property.bathrooms || 1)
+                    radius: 5, // Increase radius to 5 miles for better results
+                    limit: 20,  // Increase limit to get more listings
+                    bedrooms: property.beds || property.bedrooms || 3,
+                    bathrooms: Math.floor(property.baths || property.bathrooms || 2)
                 });
                 
-                const response = await fetch(`/api/rentcast/rental-listings?${params}`);
-                const data = await response.json();
+                console.log('🔍 Query params:', params.toString());
                 
+                const response = await fetch(`/api/rentcast/rental-listings?${params}`);
+                console.log('🎯 Response status:', response.status);
+                
+                const data = await response.json();
                 console.log('📋 Rental listings response:', data);
+                console.log('🔢 Number of listings:', data.data ? data.data.length : 0);
+                
+                // Log first listing to see structure
+                if (data.data && data.data.length > 0) {
+                    console.log('🏡 First listing structure:', data.data[0]);
+                }
                 
                 if (data.success && data.data && data.data.length > 0) {
+                    console.log('✅ Found listings, displaying them');
                     displayRentalListings(data.data, property);
                 } else {
                     // No listings found
+                    console.log('⚠️ No listings found. Response:', data);
                     document.getElementById('rentalListingsLoading').style.display = 'none';
                     document.getElementById('rentalListingsContent').style.display = 'block';
                     document.getElementById('rentalListingsContent').innerHTML = `
                         <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
                             <i class="fas fa-home" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
                             <p>No comparable rental listings found in the area.</p>
+                            <p style="font-size: 0.85em; margin-top: 10px; color: var(--text-muted);">
+                                Tried searching in ZIP ${property.zip} with ${property.beds || property.bedrooms || '?'} bedrooms
+                            </p>
                         </div>
                     `;
                 }
@@ -1797,11 +1956,12 @@
 
         // Display rental listings
         function displayRentalListings(listings, property) {
+            console.log('📊 Displaying rental listings:', listings);
             document.getElementById('rentalListingsLoading').style.display = 'none';
             document.getElementById('rentalListingsContent').style.display = 'block';
             
             // Calculate average rent from listings
-            const avgRent = listings.reduce((sum, l) => sum + (l.rent || 0), 0) / listings.length;
+            const avgRent = listings.reduce((sum, l) => sum + (l.rent || l.price || 0), 0) / listings.length;
             const rentDiff = property.rentEstimate ? ((property.rentEstimate - avgRent) / avgRent * 100).toFixed(1) : 0;
             
             let html = `
@@ -1812,8 +1972,12 @@
                             <div class="metric-value">${listings.length}</div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-label">Avg Listed Rent</div>
+                            <div class="metric-label">Avg Market Rent</div>
                             <div class="metric-value">${formatCurrency(avgRent)}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Avg Days on Market</div>
+                            <div class="metric-value">${calculateAvgDaysOnMarket(listings)}</div>
                         </div>
                         ${property.rentEstimate ? `
                         <div class="metric-card">
@@ -1842,33 +2006,55 @@
             `;
             
             listings.forEach((listing, index) => {
-                const pricePerSqft = listing.squareFootage && listing.rent ? 
-                    (listing.rent / listing.squareFootage).toFixed(2) : 'N/A';
-                const daysListed = listing.datePosted ? 
-                    Math.floor((Date.now() - new Date(listing.datePosted).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A';
+                const rent = listing.rent || listing.price || 0;
+                const sqft = listing.squareFootage || listing.squareFeet || 0;
+                const pricePerSqft = sqft && rent ? (rent / sqft).toFixed(2) : 'N/A';
+                
+                // Use daysOnMarket from API or calculate from listedDate
+                const daysListed = listing.daysOnMarket || 
+                    (listing.listedDate ? 
+                        Math.floor((Date.now() - new Date(listing.listedDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+                        'N/A');
                 
                 html += `
                     <tr style="border-bottom: 1px solid var(--border-light); ${index % 2 === 0 ? 'background: var(--bg-secondary);' : ''}">
                         <td style="padding: 12px;">
-                            <div>${listing.addressLine1 || listing.address || 'N/A'}</div>
-                            <div style="font-size: 0.85em; color: var(--text-secondary);">
-                                ${listing.city || ''} ${listing.state || ''} ${listing.zipCode || ''}
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                ${listing.propertyType ? `
+                                    <div style="width: 50px; height: 50px; background: var(--bg-card); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <i class="fas ${getPropertyIcon(listing.propertyType)}" style="font-size: 20px; color: var(--accent-primary);"></i>
+                                    </div>
+                                ` : ''}
+                                <div>
+                                    <div style="font-weight: 500;">${listing.addressLine1 || listing.formattedAddress || listing.address || 'N/A'}</div>
+                                    <div style="font-size: 0.85em; color: var(--text-secondary);">
+                                        ${listing.city || ''} ${listing.state || listing.stateCode || ''} ${listing.zipCode || listing.zip || ''}
+                                    </div>
+                                    ${listing.county ? `<div style="font-size: 0.8em; color: var(--text-muted);">${listing.county} County</div>` : ''}
+                                </div>
                             </div>
                         </td>
                         <td style="text-align: center; padding: 12px;">
                             ${listing.bedrooms || 0}/${listing.bathrooms || 0}
                         </td>
                         <td style="text-align: right; padding: 12px;">
-                            ${listing.squareFootage ? listing.squareFootage.toLocaleString() : 'N/A'}
+                            ${sqft ? sqft.toLocaleString() : 'N/A'}
                         </td>
-                        <td style="text-align: right; padding: 12px; font-weight: 500;">
-                            ${formatCurrency(listing.rent || 0)}
+                        <td style="text-align: right; padding: 12px; font-weight: 500; color: var(--accent-success);">
+                            ${formatCurrency(rent)}
                         </td>
                         <td style="text-align: right; padding: 12px;">
                             ${pricePerSqft !== 'N/A' ? `$${pricePerSqft}` : pricePerSqft}
                         </td>
                         <td style="text-align: center; padding: 12px;">
-                            ${daysListed !== 'N/A' ? daysListed : 'N/A'}
+                            <div style="${daysListed > 30 ? 'color: var(--accent-warning);' : ''}">
+                                ${daysListed !== 'N/A' ? `${daysListed}d` : 'N/A'}
+                            </div>
+                            ${listing.status ? `
+                                <div style="font-size: 0.8em; margin-top: 2px; color: ${listing.status === 'Active' ? 'var(--accent-success)' : 'var(--text-muted)'}">
+                                    ${listing.status}
+                                </div>
+                            ` : ''}
                         </td>
                     </tr>
                 `;
@@ -1879,16 +2065,27 @@
                     </table>
                 </div>
                 
-                <div style="margin-top: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px; border-left: 4px solid var(--accent-info);">
-                    <p style="margin: 0; font-size: 0.9em;">
-                        <strong>💡 Market Insight:</strong> 
-                        ${rentDiff > 5 ? 
-                            `Your estimated rent is ${rentDiff}% above the market average. This property may have premium features or the market data may be outdated.` :
-                            rentDiff < -5 ?
-                            `Your estimated rent is ${Math.abs(rentDiff)}% below the market average. Consider reviewing your rental pricing strategy.` :
-                            `Your estimated rent is aligned with the current market rates in this area.`
-                        }
-                    </p>
+                <div style="margin-top: 20px;">
+                    <div style="padding: 15px; background: var(--bg-secondary); border-radius: 8px; border-left: 4px solid var(--accent-info); margin-bottom: 15px;">
+                        <p style="margin: 0; font-size: 0.9em;">
+                            <strong>💡 Market Insight:</strong> 
+                            ${rentDiff > 5 ? 
+                                `Your estimated rent is ${rentDiff}% above the market average. This property may have premium features or the market data may be outdated.` :
+                                rentDiff < -5 ?
+                                `Your estimated rent is ${Math.abs(rentDiff)}% below the market average. Consider reviewing your rental pricing strategy.` :
+                                `Your estimated rent is aligned with the current market rates in this area.`
+                            }
+                        </p>
+                    </div>
+                    
+                    <div style="padding: 15px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                        <p style="margin: 0; font-size: 0.85em; color: var(--text-secondary);">
+                            <i class="fas fa-info-circle" style="margin-right: 5px;"></i>
+                            <strong>Note:</strong> Property photos are not available through the RentCast API. 
+                            To view property photos and detailed listings, visit popular real estate websites like Zillow, Realtor.com, or Apartments.com
+                            and search for rentals in the ${property.zip || 'area'} zip code.
+                        </p>
+                    </div>
                 </div>
             `;
             
@@ -1939,6 +2136,35 @@
                 (Math.pow(1 + monthlyRate, numPayments) - 1);
             
             return payment;
+        }
+
+        // Get property type icon
+        function getPropertyIcon(propertyType) {
+            const type = (propertyType || '').toLowerCase();
+            if (type.includes('single family') || type.includes('house')) return 'fa-home';
+            if (type.includes('condo') || type.includes('condominium')) return 'fa-building';
+            if (type.includes('townhouse') || type.includes('townhome')) return 'fa-city';
+            if (type.includes('apartment')) return 'fa-building';
+            if (type.includes('duplex') || type.includes('triplex') || type.includes('fourplex')) return 'fa-house-user';
+            if (type.includes('mobile') || type.includes('manufactured')) return 'fa-caravan';
+            if (type.includes('land') || type.includes('lot')) return 'fa-mountain';
+            return 'fa-home';
+        }
+        
+        // Calculate average days on market
+        function calculateAvgDaysOnMarket(listings) {
+            const validListings = listings.filter(l => l.daysOnMarket || l.listedDate);
+            if (validListings.length === 0) return 'N/A';
+            
+            const totalDays = validListings.reduce((sum, listing) => {
+                const days = listing.daysOnMarket || 
+                    (listing.listedDate ? 
+                        Math.floor((Date.now() - new Date(listing.listedDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+                        0);
+                return sum + days;
+            }, 0);
+            
+            return Math.round(totalDays / validListings.length) + ' days';
         }
 
         // Format currency
