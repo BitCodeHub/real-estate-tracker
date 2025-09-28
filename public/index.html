@@ -716,6 +716,55 @@
                 margin: 10px auto;
             }
         }
+        
+        /* Editable fields */
+        .editable-field {
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .editable-field:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary) !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        /* Inline edit input */
+        .inline-edit-input {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 2px solid var(--accent-primary);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: inherit;
+            font-weight: inherit;
+            width: 120px;
+            text-align: right;
+        }
+        
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -964,6 +1013,109 @@
         // Global variables
         let properties = [];
         let selectedPropertyIndex = null;
+        let samplePropertiesLoaded = false;
+
+        // Edit field inline
+        function editField(index, field, currentValue, isInModal = false) {
+            console.log('Editing field:', field, 'for property at index:', index, 'Current value:', currentValue);
+            
+            // Create input element
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'inline-edit-input';
+            input.value = currentValue;
+            input.min = '0';
+            input.step = field === 'monthlyRent' ? '50' : '10000';
+            
+            // Get the element that was clicked
+            const clickedElement = event.target;
+            const originalHTML = clickedElement.innerHTML;
+            
+            // Replace the content with input
+            clickedElement.innerHTML = '';
+            clickedElement.appendChild(input);
+            input.focus();
+            input.select();
+            
+            // Save function
+            const saveValue = () => {
+                const newValue = parseFloat(input.value) || 0;
+                
+                if (newValue !== currentValue && newValue >= 0) {
+                    // Find property by ID if in modal, otherwise by index
+                    let propertyToUpdate;
+                    let propertyIndex;
+                    
+                    // Always use index to find property
+                    propertyIndex = index;
+                    propertyToUpdate = properties[index];
+                    
+                    if (propertyToUpdate) {
+                        // Update the property
+                        propertyToUpdate[field] = newValue;
+                        
+                        // Recalculate metrics
+                        calculatePropertyMetrics(propertyToUpdate);
+                        
+                        // Save to database and localStorage
+                        saveProperties();
+                        
+                        // Update the display
+                        updateDisplay();
+                        
+                        // If modal is open, refresh it
+                        if (isInModal) {
+                            showPropertyDetails(propertyIndex);
+                        }
+                        
+                        // Show success notification
+                        showNotification(`${field === 'purchasePrice' ? 'Purchase price' : 'Monthly rent'} updated to ${formatCurrency(newValue)}`, 'success');
+                    }
+                } else {
+                    // Restore original value if invalid or unchanged
+                    clickedElement.innerHTML = originalHTML;
+                }
+            };
+            
+            // Handle blur and enter key
+            input.addEventListener('blur', saveValue);
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveValue();
+                }
+                if (e.key === 'Escape') {
+                    clickedElement.innerHTML = originalHTML;
+                }
+            });
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? 'var(--accent-success)' : 'var(--accent-info)'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: var(--shadow-lg);
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
@@ -1234,12 +1386,24 @@
                 <td style="min-width: 80px; text-align: right;">
                     ${property.sqft || property.squareFootage ? (property.sqft || property.squareFootage).toLocaleString() : 'N/A'}
                 </td>
-                <td style="min-width: 120px; text-align: right;">${formatCurrency(property.purchasePrice || 0)}</td>
+                <td style="min-width: 120px; text-align: right;">
+                    <span class="editable-field" onclick="editField(${index}, 'purchasePrice', ${property.purchasePrice || 0})" 
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(property.purchasePrice || 0)}
+                    </span>
+                </td>
                 <td style="min-width: 120px; text-align: right;">
                     ${formatCurrency(property.estimatedValue || property.currentValue || property.purchasePrice || 0)}
                     ${property.realTimeData && property.estimatedValue ? '<span style="color: #10b981; font-size: 10px;">📊</span>' : ''}
                 </td>
-                <td style="min-width: 120px; text-align: right;">${formatCurrency(property.monthlyRent || 0)}</td>
+                <td style="min-width: 120px; text-align: right;">
+                    <span class="editable-field" onclick="editField(${index}, 'monthlyRent', ${property.monthlyRent || 0})" 
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(property.monthlyRent || 0)}
+                    </span>
+                </td>
                 <td style="min-width: 120px; text-align: right;">
                     ${formatCurrency(property.rentEstimate || 0)}
                     ${property.realTimeData && property.rentEstimate ? '<span style="color: #10b981; font-size: 10px;">📊</span>' : ''}
@@ -1285,7 +1449,7 @@
             const property = properties[index];
             
             document.getElementById('modalTitle').innerHTML = `<i class="fas fa-home"></i> ${property.address}`;
-            document.getElementById('modalBody').innerHTML = generatePropertyDetailsHTML(property);
+            document.getElementById('modalBody').innerHTML = generatePropertyDetailsHTML(property, index);
             document.getElementById('propertyModal').style.display = 'block';
             
             // Fetch and display rental listings
@@ -1296,7 +1460,7 @@
         }
 
         // Generate property details HTML
-        function generatePropertyDetailsHTML(property) {
+        function generatePropertyDetailsHTML(property, propertyIndex) {
             // Debug log to check property data in modal
             console.log('🏠 Property data in modal:', {
                 address: property.address,
@@ -1359,7 +1523,12 @@
                     <div class="metrics-grid">
                         <div class="metric-card">
                             <div class="metric-label">Purchase Price</div>
-                            <div class="metric-value">${formatCurrency(property.purchasePrice || 0)}</div>
+                            <div class="metric-value editable-field" 
+                                 onclick="editField(${propertyIndex}, 'purchasePrice', ${property.purchasePrice || 0}, true)" 
+                                 style="cursor: pointer; border-bottom: 2px dashed var(--border-light);"
+                                 title="Click to edit">
+                                ${formatCurrency(property.purchasePrice || 0)}
+                            </div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-label">Current Value</div>
@@ -1373,7 +1542,12 @@
                         ` : ''}
                         <div class="metric-card">
                             <div class="metric-label">Monthly Rent</div>
-                            <div class="metric-value positive">${formatCurrency(property.monthlyRent || 0)}</div>
+                            <div class="metric-value positive editable-field"
+                                 onclick="editField(${propertyIndex}, 'monthlyRent', ${property.monthlyRent || 0}, true)" 
+                                 style="cursor: pointer; border-bottom: 2px dashed var(--border-light);"
+                                 title="Click to edit">
+                                ${formatCurrency(property.monthlyRent || 0)}
+                            </div>
                         </div>
                         ${property.rentEstimate ? `
                         <div class="metric-card">
