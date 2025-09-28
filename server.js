@@ -39,11 +39,20 @@ app.get('/', (req, res) => {
 });
 
 // API status endpoint
-app.get('/api/status', (req, res) => {
+app.get('/api/status', async (req, res) => {
+    // Check actual database connection
+    let dbConnected = false;
+    try {
+        await db.pool.query('SELECT 1');
+        dbConnected = true;
+    } catch (error) {
+        // Database not connected
+    }
+    
     res.json({
         status: 'ok',
         apiKeyConfigured: RENTCAST_API_KEY !== 'YOUR_RENTCAST_API_KEY',
-        databaseConnected: databaseConnected,
+        databaseConnected: dbConnected,
         message: RENTCAST_API_KEY === 'YOUR_RENTCAST_API_KEY' ? 
             'RentCast API key not configured. Set RENTCAST_API_KEY environment variable.' : 
             'API key configured'
@@ -384,7 +393,16 @@ app.get('/health', async (req, res) => {
 // Get all properties
 app.get('/api/properties', async (req, res) => {
     try {
-        if (!databaseConnected) {
+        // Check actual database connection
+        let dbConnected = false;
+        try {
+            await db.pool.query('SELECT 1');
+            dbConnected = true;
+        } catch (error) {
+            console.log('Database connection check failed:', error.message);
+        }
+        
+        if (!dbConnected) {
             return res.json({ 
                 success: true, 
                 data: [],
@@ -510,7 +528,16 @@ app.post('/api/properties', async (req, res) => {
         console.log('Request body keys:', Object.keys(req.body));
         console.log('Purchase price:', req.body.purchasePrice, 'Monthly rent:', req.body.monthlyRent);
         
-        if (!databaseConnected) {
+        // Check actual database connection
+        let dbConnected = false;
+        try {
+            await db.pool.query('SELECT 1');
+            dbConnected = true;
+        } catch (error) {
+            console.log('⚠️ Database connection check failed:', error.message);
+        }
+        
+        if (!dbConnected) {
             // Return the property with a temporary ID when no database
             const tempProperty = {
                 ...req.body,
@@ -525,6 +552,7 @@ app.post('/api/properties', async (req, res) => {
                 warning: 'Database not connected. Property saved locally only.'
             });
         }
+        
         const property = await db.createProperty(req.body);
         console.log('✅ Property created successfully with ID:', property.id);
         
