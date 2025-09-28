@@ -187,13 +187,18 @@ app.get('/api/rentcast/rental-listings', async (req, res) => {
     }
 
     try {
-        const { city, state, zip, radius = 1, limit = 10, bedrooms, bathrooms, maxRent } = req.query;
+        const { city, state, zip, radius = 5, limit = 50, bedrooms, bathrooms, maxRent, latitude, longitude } = req.query;
         
         // Build query params
         const params = new URLSearchParams();
         
-        // Location parameters
-        if (zip) {
+        // Location parameters - RentCast requires lat/lon or address when using radius
+        if (latitude && longitude) {
+            params.append('latitude', latitude);
+            params.append('longitude', longitude);
+            if (radius) params.append('radius', radius);
+        } else if (zip) {
+            // When using ZIP, don't use radius - RentCast doesn't support it
             params.append('zipcode', zip);
         } else if (city && state) {
             params.append('city', city);
@@ -201,12 +206,11 @@ app.get('/api/rentcast/rental-listings', async (req, res) => {
         } else {
             return res.status(400).json({
                 success: false,
-                error: 'Either zipcode or city/state is required'
+                error: 'Either zipcode, city/state, or latitude/longitude is required'
             });
         }
         
         // Optional filters
-        if (radius) params.append('radius', radius);
         if (limit) params.append('limit', limit);
         if (bedrooms) params.append('bedrooms', bedrooms);
         if (bathrooms) params.append('bathrooms', bathrooms);

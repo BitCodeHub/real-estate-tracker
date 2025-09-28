@@ -2080,9 +2080,9 @@
                 });
                 
                 // Build query parameters
+                // Note: RentCast doesn't support radius with ZIP code search
                 const params = new URLSearchParams({
                     zip: property.zip,
-                    radius: 5, // Increase radius to 5 miles for better results
                     limit: 50,  // Increase limit to get more listings
                 });
                 
@@ -2123,7 +2123,6 @@
                     
                     const broadParams = new URLSearchParams({
                         zip: property.zip,
-                        radius: 10, // Increase radius further
                         limit: 50
                     });
                     
@@ -2290,10 +2289,10 @@
                 results += `<p style="color: var(--accent-danger);">Error: ${error.message}</p><hr>`;
             }
             
-            // Test 2: ZIP with larger radius
+            // Test 2: ZIP without bedroom filter
             try {
-                results += '<p><strong>Test 2: ZIP with 20 mile radius</strong></p>';
-                const response2 = await fetch(`/api/rentcast/rental-listings?zip=${zipCode}&radius=20&limit=5`);
+                results += '<p><strong>Test 2: ZIP without bedroom filter</strong></p>';
+                const response2 = await fetch(`/api/rentcast/rental-listings?zip=${zipCode}&limit=10`);
                 const data2 = await response2.json();
                 results += `<pre>${JSON.stringify(data2, null, 2)}</pre><hr>`;
             } catch (error) {
