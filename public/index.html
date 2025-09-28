@@ -2869,20 +2869,45 @@
                 // Calculate metrics
                 calculatePropertyMetrics(property);
                 
-                // Add to properties array
-                properties.push(property);
+                // Create property in database first
+                console.log('Creating property in database:', property.address);
+                const response = await fetch('/api/properties', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(property)
+                });
                 
-                // Save and update display
-                console.log('Saving new property:', property);
-                const saveResult = await saveProperties();
-                console.log('Save result:', saveResult);
+                const data = await response.json();
                 
-                updateDisplay();
-                closeModal('addPropertyModal');
-                
-                // Show success message if we don't have showNotification
-                if (typeof showNotification === 'function') {
-                    showNotification(`Property "${property.address}" added successfully!`, 'success');
+                if (data.success && data.data) {
+                    // CRITICAL: Add the complete property from server response with ID
+                    const propertyWithId = {
+                        ...property,
+                        ...data.data,
+                        // Preserve camelCase fields
+                        purchasePrice: data.data.purchasePrice || data.data.purchase_price || property.purchasePrice,
+                        monthlyRent: data.data.monthlyRent || data.data.monthly_rent || property.monthlyRent
+                    };
+                    
+                    console.log('✅ Property created with ID:', propertyWithId.id);
+                    console.log('Property with ID:', propertyWithId);
+                    
+                    // Add to properties array
+                    properties.push(propertyWithId);
+                    
+                    // Update localStorage immediately
+                    localStorage.setItem('properties', JSON.stringify(properties));
+                    console.log('✅ Updated localStorage with new property');
+                    
+                    updateDisplay();
+                    closeModal('addPropertyModal');
+                    
+                    // Show success message
+                    if (typeof showNotification === 'function') {
+                        showNotification(`Property "${property.address}" added successfully!`, 'success');
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to create property');
                 }
                 
             } catch (error) {
@@ -3449,7 +3474,7 @@
         }
 
         // Add property from analysis
-        function addPropertyFromAnalysis(propertyData) {
+        async function addPropertyFromAnalysis(propertyData) {
             const property = {
                 ...propertyData,
                 purchasePrice: propertyData.estimatedValue || propertyData.price || 500000,
@@ -3460,12 +3485,47 @@
             };
             
             calculatePropertyMetrics(property);
-            properties.push(property);
-            saveProperties();
-            updateDisplay();
             
-            closeModal('analyzeModal');
-            alert('Property added to portfolio!');
+            // Create property in database first
+            try {
+                console.log('Creating property in database:', property.address);
+                const response = await fetch('/api/properties', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(property)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    // Add the complete property from server response with ID
+                    const propertyWithId = {
+                        ...property,
+                        ...data.data,
+                        // Preserve camelCase fields
+                        purchasePrice: data.data.purchasePrice || data.data.purchase_price || property.purchasePrice,
+                        monthlyRent: data.data.monthlyRent || data.data.monthly_rent || property.monthlyRent
+                    };
+                    
+                    console.log('✅ Property created with ID:', propertyWithId.id);
+                    
+                    // Add to properties array
+                    properties.push(propertyWithId);
+                    
+                    // Update localStorage immediately
+                    localStorage.setItem('properties', JSON.stringify(properties));
+                    console.log('✅ Updated localStorage with new property');
+                    
+                    updateDisplay();
+                    closeModal('analyzeModal');
+                    alert('Property added to portfolio!');
+                } else {
+                    throw new Error(data.error || 'Failed to create property');
+                }
+            } catch (error) {
+                console.error('Error adding property:', error);
+                alert(error.message || 'Error adding property. Please try again.');
+            }
         }
 
         // Generate AI market insights
