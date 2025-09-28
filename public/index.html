@@ -1170,17 +1170,15 @@
                 if (status.databaseConnected) {
                     console.log('✅ Database is connected');
                     
-                    // Clear localStorage to force fresh load from database
-                    // This prevents stale localStorage data from overriding database
+                    // Don't automatically clear localStorage
+                    // Instead, we'll handle sync in loadProperties
                     const localProps = localStorage.getItem('properties');
                     if (localProps) {
                         const parsed = JSON.parse(localProps);
-                        console.log(`📱 Found ${parsed.length} properties in localStorage`);
-                        
-                        // Clear localStorage to ensure we use fresh database data
-                        localStorage.removeItem('properties');
-                        console.log('🗑️ Cleared localStorage to sync with database');
+                        console.log(`📱 Found ${parsed.length} properties in localStorage - will sync with database`);
                     }
+                } else {
+                    console.warn('⚠️ Database not connected - using localStorage only');
                 }
             } catch (error) {
                 console.error('Error checking sync:', error);
@@ -1248,13 +1246,32 @@
                     console.log(`📊 Server response: success=${data.success}, properties=${data.data?.length || 0}`);
                     
                     if (data.success && data.data) {
-                        // Always use server data when available, even if empty
+                        // Always use server data when available
                         properties = data.data;
+                        
+                        // Ensure all properties have proper field names for the UI
+                        properties = properties.map(p => ({
+                            ...p,
+                            // Ensure camelCase versions exist for UI
+                            purchasePrice: p.purchasePrice || p.purchase_price,
+                            monthlyRent: p.monthlyRent || p.monthly_rent,
+                            currentValue: p.currentValue || p.value_estimate || p.purchase_price || p.purchasePrice,
+                            propertyTax: p.propertyTax || p.property_tax,
+                            managementFees: p.managementFees || p.management_fees,
+                            cashFlow: p.cashFlow || p.cash_flow,
+                            monthlyCashFlow: p.cashFlow || p.cash_flow,
+                            cocReturn: p.cocReturn || p.coc_return,
+                            cashOnCashReturn: p.cocReturn || p.coc_return,
+                            capRate: p.capRate || p.cap_rate,
+                            rentToValue: p.rentToValue || p.rent_to_value,
+                            floodRisk: p.floodRisk || p.flood_risk,
+                            marketRisk: p.marketRisk || p.market_risk
+                        }));
                         
                         // After loading from server, update localStorage to sync
                         localStorage.setItem('properties', JSON.stringify(properties));
                         
-                        console.log(`✅ Loaded ${properties.length} properties from server`);
+                        console.log(`✅ Loaded ${properties.length} properties from server and synced to localStorage`);
                         
                         // Debug: Check first 2 properties
                         if (properties.length > 0) {
@@ -1262,8 +1279,9 @@
                             properties.slice(0, 2).forEach((p, i) => {
                                 console.log(`Property ${i+1}: ${p.address}`, {
                                     id: p.id,
-                                    purchasePrice: p.purchasePrice || p.purchase_price,
-                                    monthlyRent: p.monthlyRent || p.monthly_rent
+                                    purchasePrice: p.purchasePrice,
+                                    monthlyRent: p.monthlyRent,
+                                    cashFlow: p.cashFlow
                                 });
                             });
                         }
@@ -1274,15 +1292,19 @@
                         if (saved) {
                             properties = JSON.parse(saved);
                             console.log(`📱 Loaded ${properties.length} properties from localStorage (database offline)`);
+                        } else {
+                            properties = [];
                         }
                     }
                 } else {
                     // Server error, fallback to localStorage
-                    console.error('❌ Server response not OK');
+                    console.error('❌ Server response not OK:', response.status);
                     const saved = localStorage.getItem('properties');
                     if (saved) {
                         properties = JSON.parse(saved);
                         console.log(`📱 Loaded ${properties.length} properties from localStorage (server error)`);
+                    } else {
+                        properties = [];
                     }
                 }
             } catch (error) {
@@ -1309,8 +1331,21 @@
             // Try to save to server
             let updatedCount = 0;
             let createdCount = 0;
+            let failedCount = 0;
+            
             try {
-                for (const property of properties) {
+                // First check if database is connected
+                const statusResponse = await fetch('/api/status');
+                const status = await statusResponse.json();
+                
+                if (!status.databaseConnected) {
+                    console.warn('⚠️ Database not connected - saving to localStorage only');
+                    return { success: false, warning: 'Database not connected - data saved locally only' };
+                }
+                
+                for (let i = 0; i < properties.length; i++) {
+                    const property = properties[i];
+                    
                     if (!property.id) {
                         // New property, create it
                         console.log('Creating new property in database:', property.address);
@@ -1356,9 +1391,17 @@
                         const data = await response.json();
                         
                         if (response.ok && data.success) {
-                            property.id = data.data.id;
+                            // CRITICAL: Update the property in the array with the server response
+                            properties[i] = {
+                                ...property,
+                                ...data.data,
+                                // Ensure camelCase fields are preserved
+                                purchasePrice: data.data.purchasePrice || data.data.purchase_price || property.purchasePrice,
+                                monthlyRent: data.data.monthlyRent || data.data.monthly_rent || property.monthlyRent
+                            };
                             createdCount++;
-                            console.log('✅ Property created with ID:', property.id);
+                            console.log('✅ Property created with ID:', properties[i].id);
+                            console.log('Updated property in array:', properties[i]);
                             
                             // Show warning if database wasn't available
                             if (data.warning) {
@@ -1436,9 +1479,14 @@
                 // Log summary of save operation
                 if (createdCount > 0 || updatedCount > 0) {
                     console.log(`💾 Save complete: ${createdCount} created, ${updatedCount} updated`);
+                    
+                    // IMPORTANT: Update localStorage again with all the new IDs
+                    localStorage.setItem('properties', JSON.stringify(properties));
+                    console.log('✅ Updated localStorage with new IDs');
                 }
             } catch (error) {
                 console.error('Error saving to server:', error);
+                failedCount = properties.filter(p => !p.id).length;
                 // Continue anyway, we have localStorage backup
             }
             
@@ -1447,6 +1495,7 @@
                 success: true,
                 createdCount,
                 updatedCount,
+                failedCount,
                 localStorageSaved: true
             };
         }
@@ -3834,10 +3883,38 @@
         }
 
         // Delete property
-        function deleteProperty(index) {
+        async function deleteProperty(index) {
             if (confirm('Are you sure you want to delete this property?')) {
+                const property = properties[index];
+                
+                // If property has an ID, delete it from the database
+                if (property.id) {
+                    try {
+                        console.log(`🗑️ Deleting property ${property.id} from database...`);
+                        const response = await fetch(`/api/properties/${property.id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (response.ok) {
+                            console.log('✅ Property deleted from database');
+                        } else {
+                            console.error('❌ Failed to delete from database');
+                            showNotification('Failed to delete property from database', 'error');
+                            return; // Don't remove from local array if database delete failed
+                        }
+                    } catch (error) {
+                        console.error('❌ Error deleting property:', error);
+                        showNotification('Error deleting property', 'error');
+                        return; // Don't remove from local array if database delete failed
+                    }
+                }
+                
+                // Remove from local array
                 properties.splice(index, 1);
-                saveProperties();
+                
+                // Update localStorage
+                localStorage.setItem('properties', JSON.stringify(properties));
+                
                 updateDisplay();
                 closeModal('propertyModal');
             }

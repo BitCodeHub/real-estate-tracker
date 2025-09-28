@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Property Sync Diagnostic</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+        .section {
+            background: #242424;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .warning { color: #f59e0b; }
+        .info { color: #3b82f6; }
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+        pre {
+            background-color: #0a0a0a;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        th {
+            background-color: #1a1a1a;
+            font-weight: bold;
+        }
+        .log-entry {
+            padding: 5px;
+            margin: 2px 0;
+            border-left: 3px solid #3b82f6;
+            background: #1a1a1a;
+            font-family: monospace;
+        }
+        .log-entry.error {
+            border-left-color: #ef4444;
+        }
+        .log-entry.success {
+            border-left-color: #10b981;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Real Estate Tracker - Sync Diagnostic</h1>
+    
+    <div class="section">
+        <h2>System Status</h2>
+        <div id="systemStatus">Checking...</div>
+    </div>
+    
+    <div class="section">
+        <h2>Diagnostic Tests</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="testAddProperty()">Test Add Property</button>
+        <button onclick="testDeleteProperty()">Test Delete Property</button>
+        <button onclick="compareData()">Compare DB vs LocalStorage</button>
+        <button onclick="clearAll()">Clear All Data</button>
+    </div>
+    
+    <div class="section">
+        <h2>Test Results</h2>
+        <div id="testLog"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Current Data</h2>
+        <h3>Database Properties:</h3>
+        <div id="dbProperties"></div>
+        
+        <h3>LocalStorage Properties:</h3>
+        <div id="localProperties"></div>
+    </div>
+
+    <script>
+        const log = [];
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toISOString().split('T')[1];
+            log.push({ timestamp, message, type });
+            updateLogDisplay();
+        }
+        
+        function updateLogDisplay() {
+            const logDiv = document.getElementById('testLog');
+            logDiv.innerHTML = log.map(entry => 
+                `<div class="log-entry ${entry.type}">[${entry.timestamp}] ${entry.message}</div>`
+            ).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        async function checkSystemStatus() {
+            try {
+                addLog('Checking system status...', 'info');
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                const statusDiv = document.getElementById('systemStatus');
+                statusDiv.innerHTML = `
+                    <p>Database: <span class="${status.databaseConnected ? 'success' : 'error'}">${status.databaseConnected ? '✅ Connected' : '❌ Not Connected'}</span></p>
+                    <p>API Key: <span class="${status.apiKeyConfigured ? 'success' : 'warning'}">${status.apiKeyConfigured ? '✅ Configured' : '⚠️ Not Configured'}</span></p>
+                    <p>Server Response: ${status.message}</p>
+                `;
+                
+                addLog(`System status: DB=${status.databaseConnected}, API=${status.apiKeyConfigured}`, 'success');
+                return status;
+            } catch (error) {
+                addLog(`Error checking status: ${error.message}`, 'error');
+                return null;
+            }
+        }
+        
+        async function loadData() {
+            try {
+                // Load from database
+                addLog('Loading properties from database...', 'info');
+                const dbResponse = await fetch('/api/properties');
+                const dbData = await dbResponse.json();
+                
+                if (dbData.success) {
+                    addLog(`Loaded ${dbData.data.length} properties from database`, 'success');
+                    displayDbProperties(dbData.data);
+                } else {
+                    addLog('Failed to load from database', 'error');
+                }
+                
+                // Load from localStorage
+                addLog('Loading properties from localStorage...', 'info');
+                const localData = localStorage.getItem('properties');
+                const localProperties = localData ? JSON.parse(localData) : [];
+                addLog(`Found ${localProperties.length} properties in localStorage`, 'success');
+                displayLocalProperties(localProperties);
+                
+                return { db: dbData.data || [], local: localProperties };
+            } catch (error) {
+                addLog(`Error loading data: ${error.message}`, 'error');
+                return { db: [], local: [] };
+            }
+        }
+        
+        function displayDbProperties(properties) {
+            const div = document.getElementById('dbProperties');
+            if (properties.length === 0) {
+                div.innerHTML = '<p class="warning">No properties in database</p>';
+                return;
+            }
+            
+            const table = `
+                <table>
+                    <tr>
+                        <th>ID</th>
+                        <th>Address</th>
+                        <th>City</th>
+                        <th>Purchase Price</th>
+                        <th>Monthly Rent</th>
+                        <th>Created</th>
+                    </tr>
+                    ${properties.map(p => `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.address}</td>
+                            <td>${p.city}</td>
+                            <td>${p.purchase_price || 'N/A'}</td>
+                            <td>${p.monthly_rent || 'N/A'}</td>
+                            <td>${new Date(p.created_at).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            `;
+            div.innerHTML = table;
+        }
+        
+        function displayLocalProperties(properties) {
+            const div = document.getElementById('localProperties');
+            if (properties.length === 0) {
+                div.innerHTML = '<p class="warning">No properties in localStorage</p>';
+                return;
+            }
+            
+            const table = `
+                <table>
+                    <tr>
+                        <th>ID</th>
+                        <th>Address</th>
+                        <th>City</th>
+                        <th>Purchase Price</th>
+                        <th>Monthly Rent</th>
+                        <th>Has ID?</th>
+                    </tr>
+                    ${properties.map(p => `
+                        <tr>
+                            <td>${p.id || 'NO ID'}</td>
+                            <td>${p.address}</td>
+                            <td>${p.city}</td>
+                            <td>${p.purchasePrice || p.purchase_price || 'N/A'}</td>
+                            <td>${p.monthlyRent || p.monthly_rent || 'N/A'}</td>
+                            <td class="${p.id ? 'success' : 'error'}">${p.id ? '✅ Yes' : '❌ No'}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            `;
+            div.innerHTML = table;
+        }
+        
+        async function testAddProperty() {
+            addLog('=== Testing Add Property ===', 'info');
+            
+            try {
+                const testProperty = {
+                    address: `Test Property ${Date.now()}`,
+                    city: 'Las Vegas',
+                    state: 'NV',
+                    zip: '89101',
+                    purchasePrice: 500000,
+                    monthlyRent: 3500
+                };
+                
+                addLog(`Creating property: ${testProperty.address}`, 'info');
+                
+                const response = await fetch('/api/properties', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testProperty)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLog(`✅ Property created with ID: ${result.data.id}`, 'success');
+                    
+                    // Check if it persists
+                    addLog('Verifying property persists in database...', 'info');
+                    const checkResponse = await fetch('/api/properties');
+                    const checkData = await checkResponse.json();
+                    
+                    const found = checkData.data.find(p => p.id === result.data.id);
+                    if (found) {
+                        addLog('✅ Property found in database after creation', 'success');
+                    } else {
+                        addLog('❌ Property NOT found in database after creation!', 'error');
+                    }
+                } else {
+                    addLog(`❌ Failed to create property: ${result.error}`, 'error');
+                }
+                
+                await loadData();
+            } catch (error) {
+                addLog(`❌ Test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testDeleteProperty() {
+            addLog('=== Testing Delete Property ===', 'info');
+            
+            try {
+                // Get current properties
+                const response = await fetch('/api/properties');
+                const data = await response.json();
+                
+                if (data.data.length === 0) {
+                    addLog('No properties to delete', 'warning');
+                    return;
+                }
+                
+                // Delete the last property
+                const propertyToDelete = data.data[data.data.length - 1];
+                addLog(`Deleting property ID ${propertyToDelete.id}: ${propertyToDelete.address}`, 'info');
+                
+                const deleteResponse = await fetch(`/api/properties/${propertyToDelete.id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (deleteResponse.ok) {
+                    addLog('✅ Property deleted successfully', 'success');
+                    
+                    // Verify it's gone
+                    addLog('Verifying property is removed from database...', 'info');
+                    const checkResponse = await fetch('/api/properties');
+                    const checkData = await checkResponse.json();
+                    
+                    const stillExists = checkData.data.find(p => p.id === propertyToDelete.id);
+                    if (!stillExists) {
+                        addLog('✅ Property successfully removed from database', 'success');
+                    } else {
+                        addLog('❌ Property still exists in database after deletion!', 'error');
+                    }
+                } else {
+                    addLog('❌ Failed to delete property', 'error');
+                }
+                
+                await loadData();
+            } catch (error) {
+                addLog(`❌ Test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function compareData() {
+            addLog('=== Comparing Database vs LocalStorage ===', 'info');
+            
+            const { db, local } = await loadData();
+            
+            addLog(`Database has ${db.length} properties`, 'info');
+            addLog(`LocalStorage has ${local.length} properties`, 'info');
+            
+            // Check for properties in local but not in DB
+            const localOnly = local.filter(lp => !db.find(dp => dp.id === lp.id));
+            if (localOnly.length > 0) {
+                addLog(`⚠️ ${localOnly.length} properties in localStorage but not in database:`, 'warning');
+                localOnly.forEach(p => {
+                    addLog(`  - ${p.address} (ID: ${p.id || 'NO ID'})`, 'warning');
+                });
+            }
+            
+            // Check for properties in DB but not in local
+            const dbOnly = db.filter(dp => !local.find(lp => lp.id === dp.id));
+            if (dbOnly.length > 0) {
+                addLog(`⚠️ ${dbOnly.length} properties in database but not in localStorage:`, 'warning');
+                dbOnly.forEach(p => {
+                    addLog(`  - ${p.address} (ID: ${p.id})`, 'warning');
+                });
+            }
+            
+            // Check for properties without IDs in localStorage
+            const noId = local.filter(p => !p.id);
+            if (noId.length > 0) {
+                addLog(`❌ ${noId.length} properties in localStorage without IDs:`, 'error');
+                noId.forEach(p => {
+                    addLog(`  - ${p.address}`, 'error');
+                });
+            }
+            
+            if (localOnly.length === 0 && dbOnly.length === 0 && noId.length === 0) {
+                addLog('✅ Database and localStorage are in sync!', 'success');
+            } else {
+                addLog('❌ Database and localStorage are OUT OF SYNC!', 'error');
+            }
+        }
+        
+        async function clearAll() {
+            if (!confirm('This will clear ALL data from localStorage. Database data will remain. Continue?')) {
+                return;
+            }
+            
+            addLog('Clearing localStorage...', 'info');
+            localStorage.removeItem('properties');
+            addLog('✅ LocalStorage cleared', 'success');
+            
+            await loadData();
+        }
+        
+        async function runAllTests() {
+            log.length = 0;
+            addLog('=== Running All Tests ===', 'info');
+            
+            await checkSystemStatus();
+            await compareData();
+            
+            addLog('', 'info');
+            addLog('Tests complete. Check results above.', 'success');
+        }
+        
+        // Initialize
+        (async () => {
+            await checkSystemStatus();
+            await loadData();
+        })();
+    </script>
+</body>
+</html>
