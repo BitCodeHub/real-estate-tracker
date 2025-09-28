@@ -213,6 +213,7 @@ app.get('/api/rentcast/rental-listings', async (req, res) => {
         if (maxRent) params.append('maxRent', maxRent);
         
         console.log('Fetching rental listings:', params.toString());
+        console.log('Full URL:', `${RENTCAST_API_BASE}/listings/rental/long-term?${params}`);
         
         const response = await axios.get(`${RENTCAST_API_BASE}/listings/rental/long-term?${params}`, {
             headers: {
@@ -221,16 +222,39 @@ app.get('/api/rentcast/rental-listings', async (req, res) => {
             }
         });
         
-        console.log('Rental listings response:', response.data);
+        console.log('Rental listings response status:', response.status);
+        console.log('Rental listings response data:', JSON.stringify(response.data, null, 2));
         console.log('Response type:', typeof response.data, Array.isArray(response.data) ? 'is array' : 'not array');
         
-        // RentCast API returns array directly
-        const listings = Array.isArray(response.data) ? response.data : (response.data?.listings || response.data?.data || []);
+        // RentCast API returns array directly or wrapped in object
+        let listings = [];
+        if (Array.isArray(response.data)) {
+            listings = response.data;
+        } else if (response.data && typeof response.data === 'object') {
+            // Try different possible field names
+            listings = response.data.listings || 
+                      response.data.data || 
+                      response.data.results || 
+                      response.data.properties || 
+                      response.data.rentals || 
+                      [];
+        }
+        
         console.log(`Found ${listings.length} rental listings`);
+        
+        // If no listings found, log the entire response structure
+        if (listings.length === 0) {
+            console.log('No listings found. Full response structure:', response.data);
+        }
         
         res.json({
             success: true,
-            data: listings
+            data: listings,
+            debug: {
+                totalResults: listings.length,
+                requestParams: params.toString(),
+                responseType: Array.isArray(response.data) ? 'array' : typeof response.data
+            }
         });
     } catch (error) {
         console.error('RentCast Rental Listings Error:', error.message);

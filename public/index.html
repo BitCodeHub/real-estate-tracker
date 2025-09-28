@@ -2083,10 +2083,19 @@
                 const params = new URLSearchParams({
                     zip: property.zip,
                     radius: 5, // Increase radius to 5 miles for better results
-                    limit: 20,  // Increase limit to get more listings
-                    bedrooms: property.beds || property.bedrooms || 3,
-                    bathrooms: Math.floor(property.baths || property.bathrooms || 2)
+                    limit: 50,  // Increase limit to get more listings
                 });
+                
+                // Only add bedrooms/bathrooms if they exist
+                const beds = property.beds || property.bedrooms;
+                const baths = property.baths || property.bathrooms;
+                
+                if (beds && beds > 0) {
+                    params.append('bedrooms', beds);
+                }
+                if (baths && baths > 0) {
+                    params.append('bathrooms', Math.floor(baths));
+                }
                 
                 console.log('🔍 Query params:', params.toString());
                 
@@ -2096,6 +2105,9 @@
                 const data = await response.json();
                 console.log('📋 Rental listings response:', data);
                 console.log('🔢 Number of listings:', data.data ? data.data.length : 0);
+                if (data.debug) {
+                    console.log('🐛 Debug info:', data.debug);
+                }
                 
                 // Log first listing to see structure
                 if (data.data && data.data.length > 0) {
@@ -2105,20 +2117,44 @@
                 if (data.success && data.data && data.data.length > 0) {
                     console.log('✅ Found listings, displaying them');
                     displayRentalListings(data.data, property);
+                } else if (beds || baths) {
+                    // No listings found with bedroom/bathroom filters, try without them
+                    console.log('⚠️ No listings found with filters. Trying broader search...');
+                    
+                    const broadParams = new URLSearchParams({
+                        zip: property.zip,
+                        radius: 10, // Increase radius further
+                        limit: 50
+                    });
+                    
+                    console.log('🔍 Broader search params:', broadParams.toString());
+                    
+                    const broadResponse = await fetch(`/api/rentcast/rental-listings?${broadParams}`);
+                    const broadData = await broadResponse.json();
+                    
+                    console.log('📋 Broader search response:', broadData);
+                    
+                    if (broadData.success && broadData.data && broadData.data.length > 0) {
+                        console.log('✅ Found listings with broader search');
+                        displayRentalListings(broadData.data, property);
+                        
+                        // Add note about broader search
+                        const noteDiv = document.createElement('div');
+                        noteDiv.style.cssText = 'padding: 10px; background: var(--bg-secondary); border: 1px solid var(--accent-warning); border-radius: 4px; margin-bottom: 10px;';
+                        noteDiv.innerHTML = `
+                            <i class="fas fa-info-circle" style="color: var(--accent-warning);"></i>
+                            <span style="color: var(--text-secondary); margin-left: 5px;">
+                                Showing all rentals in the area. No exact matches found for ${beds} bed / ${Math.floor(baths)} bath properties.
+                            </span>
+                        `;
+                        document.getElementById('rentalListingsContent').insertBefore(noteDiv, document.getElementById('rentalListingsContent').firstChild);
+                    } else {
+                        // Still no listings found
+                        showNoListingsMessage(property);
+                    }
                 } else {
                     // No listings found
-                    console.log('⚠️ No listings found. Response:', data);
-                    document.getElementById('rentalListingsLoading').style.display = 'none';
-                    document.getElementById('rentalListingsContent').style.display = 'block';
-                    document.getElementById('rentalListingsContent').innerHTML = `
-                        <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
-                            <i class="fas fa-home" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
-                            <p>No comparable rental listings found in the area.</p>
-                            <p style="font-size: 0.85em; margin-top: 10px; color: var(--text-muted);">
-                                Tried searching in ZIP ${property.zip} with ${property.beds || property.bedrooms || '?'} bedrooms
-                            </p>
-                        </div>
-                    `;
+                    showNoListingsMessage(property);
                 }
             } catch (error) {
                 console.error('Error fetching rental listings:', error);
@@ -2131,6 +2167,150 @@
                     </div>
                 `;
             }
+        }
+
+        // Show no listings message with helpful information
+        function showNoListingsMessage(property) {
+            document.getElementById('rentalListingsLoading').style.display = 'none';
+            document.getElementById('rentalListingsContent').style.display = 'block';
+            document.getElementById('rentalListingsContent').innerHTML = `
+                <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                    <i class="fas fa-home" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
+                    <p style="font-weight: 500; margin-bottom: 15px;">No rental listings found in the area.</p>
+                    
+                    <div style="text-align: left; max-width: 500px; margin: 0 auto; background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
+                        <p style="margin: 0 0 10px 0; font-size: 0.9em;">
+                            <strong>Possible reasons:</strong>
+                        </p>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 0.85em; color: var(--text-muted);">
+                            <li>Limited rental inventory in ZIP ${property.zip}</li>
+                            <li>No current listings match the property criteria</li>
+                            <li>The area may have low rental turnover</li>
+                            <li>RentCast may not have complete coverage for this ZIP code</li>
+                        </ul>
+                        
+                        <p style="margin: 15px 0 0 0; font-size: 0.85em; color: var(--text-secondary);">
+                            <strong>Alternatives:</strong> Try searching on 
+                            <a href="https://www.zillow.com/homes/for_rent/${property.zip}_rb/" target="_blank" style="color: var(--accent-primary);">Zillow</a>, 
+                            <a href="https://www.realtor.com/apartments/${property.city}-${property.state}/${property.zip}" target="_blank" style="color: var(--accent-primary);">Realtor.com</a>, or
+                            <a href="https://www.apartments.com/${property.city.toLowerCase()}-${property.state.toLowerCase()}/${property.zip}/" target="_blank" style="color: var(--accent-primary);">Apartments.com</a>
+                        </p>
+                    </div>
+                    
+                    <button class="btn btn-secondary" onclick="retryWithCityState(${JSON.stringify({city: property.city, state: property.state, zip: property.zip}).replace(/"/g, '&quot;')})" style="margin-top: 15px;">
+                        <i class="fas fa-redo"></i> Try searching by ${property.city}, ${property.state}
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="testRentCastAPI('${property.zip}')" style="margin-top: 15px; margin-left: 10px;">
+                        <i class="fas fa-vial"></i> Test API Response
+                    </button>
+                </div>
+            `;
+        }
+
+        // Retry rental search with city/state instead of ZIP
+        async function retryWithCityState(location) {
+            document.getElementById('rentalListingsLoading').style.display = 'block';
+            document.getElementById('rentalListingsContent').style.display = 'none';
+            
+            try {
+                const params = new URLSearchParams({
+                    city: location.city,
+                    state: location.state,
+                    radius: 10,
+                    limit: 50
+                });
+                
+                console.log('🔍 Retrying with city/state:', params.toString());
+                
+                const response = await fetch(`/api/rentcast/rental-listings?${params}`);
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    const property = properties.find(p => p.zip === location.zip) || { zip: location.zip };
+                    displayRentalListings(data.data, property);
+                    
+                    // Add note about city/state search
+                    const noteDiv = document.createElement('div');
+                    noteDiv.style.cssText = 'padding: 10px; background: var(--bg-secondary); border: 1px solid var(--accent-info); border-radius: 4px; margin-bottom: 10px;';
+                    noteDiv.innerHTML = `
+                        <i class="fas fa-info-circle" style="color: var(--accent-info);"></i>
+                        <span style="color: var(--text-secondary); margin-left: 5px;">
+                            Showing rentals for ${location.city}, ${location.state} area (not limited to ZIP ${location.zip})
+                        </span>
+                    `;
+                    document.getElementById('rentalListingsContent').insertBefore(noteDiv, document.getElementById('rentalListingsContent').firstChild);
+                } else {
+                    showNoListingsMessage({ city: location.city, state: location.state, zip: location.zip });
+                }
+            } catch (error) {
+                console.error('Error retrying with city/state:', error);
+                showNoListingsMessage({ city: location.city, state: location.state, zip: location.zip });
+            }
+        }
+
+        // Test RentCast API directly
+        async function testRentCastAPI(zipCode) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: var(--bg-card);
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: var(--shadow-lg);
+                max-width: 600px;
+                max-height: 80vh;
+                overflow-y: auto;
+                z-index: 10000;
+            `;
+            
+            modal.innerHTML = `
+                <h3 style="margin-bottom: 15px;">RentCast API Test for ZIP ${zipCode}</h3>
+                <div id="apiTestResults" style="font-family: monospace; font-size: 0.85em;">
+                    <p>Testing different API configurations...</p>
+                </div>
+                <button class="btn btn-secondary" onclick="this.parentElement.remove()" style="margin-top: 15px;">Close</button>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            const resultsDiv = document.getElementById('apiTestResults');
+            let results = '';
+            
+            // Test 1: ZIP only
+            try {
+                results += '<p><strong>Test 1: ZIP only</strong></p>';
+                const response1 = await fetch(`/api/rentcast/rental-listings?zip=${zipCode}&limit=5`);
+                const data1 = await response1.json();
+                results += `<pre>${JSON.stringify(data1, null, 2)}</pre><hr>`;
+            } catch (error) {
+                results += `<p style="color: var(--accent-danger);">Error: ${error.message}</p><hr>`;
+            }
+            
+            // Test 2: ZIP with larger radius
+            try {
+                results += '<p><strong>Test 2: ZIP with 20 mile radius</strong></p>';
+                const response2 = await fetch(`/api/rentcast/rental-listings?zip=${zipCode}&radius=20&limit=5`);
+                const data2 = await response2.json();
+                results += `<pre>${JSON.stringify(data2, null, 2)}</pre><hr>`;
+            } catch (error) {
+                results += `<p style="color: var(--accent-danger);">Error: ${error.message}</p><hr>`;
+            }
+            
+            // Test 3: Check API status
+            try {
+                results += '<p><strong>Test 3: API Status Check</strong></p>';
+                const response3 = await fetch('/api/status');
+                const data3 = await response3.json();
+                results += `<pre>${JSON.stringify(data3, null, 2)}</pre>`;
+            } catch (error) {
+                results += `<p style="color: var(--accent-danger);">Error: ${error.message}</p>`;
+            }
+            
+            resultsDiv.innerHTML = results;
         }
 
         // Display rental listings
@@ -2185,14 +2365,19 @@
             `;
             
             listings.forEach((listing, index) => {
-                const rent = listing.rent || listing.price || 0;
-                const sqft = listing.squareFootage || listing.squareFeet || 0;
+                // Log the first listing structure for debugging
+                if (index === 0) {
+                    console.log('📋 First listing structure:', listing);
+                }
+                
+                const rent = listing.rent || listing.price || listing.rentAmount || listing.monthlyRent || 0;
+                const sqft = listing.squareFootage || listing.squareFeet || listing.sqft || listing.size || 0;
                 const pricePerSqft = sqft && rent ? (rent / sqft).toFixed(2) : 'N/A';
                 
                 // Use daysOnMarket from API or calculate from listedDate
-                const daysListed = listing.daysOnMarket || 
-                    (listing.listedDate ? 
-                        Math.floor((Date.now() - new Date(listing.listedDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+                const daysListed = listing.daysOnMarket || listing.daysActive || 
+                    (listing.listedDate || listing.datePosted ? 
+                        Math.floor((Date.now() - new Date(listing.listedDate || listing.datePosted).getTime()) / (1000 * 60 * 60 * 24)) : 
                         'N/A');
                 
                 html += `
@@ -2205,9 +2390,11 @@
                                     </div>
                                 ` : ''}
                                 <div>
-                                    <div style="font-weight: 500;">${listing.addressLine1 || listing.formattedAddress || listing.address || 'N/A'}</div>
+                                    <div style="font-weight: 500;">
+                                        ${listing.addressLine1 || listing.formattedAddress || listing.address || listing.street || 'N/A'}
+                                    </div>
                                     <div style="font-size: 0.85em; color: var(--text-secondary);">
-                                        ${listing.city || ''} ${listing.state || listing.stateCode || ''} ${listing.zipCode || listing.zip || ''}
+                                        ${listing.city || ''} ${listing.state || listing.stateCode || ''} ${listing.zipCode || listing.zip || listing.postalCode || ''}
                                     </div>
                                     ${listing.county ? `<div style="font-size: 0.8em; color: var(--text-muted);">${listing.county} County</div>` : ''}
                                 </div>
