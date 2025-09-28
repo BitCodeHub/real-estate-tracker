@@ -1159,10 +1159,33 @@
         }
 
         // Initialize the application
-        document.addEventListener('DOMContentLoaded', function() {
-            loadProperties();
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check API and database status first
+            await checkAPIStatus();
+            await loadProperties();
             setupEventListeners();
         });
+        
+        // Check API and database connection status
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                console.log('🏛️ Server health check:', data);
+                
+                if (data.database !== 'connected') {
+                    console.warn('⚠️ Database is not connected. Properties will be stored locally only.');
+                    if (typeof showNotification === 'function') {
+                        showNotification('Database offline - properties saved locally only', 'warning');
+                    }
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('Failed to check API status:', error);
+                return { status: 'error', database: 'disconnected' };
+            }
+        }
 
         // Setup event listeners
         function setupEventListeners() {
@@ -1264,15 +1287,73 @@
                 for (const property of properties) {
                     if (!property.id) {
                         // New property, create it
+                        console.log('Creating new property in database:', property.address);
+                        
+                        // Ensure we send all required fields with both naming conventions
+                        const propertyToCreate = {
+                            ...property,
+                            // Include both camelCase and snake_case versions
+                            purchasePrice: property.purchasePrice || property.purchase_price || 0,
+                            monthlyRent: property.monthlyRent || property.monthly_rent || 0,
+                            propertyTax: property.propertyTax || property.property_tax || 0,
+                            managementFees: property.managementFees || property.management_fees || 0,
+                            cashFlow: property.cashFlow || property.cash_flow || 0,
+                            cocReturn: property.cocReturn || property.coc_return || 0,
+                            rentToValue: property.rentToValue || property.rent_to_value || 0,
+                            capRate: property.capRate || property.cap_rate || 0,
+                            // Also include snake_case versions for database
+                            purchase_price: property.purchasePrice || property.purchase_price || 0,
+                            monthly_rent: property.monthlyRent || property.monthly_rent || 0,
+                            property_tax: property.propertyTax || property.property_tax || 0,
+                            management_fees: property.managementFees || property.management_fees || 0,
+                            cash_flow: property.cashFlow || property.cash_flow || 0,
+                            coc_return: property.cocReturn || property.coc_return || 0,
+                            rent_to_value: property.rentToValue || property.rent_to_value || 0,
+                            cap_rate: property.capRate || property.cap_rate || 0
+                        };
+                        
+                        console.log('📦 Data being sent to server:', {
+                            address: propertyToCreate.address,
+                            city: propertyToCreate.city,
+                            state: propertyToCreate.state,
+                            zip: propertyToCreate.zip,
+                            purchasePrice: propertyToCreate.purchasePrice,
+                            monthlyRent: propertyToCreate.monthlyRent
+                        });
+                        
                         const response = await fetch('/api/properties', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(property)
+                            body: JSON.stringify(propertyToCreate)
                         });
-                        if (response.ok) {
-                            const data = await response.json();
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
                             property.id = data.data.id;
                             createdCount++;
+                            console.log('✅ Property created with ID:', property.id);
+                            
+                            // Show warning if database wasn't available
+                            if (data.warning) {
+                                console.warn('⚠️ Warning:', data.warning);
+                            }
+                        } else {
+                            console.error('❌ Failed to create property:', data.error || 'Unknown error');
+                            
+                            // Show error notification if available
+                            if (typeof showNotification === 'function' && data.error) {
+                                showNotification(data.error, 'error');
+                            }
+                            
+                            // If it's a duplicate property error, remove it from the array
+                            if (data.existingProperty) {
+                                const index = properties.indexOf(property);
+                                if (index > -1) {
+                                    properties.splice(index, 1);
+                                    console.log('Removed duplicate property from local array');
+                                }
+                            }
                         }
                     } else {
                         // Existing property, update it
@@ -1334,6 +1415,14 @@
                 console.error('Error saving to server:', error);
                 // Continue anyway, we have localStorage backup
             }
+            
+            // Return save result
+            return {
+                success: true,
+                createdCount,
+                updatedCount,
+                localStorageSaved: true
+            };
         }
 
         // Update display
@@ -2709,7 +2798,10 @@
                 properties.push(property);
                 
                 // Save and update display
-                await saveProperties();
+                console.log('Saving new property:', property);
+                const saveResult = await saveProperties();
+                console.log('Save result:', saveResult);
+                
                 updateDisplay();
                 closeModal('addPropertyModal');
                 
