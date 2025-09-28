@@ -327,11 +327,30 @@ app.get('/api/properties', async (req, res) => {
                 // Merge the JSONB data back into the main object
                 const { rentcast_data, ...mainProps } = mappedProp;
                 console.log(`Expanding RentCast data for ${mainProps.address}:`, Object.keys(rentcast_data));
-                return {
+                
+                // Ensure realTimeData flag is preserved
+                const expandedProp = {
                     ...mainProps,
                     ...rentcast_data
                 };
+                
+                // If we have RentCast data stored, ensure realTimeData flag is true
+                if (rentcast_data.realTimeData || 
+                    mainProps.rent_estimate || 
+                    mainProps.value_estimate ||
+                    mainProps.bedrooms || 
+                    mainProps.bathrooms) {
+                    expandedProp.realTimeData = true;
+                }
+                
+                return expandedProp;
             }
+            
+            // Even without rentcast_data JSONB, check if we have RentCast values
+            if (mappedProp.rent_estimate || mappedProp.value_estimate) {
+                mappedProp.realTimeData = true;
+            }
+            
             return mappedProp;
         });
         

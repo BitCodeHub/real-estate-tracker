@@ -976,10 +976,37 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.data.length > 0) {
-                        properties = data.data;
+                        // Load localStorage data first to preserve any unsaved updates
+                        const saved = localStorage.getItem('properties');
+                        const localProperties = saved ? JSON.parse(saved) : [];
+                        
+                        // Merge server data with local data, preferring local data for RentCast fields
+                        properties = data.data.map(serverProp => {
+                            // Find matching property in localStorage by address
+                            const localProp = localProperties.find(p => 
+                                p.address === serverProp.address && 
+                                p.city === serverProp.city
+                            );
+                            
+                            if (localProp) {
+                                // Merge, keeping local RentCast data if server doesn't have it
+                                return {
+                                    ...serverProp,
+                                    // Preserve RentCast data from localStorage if server data is missing
+                                    beds: serverProp.beds || serverProp.bedrooms || localProp.beds,
+                                    baths: serverProp.baths || serverProp.bathrooms || localProp.baths,
+                                    sqft: serverProp.sqft || serverProp.square_footage || localProp.sqft,
+                                    estimatedValue: serverProp.estimatedValue || serverProp.value_estimate || localProp.estimatedValue,
+                                    rentEstimate: serverProp.rentEstimate || serverProp.rent_estimate || localProp.rentEstimate,
+                                    realTimeData: serverProp.realTimeData || localProp.realTimeData,
+                                    lastRentCastUpdate: serverProp.lastRentCastUpdate || localProp.lastRentCastUpdate
+                                };
+                            }
+                            return serverProp;
+                        });
                         
                         // Debug: Check first 2 properties
-                        console.log('🔍 Loaded properties from server:');
+                        console.log('🔍 Loaded properties from server (merged with localStorage):');
                         properties.slice(0, 3).forEach((p, i) => {
                             console.log(`Property ${i+1}: ${p.address}`, {
                                 id: p.id,
@@ -1054,10 +1081,21 @@
                             });
                         }
                         
+                        // Ensure we send all necessary fields with proper names
+                        const propertyToSave = {
+                            ...property,
+                            // Ensure both field name variants are included
+                            bedrooms: property.beds || property.bedrooms,
+                            bathrooms: property.baths || property.bathrooms,
+                            square_footage: property.sqft || property.square_footage,
+                            value_estimate: property.estimatedValue || property.value_estimate || property.currentValue,
+                            rent_estimate: property.rentEstimate || property.rent_estimate
+                        };
+                        
                         const response = await fetch(`/api/properties/${property.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(property)
+                            body: JSON.stringify(propertyToSave)
                         });
                         if (response.ok) {
                             const updatedData = await response.json();
