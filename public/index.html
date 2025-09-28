@@ -1019,6 +1019,11 @@
         function editField(index, field, currentValue, isInModal = false) {
             console.log('Editing field:', field, 'for property at index:', index, 'Current value:', currentValue);
             
+            // Stop the event from bubbling up to the row click handler
+            if (event) {
+                event.stopPropagation();
+            }
+            
             // Create input element
             const input = document.createElement('input');
             input.type = 'number';
@@ -1387,7 +1392,7 @@
                     ${property.sqft || property.squareFootage ? (property.sqft || property.squareFootage).toLocaleString() : 'N/A'}
                 </td>
                 <td style="min-width: 120px; text-align: right;">
-                    <span class="editable-field" onclick="editField(${index}, 'purchasePrice', ${property.purchasePrice || 0})" 
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'purchasePrice', ${property.purchasePrice || 0})" 
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
                         ${formatCurrency(property.purchasePrice || 0)}
@@ -1398,7 +1403,7 @@
                     ${property.realTimeData && property.estimatedValue ? '<span style="color: #10b981; font-size: 10px;">📊</span>' : ''}
                 </td>
                 <td style="min-width: 120px; text-align: right;">
-                    <span class="editable-field" onclick="editField(${index}, 'monthlyRent', ${property.monthlyRent || 0})" 
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'monthlyRent', ${property.monthlyRent || 0})" 
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
                         ${formatCurrency(property.monthlyRent || 0)}
@@ -1524,7 +1529,7 @@
                         <div class="metric-card">
                             <div class="metric-label">Purchase Price</div>
                             <div class="metric-value editable-field" 
-                                 onclick="editField(${propertyIndex}, 'purchasePrice', ${property.purchasePrice || 0}, true)" 
+                                 onclick="event.stopPropagation(); editField(${propertyIndex}, 'purchasePrice', ${property.purchasePrice || 0}, true)" 
                                  style="cursor: pointer; border-bottom: 2px dashed var(--border-light);"
                                  title="Click to edit">
                                 ${formatCurrency(property.purchasePrice || 0)}
@@ -1543,7 +1548,7 @@
                         <div class="metric-card">
                             <div class="metric-label">Monthly Rent</div>
                             <div class="metric-value positive editable-field"
-                                 onclick="editField(${propertyIndex}, 'monthlyRent', ${property.monthlyRent || 0}, true)" 
+                                 onclick="event.stopPropagation(); editField(${propertyIndex}, 'monthlyRent', ${property.monthlyRent || 0}, true)" 
                                  style="cursor: pointer; border-bottom: 2px dashed var(--border-light);"
                                  title="Click to edit">
                                 ${formatCurrency(property.monthlyRent || 0)}
