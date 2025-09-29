@@ -4560,32 +4560,59 @@
                         valueAmount: gotValueFromProperties || 'NOT FOUND'
                     });
                     
-                    // If we didn't get EITHER estimate, make ONE call to rent endpoint
-                    // (rent endpoint often returns value data too)
+                    // If we didn't get estimates from properties endpoint, fetch them
                     if (!gotRentFromProperties || !gotValueFromProperties) {
-                        console.log('⚠️ Missing estimates from properties endpoint, fetching from rent-estimate...');
-                        try {
-                            apiCallCount++;
-                            const rentResponse = await fetch(`/api/rentcast/rent-estimate?${params}`);
-                            const rentResult = await rentResponse.json();
-                            
-                            if (rentResult.success && rentResult.data) {
-                                console.log('📊 Rent estimate response:', rentResult.data);
-                                rentData = rentResult.data;
-                                
-                                // Extract rent value
-                                if (!gotRentFromProperties && rentData.rent) {
-                                    property.rent = rentData.rent;
-                                    property.rentEstimate = rentData.rent;
-                                }
-                                
-                                // Check if rent endpoint also returned value data
-                                if (!gotValueFromProperties && (rentData.price || rentData.value)) {
-                                    property.estimatedValue = rentData.price || rentData.value;
-                                }
-                            }
-                        } catch (error) {
-                            console.error('Error fetching rent estimate:', error);
+                        console.log('⚠️ Missing estimates from properties endpoint, fetching additional data...');
+                        
+                        // Make parallel calls to minimize total time
+                        const promises = [];
+                        
+                        // Need rent estimate?
+                        if (!gotRentFromProperties) {
+                            console.log('📊 Fetching rent estimate...');
+                            promises.push(
+                                fetch(`/api/rentcast/rent-estimate?${params}`)
+                                    .then(res => res.json())
+                                    .then(result => {
+                                        if (result.success && result.data) {
+                                            console.log('✅ Got rent estimate:', result.data);
+                                            rentData = result.data;
+                                            // RentCast rent-estimate endpoint typically returns: { rent, rentRangeLow, rentRangeHigh }
+                                            if (result.data.rent) {
+                                                property.rent = result.data.rent;
+                                                property.rentEstimate = result.data.rent;
+                                            }
+                                        }
+                                    })
+                                    .catch(err => console.error('Error fetching rent estimate:', err))
+                            );
+                        }
+                        
+                        // Need value estimate?
+                        if (!gotValueFromProperties) {
+                            console.log('🏠 Fetching value estimate...');
+                            promises.push(
+                                fetch(`/api/rentcast/value-estimate?${params}`)
+                                    .then(res => res.json())
+                                    .then(result => {
+                                        if (result.success && result.data) {
+                                            console.log('✅ Got value estimate:', result.data);
+                                            valueData = result.data;
+                                            // RentCast value-estimate endpoint typically returns: { price, priceRangeLow, priceRangeHigh }
+                                            if (result.data.price || result.data.value) {
+                                                property.estimatedValue = result.data.price || result.data.value;
+                                                property.price = result.data.price || result.data.value;
+                                            }
+                                        }
+                                    })
+                                    .catch(err => console.error('Error fetching value estimate:', err))
+                            );
+                        }
+                        
+                        // Wait for all promises to complete
+                        if (promises.length > 0) {
+                            apiCallCount += promises.length;
+                            await Promise.all(promises);
                         }
                     }
                     
@@ -4621,23 +4648,25 @@
                                      property.monthlyRent || property.estimatedRent || property.estimatedMonthlyRent ||
                                      property.rentRangeLow || property.rentLow || property.minRent ||
                                      rentData?.rent || rentData?.rentEstimate,
-                        rentRangeLow: property.rentRangeLow,
-                        rentRangeHigh: property.rentRangeHigh,
+                        rentRangeLow: property.rentRangeLow || rentData?.rentRangeLow,
+                        rentRangeHigh: property.rentRangeHigh || rentData?.rentRangeHigh,
                         
                         // Extract value/price data - check ALL possible field names RentCast might use
-                        // Including data from the rent-estimate endpoint if it was called
+                        // Including data from BOTH rent-estimate and value-estimate endpoints
                         estimatedValue: property.price || property.value || property.valueEstimate || property.estimatedValue || 
                                       property.estimatedPrice || property.marketValue || property.currentValue || 
                                       property.assessedValue || property.priceEst || property.valueEst ||
                                       property.priceRangeLow || property.priceLow || property.minPrice ||
+                                      valueData?.price || valueData?.value || valueData?.estimatedValue ||
                                       rentData?.price || rentData?.value || rentData?.estimatedValue,
                         value_estimate: property.price || property.value || property.valueEstimate || property.estimatedValue || 
                                       property.estimatedPrice || property.marketValue || property.currentValue || 
                                       property.assessedValue || property.priceEst || property.valueEst ||
                                       property.priceRangeLow || property.priceLow || property.minPrice ||
+                                      valueData?.price || valueData?.value || valueData?.estimatedValue ||
                                       rentData?.price || rentData?.value || rentData?.estimatedValue,
-                        priceRangeLow: property.priceRangeLow,
-                        priceRangeHigh: property.priceRangeHigh,
+                        priceRangeLow: property.priceRangeLow || valueData?.priceRangeLow,
+                        priceRangeHigh: property.priceRangeHigh || valueData?.priceRangeHigh,
                         
                         // Property characteristics
                         propertyType: property.propertyType || property.type,
@@ -4719,13 +4748,21 @@
                             rent: property.rent,
                             rentEstimate: property.rentEstimate,
                             rentValue: property.rentValue,
-                            monthlyRent: property.monthlyRent
+                            monthlyRent: property.monthlyRent,
+                            fromRentAPI: rentData?.rent
                         },
                         alternativeValueFields: {
                             value: property.value,
                             price: property.price,
                             estimatedValue: property.estimatedValue,
-                            marketValue: property.marketValue
+                            marketValue: property.marketValue,
+                            fromValueAPI: valueData?.price || valueData?.value
+                        },
+                        apiCallsDetail: {
+                            totalCalls: apiCallCount,
+                            propertiesEndpoint: 'Called',
+                            rentEndpoint: rentData ? 'Called' : 'Not called',
+                            valueEndpoint: valueData ? 'Called' : 'Not called'
                         }
                     });
                     
