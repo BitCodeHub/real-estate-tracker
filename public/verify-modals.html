@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Modal Functions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #1a1a1a;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #10b981;
+        }
+        .error {
+            background: #ef4444;
+        }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #333;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Modal Function Verification</h1>
+    
+    <div class="test-section">
+        <h2>Quick Modal Tests</h2>
+        <button onclick="testModals()">Test All Modals</button>
+        <div id="results"></div>
+    </div>
+    
+    <iframe id="app" src="index.html"></iframe>
+    
+    <script>
+        let appWindow = null;
+        
+        window.onload = function() {
+            const iframe = document.getElementById('app');
+            iframe.onload = function() {
+                appWindow = iframe.contentWindow;
+                console.log('App loaded');
+            };
+        };
+        
+        async function testModals() {
+            if (!appWindow) {
+                alert('App not loaded yet. Please wait and try again.');
+                return;
+            }
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+            
+            // Test 1: Check if functions exist
+            const functions = ['openModal', 'openAddPropertyModal', 'openAnalyzeModal', 'generateMarketInsights'];
+            let allFunctionsExist = true;
+            
+            functions.forEach(func => {
+                const exists = typeof appWindow[func] === 'function';
+                if (!exists) allFunctionsExist = false;
+                results.innerHTML += `<div class="status ${exists ? 'success' : 'error'}">
+                    ${func}: ${exists ? '✓ Available' : '✗ Not Found'}
+                </div>`;
+            });
+            
+            if (!allFunctionsExist) {
+                results.innerHTML += '<div class="status error">Some functions are missing. Check console for details.</div>';
+                return;
+            }
+            
+            // Test 2: Test each modal opening
+            results.innerHTML += '<h3>Testing Modal Opening Speed...</h3>';
+            
+            // Test Add Property
+            let start = performance.now();
+            appWindow.openAddPropertyModal();
+            let modal = appWindow.document.getElementById('addPropertyModal');
+            let elapsed = performance.now() - start;
+            results.innerHTML += `<div class="status ${elapsed < 50 ? 'success' : 'error'}">
+                Add Property Modal: ${elapsed.toFixed(0)}ms ${elapsed < 50 ? '✓ Fast' : '✗ Slow'}
+            </div>`;
+            if (modal) modal.style.display = 'none';
+            
+            // Small delay between tests
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Test Analyze Property
+            start = performance.now();
+            appWindow.openAnalyzeModal();
+            modal = appWindow.document.getElementById('analyzeModal');
+            elapsed = performance.now() - start;
+            results.innerHTML += `<div class="status ${elapsed < 50 ? 'success' : 'error'}">
+                Analyze Property Modal: ${elapsed.toFixed(0)}ms ${elapsed < 50 ? '✓ Fast' : '✗ Slow'}
+            </div>`;
+            if (modal) modal.style.display = 'none';
+            
+            // Small delay between tests
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Test Market Insights
+            start = performance.now();
+            appWindow.generateMarketInsights();
+            modal = appWindow.document.getElementById('marketInsightsModal');
+            elapsed = performance.now() - start;
+            results.innerHTML += `<div class="status ${elapsed < 50 ? 'success' : 'error'}">
+                Market Insights Modal: ${elapsed.toFixed(0)}ms ${elapsed < 50 ? '✓ Fast' : '✗ Slow'}
+            </div>`;
+            if (modal) modal.style.display = 'none';
+            
+            results.innerHTML += '<h3>All tests completed!</h3>';
+        }
+    </script>
+</body>
+</html>

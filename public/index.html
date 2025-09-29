@@ -4715,6 +4715,7 @@ Format your response in clear sections with bullet points where appropriate. Be 
     </script>
     
     <!-- EMERGENCY FIX: Ensure modal functions are available -->
+    <!-- COMMENTED OUT - This emergency fix is no longer needed and was causing conflicts
     <script>
         console.log('🚨 EMERGENCY FIX: Redefining modal functions...');
         
@@ -4893,8 +4894,12 @@ Format your response in clear sections with bullet points where appropriate. Be 
         });
         
         console.log('✅ EMERGENCY FIX: Modal functions redefined successfully');
+    </script>
+    END OF EMERGENCY FIX COMMENT -->
         
-        // ============= MODAL LAG FIX =============
+        <!-- ============= MODAL LAG FIX ============= -->
+        <!-- COMMENTED OUT - This lag fix is no longer needed and was causing conflicts
+        <script>
         // Fix for delayed modal response - Final override
         setTimeout(() => {
             console.log('🚀 Applying final modal lag fix...');
@@ -4958,26 +4963,58 @@ Format your response in clear sections with bullet points where appropriate. Be 
             };
             
             // Fast generateMarketInsights
-            window.generateMarketInsights = function() {
+            window.generateMarketInsights = async function() {
                 console.log('⚡ Fast generateMarketInsights');
-                // Use fast openModal
+                // Open modal immediately
                 window.openModal('marketInsightsModal');
                 
-                // Then load content
+                // Show loading state
                 const loading = document.getElementById('marketInsightsLoading');
                 const content = document.getElementById('marketInsightsContent');
                 
                 if (loading) loading.style.display = 'block';
                 if (content) content.style.display = 'none';
                 
-                // Load data asynchronously
-                if (typeof _generateMarketInsights === 'function') {
-                    setTimeout(() => _generateMarketInsights.call(this), 10);
+                // Load market insights content
+                try {
+                    const marketData = await fetchMarketData();
+                    const html = generateMarketInsightsContent(marketData);
+                    
+                    if (content) content.innerHTML = html;
+                    if (content) content.style.display = 'block';
+                } catch (error) {
+                    console.error('Error generating insights:', error);
+                    if (content) {
+                        content.innerHTML = `
+                            <div class="error-message">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <p>Unable to generate market insights at this time. Please try again later.</p>
+                            </div>
+                        `;
+                        content.style.display = 'block';
+                    }
+                } finally {
+                    if (loading) loading.style.display = 'none';
                 }
+            };
+            
+            // Fast openAddPropertyModal (ensure consistency)
+            window.openAddPropertyModal = function() {
+                console.log('⚡ Fast openAddPropertyModal');
+                // Clear form
+                const form = document.getElementById('addPropertyForm');
+                const fullAddress = document.getElementById('fullAddress');
+                
+                if (form) form.reset();
+                if (fullAddress) fullAddress.value = '';
+                
+                // Use fast openModal
+                window.openModal('addPropertyModal');
             };
             
             console.log('✅ Modal lag fix applied - immediate response enabled');
         }, 100); // Small delay to ensure everything is loaded
     </script>
+    END OF MODAL LAG FIX COMMENT -->
 </body>
 </html>
