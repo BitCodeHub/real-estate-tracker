@@ -352,8 +352,14 @@
             overflow-y: auto;
             border-radius: 16px;
             box-shadow: var(--shadow-lg);
-            animation: slideIn 0.3s ease;
+            /* animation: slideIn 0.3s ease; - Removed for instant display */
             border: 1px solid var(--border-color);
+            /* Force instant display - no animations or transitions */
+            animation: none !important;
+            transition: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+            visibility: visible !important;
         }
         
         .modal-header {
@@ -596,11 +602,13 @@
             to { transform: rotate(360deg); }
         }
         
+        /* Removed fadeIn animation for instant display
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
-        }
+        } */
         
+        /* Removed slideIn animation for instant display
         @keyframes slideIn {
             from { 
                 opacity: 0;
@@ -610,7 +618,7 @@
                 opacity: 1;
                 transform: translateY(0);
             }
-        }
+        } */
         
         /* Export Button Styles */
         .export-controls {
@@ -730,7 +738,7 @@
             text-align: right;
         }
         
-        /* Animations */
+        /* Animations - Removed for instant display
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
@@ -740,7 +748,7 @@
                 transform: translateX(0);
                 opacity: 1;
             }
-        }
+        } */
         
         @keyframes slideOut {
             from {
@@ -753,7 +761,7 @@
             }
         }
         
-        /* Notification animations */
+        /* Notification animations - Removed for instant display
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
@@ -763,7 +771,7 @@
                 transform: translateX(0);
                 opacity: 1;
             }
-        }
+        } */
         
         @keyframes slideOut {
             from {
@@ -807,7 +815,36 @@
             width: 90%;
             max-width: 800px;
             box-shadow: var(--shadow-lg);
-            animation: slideIn 0.3s ease;
+            /* animation: slideIn 0.3s ease; - Removed for instant display */
+            /* Force instant display - no animations or transitions */
+            animation: none !important;
+            transition: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+            visibility: visible !important;
+        }
+
+        /* Global override to ensure ALL modals display instantly */
+        .modal,
+        .modal *,
+        .modal-content,
+        .modal-content * {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        /* When modal is shown, ensure immediate visibility */
+        .modal[style*="display: block"],
+        .modal[style*="display: flex"] {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .modal[style*="display: block"] .modal-content,
+        .modal[style*="display: flex"] .modal-content {
+            opacity: 1 !important;
+            transform: none !important;
+            visibility: visible !important;
         }
         
         .modal-header {
@@ -922,6 +959,35 @@
             font-size: 16px;
             color: var(--text-primary);
             font-weight: 500;
+        }
+
+        /* FINAL OVERRIDE: Absolutely ensure NO animations on modals */
+        .modal,
+        .modal *,
+        .modal-content,
+        .modal-content *,
+        .modal[style*="display: block"],
+        .modal[style*="display: block"] *,
+        .modal[style*="display: block"] .modal-content,
+        .modal[style*="display: block"] .modal-content * {
+            animation: none !important;
+            transition: none !important;
+            animation-duration: 0s !important;
+            transition-duration: 0s !important;
+            animation-delay: 0s !important;
+            transition-delay: 0s !important;
+        }
+
+        /* Ensure immediate visibility for displayed modals */
+        .modal[style*="display: block"] {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .modal[style*="display: block"] .modal-content {
+            opacity: 1 !important;
+            transform: none !important;
+            visibility: visible !important;
         }
     </style>
 </head>
@@ -1324,11 +1390,37 @@
         window.openModal = function(modalId) {
             console.log(`Opening modal: ${modalId}`);
             const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'block';
-            } else {
+            if (!modal) {
                 console.error(`Modal not found: ${modalId}`);
+                return;
             }
+            
+            // Find modal content
+            const modalContent = modal.querySelector('.modal-content');
+            
+            // Remove ALL animations and transitions before showing
+            modal.style.animation = 'none';
+            modal.style.transition = 'none';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+            
+            if (modalContent) {
+                modalContent.style.animation = 'none';
+                modalContent.style.transition = 'none';
+                modalContent.style.opacity = '1';
+                modalContent.style.transform = 'none';
+                modalContent.style.visibility = 'visible';
+            }
+            
+            // Display the modal
+            modal.style.display = 'block';
+            
+            // Force a repaint to ensure the display change is applied immediately
+            void modal.offsetHeight;
+            
+            // Double-check visibility
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
         }
 
         window.closeModal = function(modalId) {
@@ -3067,7 +3159,7 @@
                 color: white;
                 box-shadow: var(--shadow-lg);
                 z-index: 10000;
-                animation: slideIn 0.3s ease;
+                /* animation: slideIn 0.3s ease; - Removed for instant display */
                 max-width: 400px;
             `;
             
@@ -4818,22 +4910,35 @@ Format your response in clear sections with bullet points where appropriate. Be 
                 const modal = document.getElementById(modalId);
                 if (!modal) return;
                 
-                // Disable transitions/animations
-                modal.style.transition = 'none';
-                modal.style.animation = 'none';
+                // Find modal content element
+                const modalContent = modal.querySelector('.modal-content');
+                
+                // Disable ALL transitions/animations on modal and content
+                modal.style.transition = 'none !important';
+                modal.style.animation = 'none !important';
+                modal.style.opacity = '1';
+                modal.style.visibility = 'visible';
+                
+                if (modalContent) {
+                    modalContent.style.transition = 'none !important';
+                    modalContent.style.animation = 'none !important';
+                    modalContent.style.opacity = '1';
+                    modalContent.style.transform = 'none';
+                    modalContent.style.visibility = 'visible';
+                }
                 
                 // Show immediately
                 modal.style.display = 'block';
-                modal.style.opacity = '1';
                 
                 // Force repaint
                 void modal.offsetHeight;
                 
-                // Re-enable animations next frame
-                requestAnimationFrame(() => {
-                    modal.style.transition = '';
-                    modal.style.animation = '';
-                });
+                // Ensure visibility after repaint
+                modal.style.opacity = '1';
+                modal.style.visibility = 'visible';
+                
+                // Keep animations disabled for instant response
+                // Do NOT re-enable animations as it causes lag
             };
             
             // Fast openAnalyzeModal
