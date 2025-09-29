@@ -677,42 +677,518 @@
             background: var(--border-light);
         }
         
-        /* Responsive Design */
+        /* Mobile Navigation Styles */
+        .mobile-nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 10px;
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            z-index: 2000;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+        }
+        
+        .mobile-nav.active {
+            left: 0;
+        }
+        
+        .mobile-nav-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .mobile-nav-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        
+        .mobile-nav-content {
+            padding: 20px;
+        }
+        
+        .mobile-nav-item {
+            display: block;
+            padding: 15px 20px;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-nav-item:hover {
+            background: var(--bg-hover);
+            padding-left: 30px;
+        }
+        
+        .mobile-nav-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+        }
+        
+        .mobile-nav-overlay.active {
+            display: block;
+        }
+        
+        /* Mobile Property Cards */
+        .mobile-property-card {
+            display: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .mobile-property-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .mobile-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .mobile-card-address {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+        
+        .mobile-card-location {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .mobile-card-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .mobile-card-stat {
+            background: var(--bg-secondary);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .mobile-card-stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .mobile-card-stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .mobile-card-stat-value.positive {
+            color: var(--accent-success);
+        }
+        
+        .mobile-card-stat-value.negative {
+            color: var(--accent-danger);
+        }
+        
+        .mobile-card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .mobile-card-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .mobile-card-btn.primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .mobile-card-btn.secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .mobile-card-btn.danger {
+            background: var(--accent-danger);
+            color: white;
+        }
+        
+        /* Mobile Bottom Navigation */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: var(--bg-secondary);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .mobile-bottom-nav-content {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        
+        .mobile-bottom-nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-bottom-nav-item:hover {
+            color: var(--accent-primary);
+        }
+        
+        .mobile-bottom-nav-item i {
+            display: block;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .mobile-bottom-nav-item span {
+            font-size: 12px;
+        }
+        
+        /* Mobile Filter Panel */
+        .mobile-filter-toggle {
+            display: none;
+            width: 100%;
+            padding: 15px;
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-filter-toggle:hover {
+            background: #2563eb;
+        }
+        
+        .mobile-filter-panel {
+            display: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .mobile-filter-panel.active {
+            display: block;
+        }
+        
+        /* Touch-friendly form inputs */
         @media (max-width: 768px) {
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 15px;
+                touch-action: manipulation;
+            }
+            
+            .btn {
+                min-height: 44px; /* iOS touch target size */
+                padding: 12px 20px;
+                font-size: 16px;
+            }
+        }
+        
+        /* Responsive Design - Enhanced Mobile Styles */
+        @media (max-width: 768px) {
+            /* Adjust container padding for mobile */
+            .container {
+                padding: 10px;
+                padding-bottom: 80px; /* Space for bottom nav */
+            }
+            
+            /* Mobile header adjustments */
+            .header {
+                padding: 15px 0;
+                position: sticky;
+                top: 0;
+                z-index: 999;
+            }
+            
             .header-content {
-                flex-direction: column;
+                padding: 0 60px; /* Space for menu button */
                 text-align: center;
+                position: relative;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+                gap: 10px;
+            }
+            
+            .header h1 i {
+                font-size: 20px;
+            }
+            
+            /* Show mobile elements */
+            .mobile-nav-toggle {
+                display: block;
+            }
+            
+            .mobile-bottom-nav {
+                display: block;
+            }
+            
+            .mobile-filter-toggle {
+                display: block;
+            }
+            
+            /* Hide desktop table and show mobile cards */
+            .table-container {
+                display: none;
+            }
+            
+            .mobile-property-card {
+                display: block;
+            }
+            
+            /* Stats cards - more compact on mobile */
+            .stats-overview {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            
+            .stat-card {
+                padding: 15px;
+            }
+            
+            .stat-value {
+                font-size: 24px;
+            }
+            
+            .stat-label {
+                font-size: 12px;
+            }
+            
+            /* Filter section - hidden by default on mobile */
+            .filter-section {
+                display: none;
             }
             
             .filter-row {
                 flex-direction: column;
+                gap: 10px;
             }
             
             .filter-group {
                 width: 100%;
+                min-width: unset;
+            }
+            
+            /* Modal adjustments for mobile */
+            .modal-content {
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                margin: 0;
+                border-radius: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .modal-header {
+                border-radius: 0;
+                padding: 15px 20px;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+            
+            .modal-header h2 {
+                font-size: 20px;
+            }
+            
+            .modal-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Form adjustments */
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Property details grid */
+            .property-details {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Metrics grid */
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .metric-card {
+                padding: 15px;
+            }
+            
+            .metric-value {
+                font-size: 20px;
+            }
+            
+            /* Investment table on mobile */
+            .investment-table {
+                font-size: 14px;
+            }
+            
+            .investment-table th,
+            .investment-table td {
+                padding: 10px 8px;
+            }
+            
+            /* Export controls */
+            .export-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .export-controls .btn {
+                width: 100%;
+            }
+            
+            /* AI content formatting */
+            .ai-content {
+                padding: 15px;
+                font-size: 14px;
+            }
+            
+            /* Loading spinner */
+            .loading {
+                width: 30px;
+                height: 30px;
+            }
+            
+            /* Hide desktop-only elements */
+            .header-content > div:last-child {
+                display: none; /* Hide desktop add button */
+            }
+        }
+        
+        /* Small phones */
+        @media (max-width: 380px) {
+            .header h1 {
+                font-size: 20px;
             }
             
             .stats-overview {
                 grid-template-columns: 1fr;
             }
             
-            .table-container {
-                overflow-x: auto;
-                font-size: 12px;
+            .mobile-card-stats {
+                grid-template-columns: 1fr;
             }
             
-            table {
-                min-width: 1600px;
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Swipe gestures support */
+        .swipe-hint {
+            display: none;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 10px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .swipe-hint {
+                display: block;
+            }
+        }
+        
+        /* Touch feedback */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:active,
+            .mobile-card-btn:active,
+            .mobile-nav-item:active,
+            .mobile-bottom-nav-item:active {
+                transform: scale(0.95);
+                opacity: 0.8;
             }
             
-            th, td {
-                padding: 12px 8px;
-                font-size: 12px;
-            }
-            
-            .modal-content {
-                width: 95%;
-                margin: 10px auto;
+            .mobile-property-card:active {
+                transform: scale(0.98);
             }
         }
         
@@ -1000,8 +1476,45 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
 <body>
+    <!-- Mobile Navigation Menu -->
+    <div class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-header">
+            <h3 style="color: var(--text-primary); margin: 0;">Menu</h3>
+            <button class="mobile-nav-close" onclick="closeMobileNav()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mobile-nav-content">
+            <a href="#" class="mobile-nav-item" onclick="openAddPropertyModal(); closeMobileNav();">
+                <i class="fas fa-plus-circle"></i> Add Property
+            </a>
+            <a href="#" class="mobile-nav-item" onclick="showAnalyzeModal(); closeMobileNav();">
+                <i class="fas fa-search"></i> Analyze Property
+            </a>
+            <a href="#" class="mobile-nav-item" onclick="exportData(); closeMobileNav();">
+                <i class="fas fa-download"></i> Export Data
+            </a>
+            <a href="#" class="mobile-nav-item" onclick="showMarketInsights(); closeMobileNav();">
+                <i class="fas fa-brain"></i> Market Insights
+            </a>
+            <a href="#" class="mobile-nav-item" onclick="load17SampleProperties(); closeMobileNav();">
+                <i class="fas fa-database"></i> Load Sample Data
+            </a>
+            <a href="#" class="mobile-nav-item" onclick="clearAllProperties(); closeMobileNav();">
+                <i class="fas fa-trash"></i> Clear All Properties
+            </a>
+        </div>
+    </div>
+    
+    <!-- Mobile Navigation Overlay -->
+    <div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="closeMobileNav()"></div>
+    
     <div class="header">
         <div class="header-content">
+            <!-- Mobile Menu Button -->
+            <button class="mobile-nav-toggle" onclick="openMobileNav()">
+                <i class="fas fa-bars"></i>
+            </button>
             <h1><i class="fas fa-chart-line"></i> Real Estate Investment Tracker</h1>
             <div>
                 <button class="btn btn-primary" onclick="openAddPropertyModal()">
@@ -1036,8 +1549,15 @@
             </div>
         </div>
 
-        <!-- Filters -->
-        <div class="filter-section">
+        <!-- Mobile Filter Toggle -->
+        <button class="mobile-filter-toggle" onclick="toggleMobileFilters()">
+            <i class="fas fa-filter"></i> Filters & Search
+        </button>
+        
+        <!-- Mobile Filter Panel (wraps existing filter section) -->
+        <div class="mobile-filter-panel" id="mobileFilterPanel">
+            <!-- Filters -->
+            <div class="filter-section" style="display: block !important; margin-bottom: 0;">
             <div class="filter-row">
                 <div class="filter-group">
                     <label>City</label>
@@ -1066,6 +1586,12 @@
                     <i class="fas fa-times"></i> Reset
                 </button>
             </div>
+        </div>
+        </div> <!-- End mobile-filter-panel -->
+
+        <!-- Mobile Property Cards Container -->
+        <div id="mobilePropertyCards" style="display: none;">
+            <!-- Mobile cards will be inserted here -->
         </div>
 
         <!-- Properties Table -->
@@ -1392,6 +1918,195 @@
                 notification.style.animation = 'slideOut 0.3s ease-in';
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
+        }
+        
+        // Mobile Navigation Functions
+        function openMobileNav() {
+            document.getElementById('mobileNav').classList.add('active');
+            document.getElementById('mobileNavOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+        
+        function closeMobileNav() {
+            document.getElementById('mobileNav').classList.remove('active');
+            document.getElementById('mobileNavOverlay').classList.remove('active');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+        
+        // Toggle mobile filters
+        function toggleMobileFilters() {
+            const panel = document.getElementById('mobileFilterPanel');
+            const toggle = document.querySelector('.mobile-filter-toggle');
+            
+            if (panel.classList.contains('active')) {
+                panel.classList.remove('active');
+                toggle.innerHTML = '<i class="fas fa-filter"></i> Filters & Search';
+            } else {
+                panel.classList.add('active');
+                toggle.innerHTML = '<i class="fas fa-times"></i> Hide Filters';
+            }
+        }
+        
+        // Scroll to top function for mobile
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Show analyze modal (wrapper for consistency)
+        function showAnalyzeModal() {
+            openAnalyzeModal();
+        }
+        
+        // Clear all properties with confirmation
+        function clearAllProperties() {
+            if (confirm('Are you sure you want to clear all properties? This action cannot be undone.')) {
+                properties = [];
+                localStorage.removeItem('properties');
+                updateDisplay();
+                showNotification('All properties have been cleared', 'success');
+            }
+        }
+        
+        // Create mobile property card HTML
+        function createMobilePropertyCard(property, index) {
+            const cardHtml = `
+                <div class="mobile-property-card" onclick="showPropertyDetails(${index})">
+                    <div class="mobile-card-header">
+                        <div>
+                            <div class="mobile-card-address">${property.address}</div>
+                            <div class="mobile-card-location">${property.city}, ${property.state} ${property.zip}</div>
+                        </div>
+                        ${property.realTimeData ? '<span style="color: var(--accent-success);"><i class="fas fa-check-circle"></i></span>' : ''}
+                    </div>
+                    
+                    <div class="mobile-card-stats">
+                        <div class="mobile-card-stat">
+                            <div class="mobile-card-stat-label">Purchase Price</div>
+                            <div class="mobile-card-stat-value">${formatCurrency(property.purchasePrice || 0)}</div>
+                        </div>
+                        <div class="mobile-card-stat">
+                            <div class="mobile-card-stat-label">Monthly Rent</div>
+                            <div class="mobile-card-stat-value">${formatCurrency(property.monthlyRent || 0)}</div>
+                        </div>
+                        <div class="mobile-card-stat">
+                            <div class="mobile-card-stat-label">Cash Flow</div>
+                            <div class="mobile-card-stat-value ${property.cashFlow >= 0 ? 'positive' : 'negative'}">${formatCurrency(property.cashFlow || 0)}</div>
+                        </div>
+                        <div class="mobile-card-stat">
+                            <div class="mobile-card-stat-label">Cash-on-Cash</div>
+                            <div class="mobile-card-stat-value ${property.cocReturn >= 8 ? 'positive' : 'warning'}">${property.cocReturn ? property.cocReturn.toFixed(1) + '%' : 'N/A'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-card-actions">
+                        <button class="mobile-card-btn primary" onclick="event.stopPropagation(); showPropertyDetails(${index})">
+                            <i class="fas fa-eye"></i> Details
+                        </button>
+                        <button class="mobile-card-btn secondary" onclick="event.stopPropagation(); refreshProperty(${index})">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="mobile-card-btn danger" onclick="event.stopPropagation(); deleteProperty(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            return cardHtml;
+        }
+        
+        // Update mobile property cards display
+        function updateMobilePropertyCards() {
+            const container = document.getElementById('mobilePropertyCards');
+            if (!container) return;
+            
+            // Check if we're on mobile
+            const isMobile = window.innerWidth <= 768;
+            
+            if (isMobile) {
+                container.style.display = 'block';
+                
+                // Get filtered properties
+                const filteredProperties = filterPropertiesData();
+                
+                if (filteredProperties.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                            <i class="fas fa-home" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
+                            <p>No properties found</p>
+                            <button class="btn btn-primary" onclick="openAddPropertyModal()" style="margin-top: 20px;">
+                                <i class="fas fa-plus"></i> Add Your First Property
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = filteredProperties.map((property, index) => 
+                        createMobilePropertyCard(property, properties.indexOf(property))
+                    ).join('');
+                }
+            } else {
+                container.style.display = 'none';
+            }
+        }
+        
+        // Helper function to get filtered properties (reuse existing filter logic)
+        function filterPropertiesData() {
+            const cityFilter = document.getElementById('filterCity').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+            const minCashFlow = document.getElementById('filterMinCashFlow').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            return properties.filter(property => {
+                if (cityFilter && property.city !== cityFilter) return false;
+                if (statusFilter && property.status !== statusFilter) return false;
+                if (minCashFlow && property.cashFlow < parseFloat(minCashFlow)) return false;
+                if (searchTerm) {
+                    const searchStr = `${property.address} ${property.city} ${property.state} ${property.zip}`.toLowerCase();
+                    if (!searchStr.includes(searchTerm)) return false;
+                }
+                return true;
+            });
+        }
+        
+        // Handle window resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                updateMobilePropertyCards();
+            }, 250);
+        });
+        
+        // Add swipe gesture support for mobile cards
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        function handleSwipe(element, leftAction, rightAction) {
+            element.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+            
+            element.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipeGesture();
+            });
+            
+            function handleSwipeGesture() {
+                const swipeThreshold = 50;
+                const diff = touchStartX - touchEndX;
+                
+                if (Math.abs(diff) > swipeThreshold) {
+                    if (diff > 0 && leftAction) {
+                        // Swipe left
+                        leftAction();
+                    } else if (diff < 0 && rightAction) {
+                        // Swipe right
+                        rightAction();
+                    }
+                }
+            }
         }
 
         // Check and sync properties between localStorage and server
@@ -2926,6 +3641,7 @@
             updateStats();
             updateTable();
             updateCityFilter();
+            updateMobilePropertyCards(); // Update mobile cards too
         }
 
         // Update statistics
@@ -6157,5 +6873,28 @@ Format your response in clear sections with bullet points where appropriate. Be 
         */ // END OF DISABLED MODAL LAG FIX
     </script>
     -->
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-bottom-nav">
+        <div class="mobile-bottom-nav-content">
+            <a href="#" class="mobile-bottom-nav-item" onclick="scrollToTop()">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="#" class="mobile-bottom-nav-item" onclick="openAddPropertyModal()">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add</span>
+            </a>
+            <a href="#" class="mobile-bottom-nav-item" onclick="showAnalyzeModal()">
+                <i class="fas fa-search"></i>
+                <span>Analyze</span>
+            </a>
+            <a href="#" class="mobile-bottom-nav-item" onclick="exportData()">
+                <i class="fas fa-download"></i>
+                <span>Export</span>
+            </a>
+        </div>
+    </div>
+    
 </body>
 </html>
