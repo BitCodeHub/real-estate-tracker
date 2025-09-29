@@ -7018,6 +7018,110 @@ Format your response in clear sections with bullet points where appropriate. Be 
             generateAIInsights: typeof window.generateAIInsights,
             analyzeNewProperty: typeof window.analyzeNewProperty
         });
+
+        // Initialize application on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Initializing Real Estate Tracker...');
+            
+            try {
+                // Load properties from server/localStorage
+                await loadProperties();
+                console.log('✅ Properties loaded:', properties.length);
+                
+                // Update mobile property cards if on mobile
+                if (window.innerWidth <= 768) {
+                    updateMobilePropertyCards();
+                    console.log('📱 Mobile property cards updated');
+                }
+                
+                // Handle window resize
+                let resizeTimer;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        updateDisplay();
+                        updateMobilePropertyCards();
+                    }, 250);
+                });
+                
+                console.log('✅ Initialization complete');
+            } catch (error) {
+                console.error('❌ Error during initialization:', error);
+            }
+        });
+    </script>
+    
+    <!-- Mobile Property Cards Display Fix -->
+    <script>
+    (function() {
+        console.log('🔧 Applying mobile property cards display fix...');
+        
+        // Enhanced updateMobilePropertyCards function to ensure proper display
+        const originalUpdateMobilePropertyCards = window.updateMobilePropertyCards;
+        window.updateMobilePropertyCards = function() {
+            console.log('📱 updateMobilePropertyCards called');
+            const container = document.getElementById('mobilePropertyCards');
+            if (!container) return;
+            
+            const isMobile = window.innerWidth <= 768;
+            const tableContainer = document.querySelector('.table-container');
+            
+            if (isMobile) {
+                // Ensure container is visible on mobile
+                container.style.display = 'block';
+                if (tableContainer) tableContainer.style.display = 'none';
+                
+                // Call the original function if it exists
+                if (originalUpdateMobilePropertyCards) {
+                    originalUpdateMobilePropertyCards.call(this);
+                } else {
+                    // Fallback implementation
+                    const filteredProperties = typeof getFilteredProperties === 'function' 
+                        ? getFilteredProperties() 
+                        : properties;
+                    
+                    if (properties.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                                <i class="fas fa-home" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
+                                <h3>No Properties Yet</h3>
+                                <p style="margin-bottom: 20px;">Start building your real estate portfolio!</p>
+                                <button class="btn btn-primary" onclick="openAddPropertyModal()" style="margin-top: 20px;">
+                                    <i class="fas fa-plus"></i> Add Your First Property
+                                </button>
+                            </div>
+                        `;
+                    } else if (filteredProperties.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                                <i class="fas fa-filter" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
+                                <h3>No Properties Match Filters</h3>
+                                <p>Try adjusting your search criteria</p>
+                                <button class="btn btn-secondary" onclick="resetFilters()" style="margin-top: 20px;">
+                                    <i class="fas fa-times"></i> Clear Filters
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = filteredProperties.map((property, index) => 
+                            createMobilePropertyCard(property, properties.indexOf(property))
+                        ).join('');
+                    }
+                }
+            } else {
+                container.style.display = 'none';
+                if (tableContainer) tableContainer.style.display = 'block';
+            }
+        };
+        
+        // Force initial update after a short delay
+        setTimeout(() => {
+            console.log('🔄 Forcing initial mobile cards update...');
+            updateMobilePropertyCards();
+        }, 500);
+        
+        console.log('✅ Mobile property cards display fix applied');
+    })();
     </script>
     
     <!-- EMERGENCY FIX COMPLETELY REMOVED - It was breaking working modal functions -->

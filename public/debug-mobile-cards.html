@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Mobile Property Cards</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #0a0a0a;
+            color: white;
+        }
+        .debug-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .debug-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #3b82f6;
+        }
+        .debug-info {
+            margin: 5px 0;
+            padding: 10px;
+            background: #242424;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success {
+            color: #10b981;
+        }
+        .error {
+            color: #ef4444;
+        }
+        .warning {
+            color: #f59e0b;
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Mobile Property Cards</h1>
+    
+    <div class="debug-section">
+        <div class="debug-title">Window & Device Info</div>
+        <div id="windowInfo" class="debug-info"></div>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">DOM Elements Check</div>
+        <div id="domCheck" class="debug-info"></div>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">Properties Data</div>
+        <div id="propertiesCheck" class="debug-info"></div>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">Mobile Cards Container</div>
+        <div id="mobileCardsCheck" class="debug-info"></div>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">Function Availability</div>
+        <div id="functionsCheck" class="debug-info"></div>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">Actions</div>
+        <button class="btn" onclick="testUpdateMobileCards()">Test updateMobilePropertyCards()</button>
+        <button class="btn" onclick="forceShowMobileCards()">Force Show Mobile Cards</button>
+        <button class="btn" onclick="checkFilters()">Check Filter Values</button>
+        <button class="btn" onclick="simulateMobileView()">Simulate Mobile View</button>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">Console Output</div>
+        <div id="consoleOutput" class="debug-info" style="max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        let consoleLog = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            consoleLog.push({ message: logEntry, type });
+            updateConsoleOutput();
+            console.log(message);
+        }
+        
+        function updateConsoleOutput() {
+            const output = document.getElementById('consoleOutput');
+            output.innerHTML = consoleLog.map(entry => {
+                const className = entry.type === 'error' ? 'error' : 
+                                entry.type === 'success' ? 'success' : 
+                                entry.type === 'warning' ? 'warning' : '';
+                return `<div class="${className}">${entry.message}</div>`;
+            }).join('');
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function checkWindowInfo() {
+            const info = document.getElementById('windowInfo');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const isMobile = width <= 768;
+            
+            info.innerHTML = `
+                <div>Window Width: <span class="${isMobile ? 'success' : 'warning'}">${width}px</span> ${isMobile ? '(Mobile)' : '(Desktop)'}</div>
+                <div>Window Height: ${height}px</div>
+                <div>User Agent: ${navigator.userAgent}</div>
+                <div>Is Touch Device: ${('ontouchstart' in window) ? 'Yes' : 'No'}</div>
+            `;
+        }
+        
+        function checkDOMElements() {
+            const check = document.getElementById('domCheck');
+            const elements = [
+                'mobilePropertyCards',
+                'mobileFilterPanel',
+                'filterCity',
+                'filterStatus',
+                'filterMinCashFlow',
+                'searchInput'
+            ];
+            
+            let html = '';
+            elements.forEach(id => {
+                const elem = window.parent.document.getElementById(id);
+                const exists = elem !== null;
+                html += `<div class="${exists ? 'success' : 'error'}">
+                    ${id}: ${exists ? 'Found' : 'Not Found'}
+                    ${exists && id === 'mobilePropertyCards' ? ` - Display: ${elem.style.display || 'default'}` : ''}
+                </div>`;
+            });
+            check.innerHTML = html;
+        }
+        
+        function checkProperties() {
+            const check = document.getElementById('propertiesCheck');
+            try {
+                const properties = window.parent.properties || [];
+                const filteredProps = window.parent.getFilteredProperties ? window.parent.getFilteredProperties() : [];
+                
+                check.innerHTML = `
+                    <div>Total Properties: <span class="${properties.length > 0 ? 'success' : 'warning'}">${properties.length}</span></div>
+                    <div>Filtered Properties: ${filteredProps.length}</div>
+                    <div>Properties Array: ${properties.length > 0 ? 'Populated' : 'Empty'}</div>
+                `;
+                
+                if (properties.length > 0) {
+                    log(`Found ${properties.length} properties`, 'success');
+                } else {
+                    log('No properties found in array', 'warning');
+                }
+            } catch (error) {
+                check.innerHTML = `<div class="error">Error accessing properties: ${error.message}</div>`;
+                log(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function checkMobileCards() {
+            const check = document.getElementById('mobileCardsCheck');
+            try {
+                const container = window.parent.document.getElementById('mobilePropertyCards');
+                if (container) {
+                    const cards = container.querySelectorAll('.mobile-property-card');
+                    check.innerHTML = `
+                        <div>Container Found: <span class="success">Yes</span></div>
+                        <div>Display Style: ${container.style.display || 'default'}</div>
+                        <div>innerHTML Length: ${container.innerHTML.length} chars</div>
+                        <div>Number of Cards: <span class="${cards.length > 0 ? 'success' : 'warning'}">${cards.length}</span></div>
+                        <div>Container Visible: ${container.offsetHeight > 0 ? 'Yes' : 'No'}</div>
+                    `;
+                    
+                    if (cards.length === 0 && container.innerHTML.length > 0) {
+                        log('Container has content but no cards', 'warning');
+                    }
+                } else {
+                    check.innerHTML = '<div class="error">Container not found!</div>';
+                    log('mobilePropertyCards container not found', 'error');
+                }
+            } catch (error) {
+                check.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                log(`Error checking mobile cards: ${error.message}`, 'error');
+            }
+        }
+        
+        function checkFunctions() {
+            const check = document.getElementById('functionsCheck');
+            const functions = [
+                'updateMobilePropertyCards',
+                'createMobilePropertyCard',
+                'getFilteredProperties',
+                'filterPropertiesData',
+                'updateDisplay'
+            ];
+            
+            let html = '';
+            functions.forEach(funcName => {
+                const exists = typeof window.parent[funcName] === 'function';
+                html += `<div class="${exists ? 'success' : 'error'}">${funcName}: ${exists ? 'Available' : 'Not Found'}</div>`;
+            });
+            check.innerHTML = html;
+        }
+        
+        function testUpdateMobileCards() {
+            try {
+                if (typeof window.parent.updateMobilePropertyCards === 'function') {
+                    log('Calling updateMobilePropertyCards()...');
+                    window.parent.updateMobilePropertyCards();
+                    log('Function called successfully', 'success');
+                    setTimeout(() => {
+                        checkMobileCards();
+                    }, 500);
+                } else {
+                    log('updateMobilePropertyCards function not found', 'error');
+                }
+            } catch (error) {
+                log(`Error calling function: ${error.message}`, 'error');
+            }
+        }
+        
+        function forceShowMobileCards() {
+            try {
+                const container = window.parent.document.getElementById('mobilePropertyCards');
+                if (container) {
+                    container.style.display = 'block';
+                    log('Forced display: block on container', 'success');
+                    
+                    // Try to manually create a test card
+                    if (window.parent.properties && window.parent.properties.length > 0) {
+                        const testProp = window.parent.properties[0];
+                        if (typeof window.parent.createMobilePropertyCard === 'function') {
+                            container.innerHTML = window.parent.createMobilePropertyCard(testProp, 0);
+                            log('Created test card', 'success');
+                        }
+                    }
+                } else {
+                    log('Container not found', 'error');
+                }
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function checkFilters() {
+            try {
+                const filters = ['filterCity', 'filterStatus', 'filterMinCashFlow', 'searchInput'];
+                filters.forEach(id => {
+                    const elem = window.parent.document.getElementById(id);
+                    if (elem) {
+                        log(`${id}: "${elem.value}"`, elem.value ? 'warning' : 'info');
+                    }
+                });
+            } catch (error) {
+                log(`Error checking filters: ${error.message}`, 'error');
+            }
+        }
+        
+        function simulateMobileView() {
+            try {
+                // Create a backup of current window.innerWidth
+                const originalWidth = window.parent.innerWidth;
+                
+                // Override innerWidth getter temporarily
+                Object.defineProperty(window.parent, 'innerWidth', {
+                    get: function() { return 375; },
+                    configurable: true
+                });
+                
+                log('Simulating mobile width (375px)', 'success');
+                
+                // Call update function
+                if (typeof window.parent.updateMobilePropertyCards === 'function') {
+                    window.parent.updateMobilePropertyCards();
+                    log('Called updateMobilePropertyCards with mobile width', 'success');
+                }
+                
+                // Restore after 5 seconds
+                setTimeout(() => {
+                    Object.defineProperty(window.parent, 'innerWidth', {
+                        get: function() { return originalWidth; },
+                        configurable: true
+                    });
+                    log('Restored original width', 'info');
+                }, 5000);
+                
+            } catch (error) {
+                log(`Error simulating mobile: ${error.message}`, 'error');
+            }
+        }
+        
+        // Run initial checks
+        window.onload = function() {
+            checkWindowInfo();
+            checkDOMElements();
+            checkProperties();
+            checkMobileCards();
+            checkFunctions();
+            
+            // Listen for window resize
+            window.addEventListener('resize', checkWindowInfo);
+        };
+    </script>
+</body>
+</html>
