@@ -2492,23 +2492,37 @@
                         properties = data.data;
                         
                         // Ensure all properties have proper field names for the UI
-                        properties = properties.map(p => ({
-                            ...p,
-                            // Ensure camelCase versions exist for UI
-                            purchasePrice: p.purchasePrice || p.purchase_price,
-                            monthlyRent: p.monthlyRent || p.monthly_rent,
-                            currentValue: p.currentValue || p.value_estimate || p.purchase_price || p.purchasePrice,
-                            propertyTax: p.propertyTax || p.property_tax,
-                            managementFees: p.managementFees || p.management_fees,
-                            cashFlow: p.cashFlow || p.cash_flow,
-                            monthlyCashFlow: p.cashFlow || p.cash_flow,
-                            cocReturn: p.cocReturn || p.coc_return,
-                            cashOnCashReturn: p.cocReturn || p.coc_return,
-                            capRate: p.capRate || p.cap_rate,
-                            rentToValue: p.rentToValue || p.rent_to_value,
-                            floodRisk: p.floodRisk || p.flood_risk,
-                            marketRisk: p.marketRisk || p.market_risk
-                        }));
+                        properties = properties.map(p => {
+                            // Clean up any string IDs that might exist
+                            let cleanId = p.id;
+                            if (typeof p.id === 'string' && isNaN(parseInt(p.id))) {
+                                console.warn(`⚠️ Found property with string ID: ${p.id}, will need to be fixed`);
+                                cleanId = null; // Mark as needing a proper ID
+                            } else if (typeof p.id === 'string' && !isNaN(parseInt(p.id))) {
+                                // Convert numeric string to number
+                                cleanId = parseInt(p.id);
+                                console.log(`📋 Converted string ID "${p.id}" to number ${cleanId}`);
+                            }
+                            
+                            return {
+                                ...p,
+                                id: cleanId,
+                                // Ensure camelCase versions exist for UI
+                                purchasePrice: p.purchasePrice || p.purchase_price,
+                                monthlyRent: p.monthlyRent || p.monthly_rent,
+                                currentValue: p.currentValue || p.value_estimate || p.purchase_price || p.purchasePrice,
+                                propertyTax: p.propertyTax || p.property_tax,
+                                managementFees: p.managementFees || p.management_fees,
+                                cashFlow: p.cashFlow || p.cash_flow,
+                                monthlyCashFlow: p.cashFlow || p.cash_flow,
+                                cocReturn: p.cocReturn || p.coc_return,
+                                cashOnCashReturn: p.cocReturn || p.coc_return,
+                                capRate: p.capRate || p.cap_rate,
+                                rentToValue: p.rentToValue || p.rent_to_value,
+                                floodRisk: p.floodRisk || p.flood_risk,
+                                marketRisk: p.marketRisk || p.market_risk
+                            };
+                        });
                         
                         // After loading from server, update localStorage to sync
                         localStorage.setItem('properties', JSON.stringify(properties));
@@ -2559,12 +2573,29 @@
                     if (saved) {
                         properties = JSON.parse(saved);
                         console.log(`📱 Loaded ${properties.length} properties from localStorage (server error)`);
+                        
+                        // Clean up any string IDs in localStorage data
+                        properties = properties.map(p => {
+                            let cleanId = p.id;
+                            if (typeof p.id === 'string' && isNaN(parseInt(p.id))) {
+                                console.warn(`⚠️ Found property with invalid string ID during localStorage fallback: ${p.id}`);
+                                cleanId = null; // Will need proper ID from database
+                            } else if (typeof p.id === 'string' && !isNaN(parseInt(p.id))) {
+                                cleanId = parseInt(p.id);
+                                console.log(`📋 Converted string ID "${p.id}" to number ${cleanId} during localStorage fallback`);
+                            }
+                            return { ...p, id: cleanId };
+                        });
+                        
                         // Calculate metrics for properties loaded from localStorage
                         properties.forEach(prop => {
                             if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
                                 calculatePropertyMetrics(prop);
                             }
                         });
+                        
+                        // Save cleaned properties back to localStorage
+                        localStorage.setItem('properties', JSON.stringify(properties));
                     } else {
                         properties = [];
                     }
@@ -2576,12 +2607,29 @@
                 if (saved) {
                     properties = JSON.parse(saved);
                     console.log(`📱 Loaded ${properties.length} properties from localStorage (network error)`);
+                    
+                    // Clean up any string IDs in localStorage data
+                    properties = properties.map(p => {
+                        let cleanId = p.id;
+                        if (typeof p.id === 'string' && isNaN(parseInt(p.id))) {
+                            console.warn(`⚠️ Found property with invalid string ID during network error: ${p.id}`);
+                            cleanId = null; // Will need proper ID from database
+                        } else if (typeof p.id === 'string' && !isNaN(parseInt(p.id))) {
+                            cleanId = parseInt(p.id);
+                            console.log(`📋 Converted string ID "${p.id}" to number ${cleanId} during network error`);
+                        }
+                        return { ...p, id: cleanId };
+                    });
+                    
                     // Calculate metrics for properties loaded from localStorage
                     properties.forEach(prop => {
                         if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
                             calculatePropertyMetrics(prop);
                         }
                     });
+                    
+                    // Save cleaned properties back to localStorage
+                    localStorage.setItem('properties', JSON.stringify(properties));
                 } else {
                     properties = [];
                     console.log('📱 No properties in localStorage');
@@ -2772,14 +2820,21 @@
                                         const existingPropData = await existingPropResponse.json();
                                         if (existingPropData.success && existingPropData.data) {
                                             // Update the property in the array with database data
+                                            const dbId = existingPropData.data.id;
+                                            
+                                            // Ensure we use the numeric ID from database
                                             properties[i] = {
                                                 ...property,
                                                 ...existingPropData.data,
+                                                id: dbId, // Force use of database ID
                                                 // Preserve camelCase fields
                                                 purchasePrice: existingPropData.data.purchasePrice || existingPropData.data.purchase_price || property.purchasePrice,
                                                 monthlyRent: existingPropData.data.monthlyRent || existingPropData.data.monthly_rent || property.monthlyRent
                                             };
                                             console.log('✅ Updated property with database ID:', properties[i].id);
+                                            
+                                            // Update localStorage immediately
+                                            localStorage.setItem('properties', JSON.stringify(properties));
                                         }
                                     }
                                 } catch (fetchError) {
@@ -3380,6 +3435,13 @@
                                     // Property exists, update with correct ID
                                     property.id = checkData.data.id;
                                     console.log('✅ Found existing property in database with ID:', property.id);
+                                    
+                                    // CRITICAL: Update the property in the array to ensure the new ID persists
+                                    properties[index].id = checkData.data.id;
+                                    
+                                    // Save to localStorage immediately to persist the correct ID
+                                    localStorage.setItem('properties', JSON.stringify(properties));
+                                    console.log('💾 Updated property ID in localStorage');
                                 } else {
                                     // Property doesn't exist, create it
                                     console.log('🔄 Property not found in database, creating new one');
@@ -3395,7 +3457,11 @@
                                         const createData = await createResponse.json();
                                         if (createData.success && createData.data && createData.data.id) {
                                             property.id = createData.data.id;
+                                            properties[index].id = createData.data.id;
                                             console.log('✅ Property created in database with ID:', property.id);
+                                            
+                                            // Save to localStorage to persist the new ID
+                                            localStorage.setItem('properties', JSON.stringify(properties));
                                         }
                                     } else {
                                         const errorData = await createResponse.json();
@@ -3411,7 +3477,11 @@
                                                 const recheckData = await recheckResponse.json();
                                                 if (recheckData.success && recheckData.data && recheckData.data.id) {
                                                     property.id = recheckData.data.id;
+                                                    properties[index].id = recheckData.data.id;
                                                     console.log('✅ Found existing property after duplicate error, ID:', property.id);
+                                                    
+                                                    // Save to localStorage to persist the correct ID
+                                                    localStorage.setItem('properties', JSON.stringify(properties));
                                                 }
                                             }
                                         }
