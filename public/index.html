@@ -2906,9 +2906,18 @@
                     throw new Error(`Incomplete address for property: ${property.address || 'No address'}`);
                 }
                 
+                // Check if we have recent cached data (less than 24 hours old)
+                const cacheAge = property.rentcastCache?.timestamp ? 
+                    (Date.now() - new Date(property.rentcastCache.timestamp).getTime()) / (1000 * 60 * 60) : Infinity;
+                
+                if (cacheAge < 24 && property.rentcastCache?.data) {
+                    console.log('📦 Cache is recent (< 24 hours old), consider using cached data');
+                }
+                
                 // Fetch updated data from RentCast
                 const fullAddress = `${property.address}, ${property.city}, ${property.state} ${property.zip}`;
                 console.log('📍 Full address for API call:', fullAddress);
+                console.log('🎯 API Call Strategy: Optimized to minimize calls');
                 
                 const rentcastData = await fetchRentCastData({
                     streetAddress: property.address,
@@ -2918,6 +2927,9 @@
                 });
                 
                 console.log('📊 RentCast API response:', rentcastData);
+                if (rentcastData?.data?.apiCallCount) {
+                    console.log(`🎯 Total API calls made: ${rentcastData.data.apiCallCount}`);
+                }
                 
                 if (rentcastData && rentcastData.success && rentcastData.data) {
                     console.log('✅ RentCast data found, updating property...');
@@ -3012,7 +3024,8 @@
         }
 
         // Fetch RentCast data
-        async function fetchRentCastData(address) {
+        async function fetchRentCastData(address, forceRefresh = true) {
+            let apiCallCount = 0; // Track number of API calls
             try {
                 console.log('🌐 Fetching RentCast data for:', address);
                 
@@ -3025,7 +3038,9 @@
                 
                 console.log('📋 API Parameters:', params.toString());
                 
-                // Fetch properties data first
+                // OPTIMIZATION: Try to get all data from the properties endpoint first
+                console.log('🎯 Making single API call to properties endpoint...');
+                apiCallCount++;
                 const response = await fetch(`/api/rentcast/properties?${params}`);
                 const data = await response.json();
                 
@@ -3035,19 +3050,67 @@
                     const property = data.data[0];
                     console.log('✅ Found property data:', property);
                     
-                    // Also fetch rent estimate, value estimate, and market stats in parallel
-                    console.log('🔄 Fetching additional data (rent, value, market stats)...');
-                    const [rentData, valueData, marketData] = await Promise.all([
-                        fetchRentEstimate(address),
-                        fetchValueEstimate(address),
-                        fetchMarketStats(address.zip)
-                    ]);
+                    // Check if property data already includes rent and value estimates
+                    const hasRentEstimate = property.rent || property.rentEstimate || property.rentRangeLow;
+                    const hasValueEstimate = property.price || property.value || property.estimatedValue;
                     
-                    console.log('📊 Additional data fetched:', {
-                        rentData: rentData?.rent ? `$${rentData.rent}` : 'No data',
-                        valueData: valueData?.value ? `$${valueData.value.toLocaleString()}` : 'No data',
-                        marketData: marketData?.zipCode ? `ZIP ${marketData.zipCode}` : 'No data'
+                    console.log('📋 Checking existing data:', {
+                        hasRentEstimate,
+                        hasValueEstimate,
+                        rentValue: property.rent || property.rentEstimate || property.rentRangeLow,
+                        valueEstimate: property.price || property.value || property.estimatedValue
                     });
+                    
+                    // Only fetch additional data if not already present
+                    let rentData = null;
+                    let valueData = null;
+                    let marketData = null;
+                    
+                    // Determine what additional data we need
+                    const needsRent = !hasRentEstimate;
+                    const needsValue = !hasValueEstimate;
+                    // OPTIMIZATION: Skip market stats - it's not essential for property data
+                    // Market stats can be fetched separately if needed
+                    const needsMarket = false; // Skip to reduce API calls
+                    
+                    if (needsRent || needsValue || needsMarket) {
+                        console.log('🔄 Fetching only missing data:', {
+                            needsRent,
+                            needsValue,
+                            needsMarket
+                        });
+                        
+                        // Fetch only what's needed
+                        const promises = [];
+                        if (needsRent) {
+                            promises.push(fetchRentEstimate(address));
+                            apiCallCount++;
+                        }
+                        if (needsValue) {
+                            promises.push(fetchValueEstimate(address));
+                            apiCallCount++;
+                        }
+                        if (needsMarket) {
+                            promises.push(fetchMarketStats(address.zip));
+                            apiCallCount++;
+                        }
+                        
+                        const results = await Promise.all(promises);
+                        
+                        // Assign results based on what was fetched
+                        let resultIndex = 0;
+                        if (needsRent) rentData = results[resultIndex++];
+                        if (needsValue) valueData = results[resultIndex++];
+                        if (needsMarket) marketData = results[resultIndex++];
+                        
+                        console.log('📊 Additional data fetched:', {
+                            rentData: rentData?.rent ? `$${rentData.rent}` : (hasRentEstimate ? 'Already had data' : 'No data'),
+                            valueData: valueData?.value ? `$${valueData.value.toLocaleString()}` : (hasValueEstimate ? 'Already had data' : 'No data'),
+                            marketData: marketData?.zipCode ? `ZIP ${marketData.zipCode}` : 'No data'
+                        });
+                    } else {
+                        console.log('✅ Property data already contains all estimates, skipping additional API calls');
+                    }
                     
                     return {
                         success: true,
@@ -3058,38 +3121,40 @@
                             baths: property.bathrooms,
                             sqft: property.squareFootage,
                             yearBuilt: property.yearBuilt,
-                            rentEstimate: rentData?.rent || property.rentEstimate,
-                            estimatedValue: valueData?.price || valueData?.value || property.price,
+                            // Use existing data if available, otherwise use fetched data
+                            rentEstimate: property.rent || property.rentEstimate || property.rentRangeLow || rentData?.rent,
+                            estimatedValue: property.price || property.value || property.estimatedValue || valueData?.price || valueData?.value,
                             marketStats: marketData || {},
                             // Add metadata
                             dataSource: 'RentCast API',
                             fetchedAt: new Date().toISOString(),
-                            realTimeData: true
+                            realTimeData: true,
+                            apiCallCount: apiCallCount // Track how many API calls were made
                         }
                     };
                 } else {
                     console.warn('⚠️ Properties API returned no data:', data);
                     
-                    // Even if properties API fails, try to get rent/value estimates
-                    console.log('🔄 Trying fallback: rent and value estimates only...');
-                    const [rentData, valueData, marketData] = await Promise.all([
-                        fetchRentEstimate(address),
-                        fetchValueEstimate(address),
-                        fetchMarketStats(address.zip)
-                    ]);
+                    // OPTIMIZATION: If properties API fails, only try rent estimate as fallback
+                    // This reduces from 3 API calls to just 1
+                    console.log('🔄 Trying minimal fallback: rent estimate only...');
+                    apiCallCount++;
+                    const rentData = await fetchRentEstimate(address);
                     
-                    if (rentData?.rent || valueData?.price || valueData?.value || marketData?.zipCode) {
-                        console.log('✅ Found fallback data');
+                    if (rentData?.rent) {
+                        console.log('✅ Found fallback rent data');
                         return {
                             success: true,
                             data: {
                                 address: `${address.streetAddress || address.address}, ${address.city}, ${address.state} ${address.zip}`,
-                                rentEstimate: rentData?.rent,
-                                estimatedValue: valueData?.price || valueData?.value,
-                                marketStats: marketData || {},
-                                dataSource: 'RentCast API (Estimates Only)',
+                                rentEstimate: rentData.rent,
+                                estimatedValue: null, // No value data in minimal mode
+                                marketStats: {}, // No market stats in minimal mode
+                                dataSource: 'RentCast API (Rent Estimate Only)',
                                 fetchedAt: new Date().toISOString(),
-                                realTimeData: true
+                                realTimeData: true,
+                                minimalData: true, // Flag to indicate limited data
+                                apiCallCount: apiCallCount // Track how many API calls were made
                             }
                         };
                     }
@@ -3100,8 +3165,11 @@
                         message: data.message || 'The address may not exist in RentCast database'
                     };
                 }
+                
+                console.log(`📊 Total RentCast API calls made: ${apiCallCount}`);
             } catch (error) {
                 console.error('❌ Error fetching RentCast data:', error);
+                console.log(`📊 Total RentCast API calls made before error: ${apiCallCount}`);
                 return { 
                     success: false, 
                     error: error.message,
