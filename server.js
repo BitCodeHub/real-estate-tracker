@@ -91,6 +91,26 @@ app.get('/api/rentcast/properties', async (req, res) => {
             }
         });
         
+        // DEBUG: Log RentCast response to identify field names
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+            const firstProperty = response.data[0];
+            console.log('\n🚨 RENTCAST API RESPONSE ANALYSIS:');
+            console.log('Fields returned:', Object.keys(firstProperty).sort());
+            
+            // Look for rent/value fields
+            console.log('\nPotential rent/value fields:');
+            Object.entries(firstProperty).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '') {
+                    const keyLower = key.toLowerCase();
+                    if (keyLower.includes('rent') || keyLower.includes('value') || 
+                        keyLower.includes('price') || keyLower.includes('estimate')) {
+                        console.log(`  ${key}: ${value}`);
+                    }
+                }
+            });
+            console.log('--- END RENTCAST ANALYSIS ---\n');
+        }
+        
         // Forward the response
         res.json({
             success: true,
