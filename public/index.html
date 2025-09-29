@@ -3985,6 +3985,183 @@
                 </div>
                 ` : ''}
 
+                <!-- Additional RentCast Data Section -->
+                ${(property.stories || property.garage || property.pool || property.fireplace || property.basement || 
+                   property.airConditioning || property.heating || property.foundation || property.roofType || 
+                   property.exteriorWall || property.architecturalStyle) ? `
+                <div class="analysis-section">
+                    <h3>Property Features & Details</h3>
+                    <div class="property-details">
+                        ${property.stories ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Stories</div>
+                            <div class="detail-value">${property.stories}</div>
+                        </div>
+                        ` : ''}
+                        ${property.garage ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Garage Spaces</div>
+                            <div class="detail-value">${property.garage}</div>
+                        </div>
+                        ` : ''}
+                        ${property.lotSize ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Lot Size</div>
+                            <div class="detail-value">${property.lotSize.toLocaleString()} sq ft</div>
+                        </div>
+                        ` : ''}
+                        ${property.pool !== undefined ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Pool</div>
+                            <div class="detail-value">${property.pool ? 'Yes' : 'No'}</div>
+                        </div>
+                        ` : ''}
+                        ${property.fireplace !== undefined ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Fireplace</div>
+                            <div class="detail-value">${property.fireplace ? 'Yes' : 'No'}</div>
+                        </div>
+                        ` : ''}
+                        ${property.basement !== undefined ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Basement</div>
+                            <div class="detail-value">${property.basement ? 'Yes' : 'No'}</div>
+                        </div>
+                        ` : ''}
+                        ${property.airConditioning !== undefined ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Air Conditioning</div>
+                            <div class="detail-value">${property.airConditioning ? 'Yes' : 'No'}</div>
+                        </div>
+                        ` : ''}
+                        ${property.heating ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Heating</div>
+                            <div class="detail-value">${property.heating}</div>
+                        </div>
+                        ` : ''}
+                        ${property.foundation ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Foundation</div>
+                            <div class="detail-value">${property.foundation}</div>
+                        </div>
+                        ` : ''}
+                        ${property.roofType ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Roof Type</div>
+                            <div class="detail-value">${property.roofType}</div>
+                        </div>
+                        ` : ''}
+                        ${property.exteriorWall ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Exterior</div>
+                            <div class="detail-value">${property.exteriorWall}</div>
+                        </div>
+                        ` : ''}
+                        ${property.architecturalStyle ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Style</div>
+                            <div class="detail-value">${property.architecturalStyle}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Tax & Assessment Data -->
+                ${(property.taxAssessedValue || property.taxAssessedYear || property.propertyTaxes || 
+                   property.lastSaleDate || property.lastSalePrice) ? `
+                <div class="analysis-section">
+                    <h3>Tax & Sales History</h3>
+                    <div class="property-details">
+                        ${property.taxAssessedValue ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Tax Assessed Value</div>
+                            <div class="detail-value">${formatCurrency(property.taxAssessedValue)}</div>
+                        </div>
+                        ` : ''}
+                        ${property.taxAssessedYear ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Assessment Year</div>
+                            <div class="detail-value">${property.taxAssessedYear}</div>
+                        </div>
+                        ` : ''}
+                        ${property.propertyTaxes ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Annual Property Tax</div>
+                            <div class="detail-value">${formatCurrency(property.propertyTaxes)}</div>
+                        </div>
+                        ` : ''}
+                        ${property.lastSaleDate ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Last Sale Date</div>
+                            <div class="detail-value">${new Date(property.lastSaleDate).toLocaleDateString()}</div>
+                        </div>
+                        ` : ''}
+                        ${property.lastSalePrice ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Last Sale Price</div>
+                            <div class="detail-value">${formatCurrency(property.lastSalePrice)}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Owner Information -->
+                ${(property.ownerName || property.ownerType || property.ownerOccupied !== undefined) ? `
+                <div class="analysis-section">
+                    <h3>Owner Information</h3>
+                    <div class="property-details">
+                        ${property.ownerName ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Owner Name</div>
+                            <div class="detail-value">${property.ownerName}</div>
+                        </div>
+                        ` : ''}
+                        ${property.ownerType ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Owner Type</div>
+                            <div class="detail-value">${property.ownerType}</div>
+                        </div>
+                        ` : ''}
+                        ${property.ownerOccupied !== undefined ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Owner Occupied</div>
+                            <div class="detail-value">${property.ownerOccupied ? 'Yes' : 'No'}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Value Ranges -->
+                ${(property.rentRangeLow || property.rentRangeHigh || property.priceRangeLow || property.priceRangeHigh) ? `
+                <div class="analysis-section">
+                    <h3>Estimated Ranges</h3>
+                    <div class="metrics-grid">
+                        ${(property.rentRangeLow || property.rentRangeHigh) ? `
+                        <div class="metric-card">
+                            <div class="metric-label">Rent Range</div>
+                            <div class="metric-value positive">
+                                ${property.rentRangeLow ? formatCurrency(property.rentRangeLow) : '?'} - 
+                                ${property.rentRangeHigh ? formatCurrency(property.rentRangeHigh) : '?'}
+                            </div>
+                        </div>
+                        ` : ''}
+                        ${(property.priceRangeLow || property.priceRangeHigh) ? `
+                        <div class="metric-card">
+                            <div class="metric-label">Value Range</div>
+                            <div class="metric-value">
+                                ${property.priceRangeLow ? formatCurrency(property.priceRangeLow) : '?'} - 
+                                ${property.priceRangeHigh ? formatCurrency(property.priceRangeHigh) : '?'}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+
                 <!-- Rental Listings Section -->
                 <div class="analysis-section" style="margin-top: 20px;">
                     <h3>🏠 Comparable Rental Listings</h3>
@@ -4111,15 +4288,41 @@
                     
                     // Debug log to check property data
                     console.log('📊 Property after RentCast update:', {
-                        beds: property.beds,
-                        baths: property.baths,
-                        sqft: property.sqft,
-                        bedrooms: property.bedrooms,
-                        bathrooms: property.bathrooms,
-                        square_footage: property.square_footage,
-                        estimatedValue: property.estimatedValue,
-                        currentValue: property.currentValue,
-                        yearBuilt: property.yearBuilt
+                        basicInfo: {
+                            beds: property.beds,
+                            baths: property.baths,
+                            sqft: property.sqft,
+                            yearBuilt: property.yearBuilt
+                        },
+                        pricing: {
+                            estimatedValue: property.estimatedValue,
+                            currentValue: property.currentValue,
+                            rentEstimate: property.rentEstimate,
+                            rentRange: `${property.rentRangeLow || 'N/A'} - ${property.rentRangeHigh || 'N/A'}`,
+                            priceRange: `${property.priceRangeLow || 'N/A'} - ${property.priceRangeHigh || 'N/A'}`
+                        },
+                        features: {
+                            pool: property.pool,
+                            garage: property.garage,
+                            basement: property.basement,
+                            fireplace: property.fireplace,
+                            stories: property.stories,
+                            lotSize: property.lotSize
+                        },
+                        taxInfo: {
+                            taxAssessedValue: property.taxAssessedValue,
+                            taxAssessedYear: property.taxAssessedYear,
+                            propertyTaxes: property.propertyTaxes
+                        },
+                        ownerInfo: {
+                            ownerName: property.ownerName,
+                            ownerType: property.ownerType,
+                            ownerOccupied: property.ownerOccupied
+                        },
+                        saleHistory: {
+                            lastSaleDate: property.lastSaleDate,
+                            lastSalePrice: property.lastSalePrice
+                        }
                     });
                     
                     // Recalculate financial metrics
@@ -4329,25 +4532,113 @@
                         console.log('✅ Property data already contains all estimates, skipping additional API calls');
                     }
                     
+                    // Extract ALL available data from RentCast response
+                    // This preserves all fields returned by the API for maximum data capture
+                    const extractedData = {
+                        // First, preserve ALL original data from RentCast
+                        ...property,
+                        
+                        // Map RentCast field names to our application's field names
+                        // These mappings ensure compatibility with the UI
+                        beds: property.bedrooms || property.beds,
+                        baths: property.bathrooms || property.baths,
+                        sqft: property.squareFootage || property.squareFeet || property.sqft,
+                        yearBuilt: property.yearBuilt,
+                        
+                        // Preserve both field name variations for maximum compatibility
+                        bedrooms: property.bedrooms || property.beds,
+                        bathrooms: property.bathrooms || property.baths,
+                        squareFootage: property.squareFootage || property.squareFeet || property.sqft,
+                        square_footage: property.squareFootage || property.squareFeet || property.sqft,
+                        year_built: property.yearBuilt,
+                        
+                        // Extract rent data (use most accurate value available)
+                        rentEstimate: property.rent || property.rentEstimate || property.rentRangeLow || rentData?.rent,
+                        rent_estimate: property.rent || property.rentEstimate || property.rentRangeLow || rentData?.rent,
+                        rentRangeLow: property.rentRangeLow,
+                        rentRangeHigh: property.rentRangeHigh,
+                        
+                        // Extract value/price data
+                        estimatedValue: property.price || property.value || property.estimatedValue || property.priceRangeLow || valueData?.price || valueData?.value,
+                        value_estimate: property.price || property.value || property.estimatedValue || property.priceRangeLow || valueData?.price || valueData?.value,
+                        priceRangeLow: property.priceRangeLow,
+                        priceRangeHigh: property.priceRangeHigh,
+                        
+                        // Property characteristics
+                        propertyType: property.propertyType || property.type,
+                        lotSize: property.lotSize || property.lotSquareFeet,
+                        county: property.county,
+                        
+                        // Additional RentCast fields that might be available
+                        // Tax and assessment data
+                        taxAssessedValue: property.taxAssessedValue || property.assessedValue,
+                        taxAssessedYear: property.taxAssessedYear || property.assessedYear,
+                        propertyTaxes: property.propertyTaxes || property.taxes,
+                        
+                        // Owner information
+                        ownerName: property.ownerName,
+                        ownerType: property.ownerType,
+                        ownerOccupied: property.ownerOccupied,
+                        
+                        // Property features
+                        stories: property.stories || property.numStories,
+                        garage: property.garage || property.garageSpaces,
+                        pool: property.pool,
+                        fireplace: property.fireplace,
+                        basement: property.basement,
+                        airConditioning: property.airConditioning || property.ac,
+                        heating: property.heating,
+                        
+                        // Construction details
+                        foundation: property.foundation,
+                        roofType: property.roofType || property.roof,
+                        exteriorWall: property.exteriorWall || property.exterior,
+                        architecturalStyle: property.architecturalStyle || property.style,
+                        
+                        // Sale history
+                        lastSaleDate: property.lastSaleDate || property.soldDate,
+                        lastSalePrice: property.lastSalePrice || property.soldPrice,
+                        
+                        // Market data
+                        marketStats: marketData || {},
+                        daysOnMarket: property.daysOnMarket,
+                        listingDate: property.listingDate,
+                        
+                        // Preserve any other fields that RentCast might return
+                        // This ensures we don't lose any data
+                        ...(property.additionalDetails || {}),
+                        
+                        // Add metadata
+                        dataSource: 'RentCast API',
+                        fetchedAt: new Date().toISOString(),
+                        realTimeData: true,
+                        apiCallCount: apiCallCount // Track how many API calls were made
+                    };
+                    
+                    console.log('📊 Extracted RentCast data with fields:', Object.keys(extractedData).length);
+                    console.log('🔍 Sample of extracted data:', {
+                        basicInfo: {
+                            beds: extractedData.beds,
+                            baths: extractedData.baths,
+                            sqft: extractedData.sqft,
+                            yearBuilt: extractedData.yearBuilt
+                        },
+                        pricing: {
+                            rentEstimate: extractedData.rentEstimate,
+                            estimatedValue: extractedData.estimatedValue,
+                            rentRange: `${extractedData.rentRangeLow || 'N/A'} - ${extractedData.rentRangeHigh || 'N/A'}`,
+                            priceRange: `${extractedData.priceRangeLow || 'N/A'} - ${extractedData.priceRangeHigh || 'N/A'}`
+                        },
+                        features: {
+                            pool: extractedData.pool,
+                            garage: extractedData.garage,
+                            basement: extractedData.basement
+                        }
+                    });
+                    
                     return {
                         success: true,
-                        data: {
-                            ...property,
-                            // Map RentCast field names to our application's field names
-                            beds: property.bedrooms,
-                            baths: property.bathrooms,
-                            sqft: property.squareFootage,
-                            yearBuilt: property.yearBuilt,
-                            // Use existing data if available, otherwise use fetched data
-                            rentEstimate: property.rent || property.rentEstimate || property.rentRangeLow || rentData?.rent,
-                            estimatedValue: property.price || property.value || property.estimatedValue || valueData?.price || valueData?.value,
-                            marketStats: marketData || {},
-                            // Add metadata
-                            dataSource: 'RentCast API',
-                            fetchedAt: new Date().toISOString(),
-                            realTimeData: true,
-                            apiCallCount: apiCallCount // Track how many API calls were made
-                        }
+                        data: extractedData
                     };
                 } else {
                     console.warn('⚠️ Properties API returned no data:', data);
