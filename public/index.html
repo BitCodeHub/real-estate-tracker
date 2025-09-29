@@ -2134,11 +2134,14 @@
                         hasAllRequired: !!(property.address && property.city && property.state)
                     });
                     
+                    // Clean property data for database
+                    const sanitizedProperty = sanitizePropertyForDatabase(property);
+                    
                     // Try to create in database
                     const response = await fetch('/api/properties', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(property)
+                        body: JSON.stringify(sanitizedProperty)
                     });
                     
                     const data = await response.json();
@@ -2686,15 +2689,21 @@
                 for (let i = 0; i < properties.length; i++) {
                     const property = properties[i];
                     
-                    // Check if this property has a temporary ID (timestamp-based)
+                    // Check if this property has a temporary ID (timestamp-based) or invalid string ID
                     const hasTemporaryId = property.id && typeof property.id === 'number' && property.id > 1700000000000;
-                    const isTemporary = property._isTemporary || hasTemporaryId;
+                    const hasStringId = property.id && typeof property.id === 'string';
+                    const hasInvalidId = hasStringId || !Number.isInteger(property.id);
+                    const isTemporary = property._isTemporary || hasTemporaryId || hasInvalidId;
                     
                     if (!property.id || isTemporary) {
                         // New property or temporary property, create it
-                        console.log(isTemporary ? 
-                            `🔄 Re-creating temporary property in database: ${property.address} (old ID: ${property.id})` : 
-                            `Creating new property in database: ${property.address}`);
+                        if (hasStringId) {
+                            console.log(`🔄 Re-creating property with invalid string ID: ${property.address} (old ID: ${property.id})`);
+                        } else {
+                            console.log(isTemporary ? 
+                                `🔄 Re-creating temporary property in database: ${property.address} (old ID: ${property.id})` : 
+                                `Creating new property in database: ${property.address}`);
+                        }
                         
                         // Clean property data and map field names properly
                         const propertyToCreate = sanitizePropertyForDatabase(property);
