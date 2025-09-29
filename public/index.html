@@ -587,6 +587,10 @@
             transform: rotate(180deg);
         }
         
+        .text-warning {
+            color: var(--accent-warning) !important;
+        }
+        
         /* Loading States */
         .loading {
             display: inline-block;
@@ -1484,15 +1488,30 @@
                 // Parse address
                 const parsedAddress = parseAddressComponents(address);
                 
-                // Fetch property data
-                const rentcastData = await fetchRentCastData(parsedAddress);
+                // Show basic analysis without making API call
+                generatePropertyAnalysis(address);
                 
-                if (rentcastData && rentcastData.success && rentcastData.data) {
-                    generateEnhancedPropertyAnalysis(address, rentcastData.data);
-                } else {
-                    // Fallback to basic analysis
-                    generatePropertyAnalysis(address);
-                }
+                // Add a note about fetching real-time data
+                const analysisResults = document.getElementById('analysisResults');
+                const apiNote = document.createElement('div');
+                apiNote.style.cssText = 'background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid var(--border-color);';
+                apiNote.innerHTML = `
+                    <p style="color: var(--text-secondary); margin-bottom: 10px;">
+                        <i class="fas fa-info-circle" style="color: var(--accent-info);"></i> 
+                        To fetch real-time market data from RentCast, add this property and click the refresh icon.
+                    </p>
+                    <button class="btn btn-primary" onclick="
+                        document.getElementById('addPropertyForm').reset();
+                        document.getElementById('fullAddress').value = '${address.replace(/'/g, "\\'")}';
+                        parseAndFillAddress();
+                        closeModal('analyzeModal');
+                        openAddPropertyModal();
+                    ">
+                        <i class="fas fa-plus"></i> Add This Property
+                    </button>
+                `;
+                analysisResults.appendChild(apiNote);
+                
             } catch (error) {
                 console.error('Error analyzing property:', error);
                 alert('Error analyzing property. Please try again.');
@@ -1723,23 +1742,17 @@
                         monthlyRent: null,
                         beds: null,
                         baths: null,
-                        sqft: null
+                        sqft: null,
+                        dateAdded: new Date().toISOString(),
+                        status: 'available',
+                        // Mark as not having RentCast data yet
+                        rentcastCache: null,
+                        needsRentCastData: true
                     };
                     
-                    // Try to fetch data from RentCast
-                    try {
-                        const rentcastData = await fetchRentCastData(parsedAddress);
-                        if (rentcastData && rentcastData.success && rentcastData.data) {
-                            property.purchasePrice = rentcastData.data.price || null;
-                            property.monthlyRent = rentcastData.data.rent || null;
-                            property.beds = rentcastData.data.bedrooms || null;
-                            property.baths = rentcastData.data.bathrooms || null;
-                            property.sqft = rentcastData.data.squareFootage || null;
-                        }
-                    } catch (apiError) {
-                        console.error('RentCast API error for address:', address, apiError);
-                        // Continue without API data
-                    }
+                    // Skip RentCast API calls during bulk import to minimize API usage
+                    // Users can refresh individual properties later if needed
+                    console.log(`Property ${i + 1}: Skipping RentCast API call for bulk import`);
                     
                     // Calculate metrics
                     calculatePropertyMetrics(property);
@@ -1752,11 +1765,6 @@
                     console.error(`Error importing property "${address}":`, error);
                     failCount++;
                     failedAddresses.push(address);
-                }
-                
-                // Small delay to prevent overwhelming the API
-                if (i < pendingBulkImportProperties.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
             
@@ -1774,6 +1782,13 @@
                 console.log('Failed addresses:', failedAddresses);
             }
             showNotification(message, successCount > 0 ? 'success' : 'error');
+            
+            // Show additional notification about RentCast data
+            if (successCount > 0) {
+                setTimeout(() => {
+                    showNotification('Click the refresh icon (🔄) on each property to fetch market data from RentCast', 'info');
+                }, 2000);
+            }
             
             // Close modal if all successful
             if (failCount === 0) {
@@ -2323,7 +2338,9 @@
                 </td>
                 <td onclick="event.stopPropagation()" style="min-width: 80px;">
                     <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-                        <i class="fas fa-sync-alt icon-refresh" onclick="refreshProperty(${index})" title="Refresh RentCast Data"></i>
+                        <i class="fas fa-sync-alt icon-refresh ${property.rentcastCache ? '' : 'text-warning'}" 
+                           onclick="refreshProperty(${index})" 
+                           title="${property.rentcastCache ? 'Refresh RentCast Data (Last updated: ' + new Date(property.rentcastCache.timestamp).toLocaleDateString() + ')' : 'Fetch RentCast Data (No data cached yet)'}"></i>
                         ${property.realTimeData ? 
                             `<span style="color: #10b981; font-size: 12px;" title="RentCast data available (${property.lastRentCastUpdate ? new Date(property.lastRentCastUpdate).toLocaleDateString() : 'Unknown date'})">📊</span>` : 
                             `<span style="color: #ef4444; font-size: 12px;" title="No RentCast data - click refresh">❌</span>`
@@ -2582,6 +2599,13 @@
                     // Store original values for comparison
                     const originalRent = property.monthlyRent;
                     const originalValue = property.currentValue;
+                    
+                    // Cache the full RentCast API response
+                    property.rentcastCache = {
+                        data: rentcastData.data,
+                        timestamp: new Date().toISOString(),
+                        success: true
+                    };
                     
                     // Update property with new data - mark as real-time data
                     property.realTimeData = true;
@@ -3494,6 +3518,13 @@
                 // Try to fetch additional data from RentCast
                 const rentcastData = await fetchRentCastData(property);
                 if (rentcastData && rentcastData.success && rentcastData.data) {
+                    // Cache the full RentCast API response
+                    property.rentcastCache = {
+                        data: rentcastData.data,
+                        timestamp: new Date().toISOString(),
+                        success: true
+                    };
+                    
                     // Merge with proper field mapping
                     const mappedData = {
                         ...rentcastData.data,
