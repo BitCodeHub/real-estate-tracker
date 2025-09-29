@@ -588,6 +588,16 @@ app.post('/api/properties', async (req, res) => {
         }
         
         // Create new property
+        console.log('🔄 Calling db.createProperty with data:', {
+            address: req.body.address,
+            city: req.body.city,
+            state: req.body.state,
+            zip: req.body.zip,
+            purchasePrice: req.body.purchasePrice,
+            monthlyRent: req.body.monthlyRent,
+            dataKeys: Object.keys(req.body).length
+        });
+        
         const property = await db.createProperty(req.body);
         console.log('✅ Property created successfully with ID:', property.id);
         
@@ -612,7 +622,11 @@ app.post('/api/properties', async (req, res) => {
             res.status(201).json({ success: true, data: mappedProp });
         }
     } catch (error) {
-        console.error('Error creating property:', error);
+        console.error('❌ Error creating property:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        
+        // Handle specific database error types
         if (error.code === '23505') { // Unique constraint violation
             const address = req.body.address || 'Unknown address';
             res.status(409).json({ 
@@ -620,8 +634,30 @@ app.post('/api/properties', async (req, res) => {
                 error: `Property "${address}" already exists in your portfolio. Each property must have a unique address.`,
                 existingProperty: true
             });
-        } else {
-            // Return success with local storage fallback
+        } else if (error.code === '23502') { // NOT NULL constraint violation
+            res.status(400).json({ 
+                success: false, 
+                error: 'Missing required property information. Please check all fields are filled.'
+            });
+        } else if (error.code === '22P02') { // Invalid input syntax/data type
+            res.status(400).json({ 
+                success: false, 
+                error: 'Invalid property data format. Please check numeric fields contain valid numbers.'
+            });
+        } else if (error.code === '23503') { // Foreign key constraint violation
+            res.status(400).json({ 
+                success: false, 
+                error: 'Invalid property data references. Please check all fields are valid.'
+            });
+        } else if (error.code === '23514') { // Check constraint violation
+            res.status(400).json({ 
+                success: false, 
+                error: 'Property data violates database constraints. Please check all values are valid.'
+            });
+        } else if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
+                   error.message?.includes('connect') || error.message?.includes('timeout')) {
+            // ONLY return temporary property for actual connectivity issues
+            console.warn('⚠️ Database connectivity issue - returning temporary property');
             const tempProperty = {
                 ...req.body,
                 id: Date.now(),
@@ -632,6 +668,14 @@ app.post('/api/properties', async (req, res) => {
                 success: true, 
                 data: tempProperty,
                 warning: 'Database temporarily unavailable. Property saved locally only.'
+            });
+        } else {
+            // For all other errors, return a proper error response
+            console.error('❌ Unhandled database error - returning error response');
+            res.status(500).json({ 
+                success: false, 
+                error: 'Failed to save property to database. Please try again or contact support.',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     }
