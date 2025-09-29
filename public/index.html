@@ -7054,73 +7054,226 @@ Format your response in clear sections with bullet points where appropriate. Be 
     <!-- Mobile Property Cards Display Fix -->
     <script>
     (function() {
-        console.log('🔧 Applying mobile property cards display fix...');
+        console.log('🔧 COMPREHENSIVE Mobile Display Fix Starting...');
         
-        // Enhanced updateMobilePropertyCards function to ensure proper display
-        const originalUpdateMobilePropertyCards = window.updateMobilePropertyCards;
-        window.updateMobilePropertyCards = function() {
-            console.log('📱 updateMobilePropertyCards called');
+        // Debug function to check current state
+        function debugMobileState() {
+            console.log('📊 Debug Info:');
+            console.log('- Properties defined:', typeof properties !== 'undefined');
+            console.log('- Properties count:', typeof properties !== 'undefined' ? properties.length : 'N/A');
+            console.log('- Window width:', window.innerWidth);
+            console.log('- Is mobile:', window.innerWidth <= 768);
+            console.log('- Container exists:', !!document.getElementById('mobilePropertyCards'));
+            
+            const localData = localStorage.getItem('properties');
+            console.log('- LocalStorage has data:', !!localData);
+            if (localData) {
+                try {
+                    const parsed = JSON.parse(localData);
+                    console.log('- LocalStorage properties count:', parsed.length);
+                } catch (e) {
+                    console.log('- LocalStorage data is invalid');
+                }
+            }
+        }
+        
+        // Enhanced force update function
+        function forceUpdateMobileDisplay() {
+            console.log('🔄 Force updating mobile display...');
+            
             const container = document.getElementById('mobilePropertyCards');
-            if (!container) return;
+            if (!container) {
+                console.error('❌ Mobile container not found!');
+                return;
+            }
             
             const isMobile = window.innerWidth <= 768;
             const tableContainer = document.querySelector('.table-container');
             
-            if (isMobile) {
-                // Ensure container is visible on mobile
-                container.style.display = 'block';
-                if (tableContainer) tableContainer.style.display = 'none';
-                
-                // Call the original function if it exists
-                if (originalUpdateMobilePropertyCards) {
-                    originalUpdateMobilePropertyCards.call(this);
-                } else {
-                    // Fallback implementation
-                    const filteredProperties = typeof getFilteredProperties === 'function' 
-                        ? getFilteredProperties() 
-                        : properties;
-                    
-                    if (properties.length === 0) {
-                        container.innerHTML = `
-                            <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
-                                <i class="fas fa-home" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
-                                <h3>No Properties Yet</h3>
-                                <p style="margin-bottom: 20px;">Start building your real estate portfolio!</p>
-                                <button class="btn btn-primary" onclick="openAddPropertyModal()" style="margin-top: 20px;">
-                                    <i class="fas fa-plus"></i> Add Your First Property
-                                </button>
-                            </div>
-                        `;
-                    } else if (filteredProperties.length === 0) {
-                        container.innerHTML = `
-                            <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
-                                <i class="fas fa-filter" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
-                                <h3>No Properties Match Filters</h3>
-                                <p>Try adjusting your search criteria</p>
-                                <button class="btn btn-secondary" onclick="resetFilters()" style="margin-top: 20px;">
-                                    <i class="fas fa-times"></i> Clear Filters
-                                </button>
-                            </div>
-                        `;
-                    } else {
-                        container.innerHTML = filteredProperties.map((property, index) => 
-                            createMobilePropertyCard(property, properties.indexOf(property))
-                        ).join('');
-                    }
-                }
-            } else {
+            if (!isMobile) {
                 container.style.display = 'none';
                 if (tableContainer) tableContainer.style.display = 'block';
+                return;
+            }
+            
+            // Mobile view - ensure visibility
+            container.style.display = 'block';
+            if (tableContainer) tableContainer.style.display = 'none';
+            
+            // Check if properties exist
+            if (typeof properties === 'undefined' || !properties || properties.length === 0) {
+                console.log('📭 No properties available');
+                
+                // Try to load from localStorage as fallback
+                const localData = localStorage.getItem('properties');
+                if (localData) {
+                    try {
+                        window.properties = JSON.parse(localData);
+                        console.log('✅ Restored properties from localStorage:', properties.length);
+                    } catch (e) {
+                        console.error('❌ Failed to parse localStorage:', e);
+                        window.properties = [];
+                    }
+                }
+                
+                if (!properties || properties.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                            <i class="fas fa-home" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
+                            <h3>No Properties Yet</h3>
+                            <p style="margin-bottom: 20px;">Start building your real estate portfolio!</p>
+                            <button class="btn btn-primary" onclick="openAddPropertyModal()" style="margin-top: 20px;">
+                                <i class="fas fa-plus"></i> Add Your First Property
+                            </button>
+                            <div style="margin-top: 30px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 8px; font-size: 12px;">
+                                <strong>Debug:</strong> No properties loaded. Check console for details.
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+            }
+            
+            // Get filtered properties
+            let filteredProperties = properties;
+            if (typeof getFilteredProperties === 'function') {
+                filteredProperties = getFilteredProperties();
+            }
+            
+            console.log(`📱 Rendering ${filteredProperties.length} of ${properties.length} properties`);
+            
+            if (filteredProperties.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                        <i class="fas fa-filter" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
+                        <h3>No Properties Match Filters</h3>
+                        <p>Try adjusting your search criteria</p>
+                        <button class="btn btn-secondary" onclick="resetFilters()" style="margin-top: 20px;">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Create property cards
+            let cardsHtml = '';
+            filteredProperties.forEach((property, i) => {
+                const globalIndex = properties.indexOf(property);
+                
+                if (typeof createMobilePropertyCard === 'function') {
+                    cardsHtml += createMobilePropertyCard(property, globalIndex);
+                } else {
+                    // Fallback card HTML
+                    cardsHtml += `
+                        <div class="mobile-property-card" style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="margin: 0; font-size: 18px; color: #333;">${property.address || 'Unknown Address'}</h4>
+                                <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">
+                                    ${property.city || 'Unknown'}, ${property.state || 'XX'} ${property.zip || ''}
+                                </p>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                                    <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px;">Purchase Price</div>
+                                    <div style="font-size: 16px; font-weight: 600; color: #333;">
+                                        $${((property.purchasePrice || property.purchase_price || 0) / 1000).toFixed(0)}k
+                                    </div>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                                    <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px;">Monthly Rent</div>
+                                    <div style="font-size: 16px; font-weight: 600; color: #333;">
+                                        $${(property.monthlyRent || property.monthly_rent || 0).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                                    <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px;">Cash Flow</div>
+                                    <div style="font-size: 16px; font-weight: 600; color: ${(property.cashFlow || property.monthlyCashFlow || 0) >= 0 ? '#28a745' : '#dc3545'};">
+                                        $${(property.cashFlow || property.monthlyCashFlow || property.cash_flow || 0).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                                    <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px;">CoC Return</div>
+                                    <div style="font-size: 16px; font-weight: 600; color: ${(property.cocReturn || property.cashOnCashReturn || 0) >= 8 ? '#28a745' : '#ffc107'};">
+                                        ${property.cocReturn || property.cashOnCashReturn || property.coc_return ? 
+                                            ((property.cocReturn || property.cashOnCashReturn || property.coc_return).toFixed(1) + '%') : 
+                                            'N/A'}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="showPropertyDetails(${globalIndex})" 
+                                    style="flex: 1; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500;">
+                                    <i class="fas fa-eye"></i> View Details
+                                </button>
+                                <button onclick="refreshProperty(${globalIndex})" 
+                                    style="padding: 10px 16px; background: #6c757d; color: white; border: none; border-radius: 6px; font-size: 14px;">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button onclick="deleteProperty(${globalIndex})" 
+                                    style="padding: 10px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 14px;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            container.innerHTML = cardsHtml;
+            console.log(`✅ Rendered ${filteredProperties.length} property cards`);
+        }
+        
+        // Override the updateMobilePropertyCards function with enhanced version
+        const originalUpdate = window.updateMobilePropertyCards;
+        window.updateMobilePropertyCards = function() {
+            console.log('📱 updateMobilePropertyCards called (enhanced)');
+            debugMobileState();
+            
+            try {
+                if (originalUpdate && typeof originalUpdate === 'function') {
+                    originalUpdate.call(this);
+                } else {
+                    forceUpdateMobileDisplay();
+                }
+            } catch (error) {
+                console.error('❌ Error in updateMobilePropertyCards:', error);
+                forceUpdateMobileDisplay();
             }
         };
         
-        // Force initial update after a short delay
-        setTimeout(() => {
-            console.log('🔄 Forcing initial mobile cards update...');
-            updateMobilePropertyCards();
-        }, 500);
+        // Ensure properties are available globally
+        if (typeof properties === 'undefined') {
+            console.log('⚠️ Creating global properties array');
+            window.properties = [];
+        }
         
-        console.log('✅ Mobile property cards display fix applied');
+        // Set up delayed initialization to ensure everything is loaded
+        function initializeMobileDisplay() {
+            console.log('🚀 Initializing mobile display (delayed)...');
+            debugMobileState();
+            
+            if (window.innerWidth <= 768) {
+                forceUpdateMobileDisplay();
+            }
+        }
+        
+        // Multiple initialization attempts to ensure it works
+        setTimeout(initializeMobileDisplay, 100);
+        setTimeout(initializeMobileDisplay, 500);
+        setTimeout(initializeMobileDisplay, 1000);
+        setTimeout(initializeMobileDisplay, 2000);
+        
+        // Also initialize on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeMobileDisplay);
+        } else {
+            initializeMobileDisplay();
+        }
+        
+        console.log('✅ COMPREHENSIVE Mobile Display Fix Applied');
     })();
     </script>
     

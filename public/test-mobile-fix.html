@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mobile Display Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .property-sample {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mobile Display Test & Debug</h1>
+    
+    <div class="test-section">
+        <h2>Environment Check</h2>
+        <div id="environmentCheck"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Data Check</h2>
+        <div id="dataCheck"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Actions</h2>
+        <button onclick="loadMainPage()">Load Main Page in iframe</button>
+        <button onclick="testLocalStorage()">Test LocalStorage</button>
+        <button onclick="forceLoadProperties()">Force Load Properties</button>
+        <button onclick="injectTestData()">Inject Test Data</button>
+        <button onclick="clearAllData()">Clear All Data</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Main Page iframe</h2>
+        <iframe id="mainFrame" src="index.html" style="width: 100%; height: 600px; border: 2px solid #ddd;"></iframe>
+    </div>
+    
+    <script>
+        // Environment check
+        function checkEnvironment() {
+            const checks = [];
+            
+            // Window size
+            checks.push({
+                name: 'Window Width',
+                value: window.innerWidth + 'px',
+                status: window.innerWidth <= 768 ? 'success' : 'warning',
+                message: window.innerWidth <= 768 ? 'Mobile view active' : 'Desktop view (mobile is <= 768px)'
+            });
+            
+            // User agent
+            const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            checks.push({
+                name: 'User Agent',
+                value: isMobileUA ? 'Mobile' : 'Desktop',
+                status: 'success',
+                message: navigator.userAgent.substring(0, 50) + '...'
+            });
+            
+            // LocalStorage
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                checks.push({
+                    name: 'LocalStorage',
+                    value: 'Available',
+                    status: 'success',
+                    message: 'LocalStorage is working'
+                });
+            } catch (e) {
+                checks.push({
+                    name: 'LocalStorage',
+                    value: 'Not Available',
+                    status: 'error',
+                    message: 'LocalStorage error: ' + e.message
+                });
+            }
+            
+            const html = checks.map(check => `
+                <div class="status ${check.status}">
+                    <strong>${check.name}:</strong> ${check.value}<br>
+                    <small>${check.message}</small>
+                </div>
+            `).join('');
+            
+            document.getElementById('environmentCheck').innerHTML = html;
+        }
+        
+        // Data check
+        function checkData() {
+            let html = '';
+            
+            // Check localStorage for properties
+            const localData = localStorage.getItem('properties');
+            if (localData) {
+                try {
+                    const properties = JSON.parse(localData);
+                    html += `
+                        <div class="status success">
+                            <strong>LocalStorage Properties:</strong> ${properties.length} found
+                        </div>
+                    `;
+                    
+                    if (properties.length > 0) {
+                        html += '<div class="property-sample"><strong>Sample Property:</strong><pre>' + 
+                            JSON.stringify(properties[0], null, 2) + '</pre></div>';
+                    }
+                } catch (e) {
+                    html += `
+                        <div class="status error">
+                            <strong>LocalStorage Parse Error:</strong> ${e.message}
+                        </div>
+                    `;
+                }
+            } else {
+                html += `
+                    <div class="status warning">
+                        <strong>LocalStorage:</strong> No properties data found
+                    </div>
+                `;
+            }
+            
+            document.getElementById('dataCheck').innerHTML = html;
+        }
+        
+        // Test localStorage
+        function testLocalStorage() {
+            const testData = [
+                {
+                    id: 1,
+                    address: "123 Test Street",
+                    city: "Test City",
+                    state: "TX",
+                    zip: "12345",
+                    purchasePrice: 250000,
+                    purchase_price: 250000,
+                    monthlyRent: 2500,
+                    monthly_rent: 2500,
+                    cashFlow: 500,
+                    cash_flow: 500,
+                    monthlyCashFlow: 500,
+                    cocReturn: 12.5,
+                    coc_return: 12.5,
+                    cashOnCashReturn: 12.5,
+                    status: "owned"
+                }
+            ];
+            
+            localStorage.setItem('properties', JSON.stringify(testData));
+            alert('Test data saved to localStorage. Refresh to see if it loads.');
+            checkData();
+        }
+        
+        // Inject test data into iframe
+        function injectTestData() {
+            const iframe = document.getElementById('mainFrame');
+            const iframeWindow = iframe.contentWindow;
+            
+            if (iframeWindow) {
+                const testProperties = [
+                    {
+                        id: 1,
+                        address: "123 Mobile Test Ave",
+                        city: "Mobile",
+                        state: "AL",
+                        zip: "36601",
+                        purchasePrice: 150000,
+                        monthlyRent: 1500,
+                        cashFlow: 300,
+                        monthlyCashFlow: 300,
+                        cocReturn: 8.5,
+                        cashOnCashReturn: 8.5,
+                        status: "owned"
+                    },
+                    {
+                        id: 2,
+                        address: "456 Debug Street",
+                        city: "Test",
+                        state: "TX",
+                        zip: "75001",
+                        purchasePrice: 200000,
+                        monthlyRent: 2000,
+                        cashFlow: 450,
+                        monthlyCashFlow: 450,
+                        cocReturn: 10.2,
+                        cashOnCashReturn: 10.2,
+                        status: "owned"
+                    }
+                ];
+                
+                // Inject properties
+                iframeWindow.properties = testProperties;
+                
+                // Save to localStorage
+                localStorage.setItem('properties', JSON.stringify(testProperties));
+                
+                // Force update if function exists
+                if (typeof iframeWindow.updateMobilePropertyCards === 'function') {
+                    iframeWindow.updateMobilePropertyCards();
+                    alert('Test data injected and display updated!');
+                } else if (typeof iframeWindow.forceUpdateMobileDisplay === 'function') {
+                    iframeWindow.forceUpdateMobileDisplay();
+                    alert('Test data injected and display forced!');
+                } else {
+                    alert('Test data injected but no update function found. Try refreshing.');
+                }
+                
+                checkData();
+            } else {
+                alert('Could not access iframe. Make sure it has loaded.');
+            }
+        }
+        
+        // Clear all data
+        function clearAllData() {
+            if (confirm('This will clear all property data. Are you sure?')) {
+                localStorage.removeItem('properties');
+                const iframe = document.getElementById('mainFrame');
+                if (iframe.contentWindow && iframe.contentWindow.properties) {
+                    iframe.contentWindow.properties = [];
+                }
+                alert('All data cleared. Refresh to see changes.');
+                checkData();
+            }
+        }
+        
+        // Force load properties
+        function forceLoadProperties() {
+            const iframe = document.getElementById('mainFrame');
+            const iframeWindow = iframe.contentWindow;
+            
+            if (iframeWindow && typeof iframeWindow.loadProperties === 'function') {
+                iframeWindow.loadProperties().then(() => {
+                    alert('Properties loaded! Check console for details.');
+                    if (typeof iframeWindow.updateMobilePropertyCards === 'function') {
+                        iframeWindow.updateMobilePropertyCards();
+                    }
+                }).catch(err => {
+                    alert('Error loading properties: ' + err.message);
+                });
+            } else {
+                alert('loadProperties function not found in iframe');
+            }
+        }
+        
+        // Load main page
+        function loadMainPage() {
+            document.getElementById('mainFrame').src = 'index.html?' + Date.now();
+        }
+        
+        // Initial checks
+        checkEnvironment();
+        checkData();
+        
+        // Update on resize
+        window.addEventListener('resize', checkEnvironment);
+    </script>
+</body>
+</html>
