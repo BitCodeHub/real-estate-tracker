@@ -3173,17 +3173,21 @@
         // Fetch and display market statistics
         async function fetchAndDisplayMarketStats(property) {
             try {
-                console.log('📈 Fetching market stats for:', property.zip);
+                console.log('📈 Displaying market stats section for:', property.zip);
                 
                 // Add market stats section
                 const marketStatsHTML = `
                     <div class="property-section">
                         <h3><i class="fas fa-chart-line"></i> Market Statistics</h3>
-                        <div id="marketStatsLoading" style="text-align: center; padding: 20px;">
-                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--accent-primary);"></i>
-                            <p style="margin-top: 10px;">Loading market data...</p>
+                        <div id="marketStatsContent" style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                            <i class="fas fa-chart-bar" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
+                            <p>Market statistics are not loaded to minimize API usage.</p>
+                            <p style="margin-top: 10px; color: var(--text-muted);">
+                                To view current market statistics, please click the refresh icon 
+                                <i class="fas fa-sync-alt" style="color: var(--accent-primary);"></i> 
+                                on this property in the main table.
+                            </p>
                         </div>
-                        <div id="marketStatsContent" style="display: none;"></div>
                     </div>
                 `;
                 
@@ -3193,35 +3197,19 @@
                     rentalSection.insertAdjacentHTML('afterend', marketStatsHTML);
                 }
                 
-                // Fetch market stats
-                const response = await fetch(`/api/rentcast/market-stats?zipCode=${property.zip}`);
-                const data = await response.json();
+                console.log('📦 Skipping market stats API call - use refresh button to load data');
                 
-                console.log('📈 Market stats response:', data);
-                
-                if (data.success && data.data) {
-                    displayMarketStats(data.data, property);
-                } else {
-                    document.getElementById('marketStatsLoading').style.display = 'none';
-                    document.getElementById('marketStatsContent').style.display = 'block';
-                    document.getElementById('marketStatsContent').innerHTML = `
+                // IMPORTANT: API calls removed to prevent excessive usage
+                // Market stats are only fetched when user explicitly clicks refresh
+                // This follows our caching strategy to minimize RentCast API calls
+            } catch (error) {
+                console.error('Error displaying market stats section:', error);
+                const statsContent = document.getElementById('marketStatsContent');
+                if (statsContent) {
+                    statsContent.innerHTML = `
                         <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
                             <i class="fas fa-chart-bar" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
-                            <p>Market statistics unavailable for this area.</p>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Error fetching market stats:', error);
-                const statsLoading = document.getElementById('marketStatsLoading');
-                const statsContent = document.getElementById('marketStatsContent');
-                if (statsLoading && statsContent) {
-                    statsLoading.style.display = 'none';
-                    statsContent.style.display = 'block';
-                    statsContent.innerHTML = `
-                        <div style="text-align: center; padding: 20px; color: var(--accent-danger);">
-                            <i class="fas fa-exclamation-triangle" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
-                            <p>Unable to fetch market statistics.</p>
+                            <p>Unable to display market statistics section.</p>
                         </div>
                     `;
                 }
@@ -3306,100 +3294,37 @@
 
         async function fetchAndDisplayRentalListings(property) {
             try {
-                console.log('🏠 Fetching rental listings for:', property.address);
-                console.log('Property data:', {
-                    address: property.address,
-                    city: property.city,
-                    state: property.state,
-                    zip: property.zip,
-                    beds: property.beds || property.bedrooms,
-                    baths: property.baths || property.bathrooms
-                });
+                console.log('🏠 Displaying rental listings section for:', property.address);
+                // Hide loading indicator immediately
+                document.getElementById('rentalListingsLoading').style.display = 'none';
+                document.getElementById('rentalListingsContent').style.display = 'block';
                 
-                // Build query parameters
-                // Note: RentCast doesn't support radius with ZIP code search
-                const params = new URLSearchParams({
-                    zip: property.zip,
-                    limit: 50,  // Increase limit to get more listings
-                });
+                // Instead of making API calls, show a message to use the refresh button
+                document.getElementById('rentalListingsContent').innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                        <i class="fas fa-home" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
+                        <p>Rental listings data is not loaded to minimize API usage.</p>
+                        <p style="margin-top: 10px; color: var(--text-muted);">
+                            To view current rental listings, please click the refresh icon 
+                            <i class="fas fa-sync-alt" style="color: var(--accent-primary);"></i> 
+                            on this property in the main table.
+                        </p>
+                    </div>
+                `;
                 
-                // Only add bedrooms/bathrooms if they exist
-                const beds = property.beds || property.bedrooms;
-                const baths = property.baths || property.bathrooms;
+                console.log('📦 Skipping rental listings API call - use refresh button to load data');
                 
-                if (beds && beds > 0) {
-                    params.append('bedrooms', beds);
-                }
-                if (baths && baths > 0) {
-                    params.append('bathrooms', Math.floor(baths));
-                }
-                
-                console.log('🔍 Query params:', params.toString());
-                
-                const response = await fetch(`/api/rentcast/rental-listings?${params}`);
-                console.log('🎯 Response status:', response.status);
-                
-                const data = await response.json();
-                console.log('📋 Rental listings response:', data);
-                console.log('🔢 Number of listings:', data.data ? data.data.length : 0);
-                if (data.debug) {
-                    console.log('🐛 Debug info:', data.debug);
-                }
-                
-                // Log first listing to see structure
-                if (data.data && data.data.length > 0) {
-                    console.log('🏡 First listing structure:', data.data[0]);
-                }
-                
-                if (data.success && data.data && data.data.length > 0) {
-                    console.log('✅ Found listings, displaying them');
-                    displayRentalListings(data.data, property);
-                } else if (beds || baths) {
-                    // No listings found with bedroom/bathroom filters, try without them
-                    console.log('⚠️ No listings found with filters. Trying broader search...');
-                    
-                    const broadParams = new URLSearchParams({
-                        zip: property.zip,
-                        limit: 50
-                    });
-                    
-                    console.log('🔍 Broader search params:', broadParams.toString());
-                    
-                    const broadResponse = await fetch(`/api/rentcast/rental-listings?${broadParams}`);
-                    const broadData = await broadResponse.json();
-                    
-                    console.log('📋 Broader search response:', broadData);
-                    
-                    if (broadData.success && broadData.data && broadData.data.length > 0) {
-                        console.log('✅ Found listings with broader search');
-                        displayRentalListings(broadData.data, property);
-                        
-                        // Add note about broader search
-                        const noteDiv = document.createElement('div');
-                        noteDiv.style.cssText = 'padding: 10px; background: var(--bg-secondary); border: 1px solid var(--accent-warning); border-radius: 4px; margin-bottom: 10px;';
-                        noteDiv.innerHTML = `
-                            <i class="fas fa-info-circle" style="color: var(--accent-warning);"></i>
-                            <span style="color: var(--text-secondary); margin-left: 5px;">
-                                Showing all rentals in the area. No exact matches found for ${beds} bed / ${Math.floor(baths)} bath properties.
-                            </span>
-                        `;
-                        document.getElementById('rentalListingsContent').insertBefore(noteDiv, document.getElementById('rentalListingsContent').firstChild);
-                    } else {
-                        // Still no listings found
-                        showNoListingsMessage(property);
-                    }
-                } else {
-                    // No listings found
-                    showNoListingsMessage(property);
-                }
+                // IMPORTANT: API calls removed to prevent excessive usage
+                // Rental listings are only fetched when user explicitly clicks refresh
+                // This follows our caching strategy to minimize RentCast API calls
             } catch (error) {
-                console.error('Error fetching rental listings:', error);
+                console.error('Error in rental listings section:', error);
                 document.getElementById('rentalListingsLoading').style.display = 'none';
                 document.getElementById('rentalListingsContent').style.display = 'block';
                 document.getElementById('rentalListingsContent').innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: var(--accent-danger);">
-                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
-                        <p>Unable to fetch rental listings at this time.</p>
+                    <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                        <i class="fas fa-home" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
+                        <p>Unable to display rental listings section.</p>
                     </div>
                 `;
             }
