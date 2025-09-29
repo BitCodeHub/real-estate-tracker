@@ -1601,21 +1601,86 @@
                         const lines = text.split('\n').filter(line => line.trim());
                         const addresses = [];
                         
+                        // Helper function to parse CSV line (handles quotes and commas)
+                        const parseCSVLine = (line) => {
+                            const result = [];
+                            let current = '';
+                            let inQuotes = false;
+                            
+                            for (let i = 0; i < line.length; i++) {
+                                const char = line[i];
+                                
+                                if (char === '"') {
+                                    inQuotes = !inQuotes;
+                                } else if (char === ',' && !inQuotes) {
+                                    result.push(current.trim());
+                                    current = '';
+                                } else {
+                                    current += char;
+                                }
+                            }
+                            
+                            if (current) {
+                                result.push(current.trim());
+                            }
+                            
+                            return result;
+                        };
+                        
+                        // Helper function to check if a string looks like a city/state/zip
+                        const isCityStateZip = (str) => {
+                            if (!str) return false;
+                            return /[A-Za-z\s]+,?\s+[A-Z]{2}\s+\d{5}(-\d{4})?/.test(str);
+                        };
+                        
+                        // Helper function to check if a string looks like just a street address
+                        const isStreetOnly = (str) => {
+                            if (!str) return false;
+                            return /^\d+\s+[A-Za-z\s]+$/.test(str) && !/[A-Z]{2}\s+\d{5}/.test(str);
+                        };
+                        
                         // Skip header if it exists
                         const startIndex = lines[0].toLowerCase().includes('address') ? 1 : 0;
                         
                         for (let i = startIndex; i < lines.length; i++) {
                             const line = lines[i].trim();
-                            if (line) {
-                                // Handle quoted values
-                                const address = line.replace(/^"|"$/g, '').trim();
-                                if (address) {
-                                    addresses.push(address);
+                            if (!line) continue;
+                            
+                            // Parse CSV line into fields
+                            const fields = parseCSVLine(line);
+                            
+                            // Process fields to find addresses
+                            for (let j = 0; j < fields.length; j++) {
+                                const field = fields[j];
+                                if (!field) continue;
+                                
+                                // Check if this looks like a street address only
+                                if (isStreetOnly(field)) {
+                                    // Look for city/state/zip in the next field
+                                    const nextField = fields[j + 1];
+                                    if (nextField && isCityStateZip(nextField)) {
+                                        // Combine street + city/state/zip
+                                        addresses.push(`${field}, ${nextField}`);
+                                        j++; // Skip the next field since we used it
+                                        continue;
+                                    }
+                                }
+                                
+                                // Check if this is a complete address
+                                if (field.match(/\d+\s+[A-Za-z]/) || isCityStateZip(field)) {
+                                    // Only add if it's not just a city/state/zip without street
+                                    if (!isCityStateZip(field) || field.match(/^\d+/)) {
+                                        addresses.push(field);
+                                    }
                                 }
                             }
                         }
                         
-                        resolve(addresses);
+                        // Remove duplicates
+                        const uniqueAddresses = [...new Set(addresses)];
+                        
+                        console.log('Parsed addresses from CSV:', uniqueAddresses);
+                        resolve(uniqueAddresses);
                     } catch (error) {
                         reject(error);
                     }
@@ -1638,40 +1703,65 @@
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         
-                        // Convert to JSON
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        // Convert to JSON - get all data
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
                         
                         const addresses = [];
                         
-                        // Find address column
-                        let addressColumnIndex = 0;
-                        if (jsonData.length > 0) {
-                            const header = jsonData[0];
-                            if (Array.isArray(header)) {
-                                const addressIndex = header.findIndex(col => 
-                                    col && col.toString().toLowerCase().includes('address')
-                                );
-                                if (addressIndex !== -1) {
-                                    addressColumnIndex = addressIndex;
-                                }
-                            }
-                        }
+                        // Helper function to check if a string looks like a city/state/zip
+                        const isCityStateZip = (str) => {
+                            if (!str) return false;
+                            // Check for patterns like "Las Vegas, NV 89169" or "Las Vegas NV 89169-2575"
+                            return /[A-Za-z\s]+,?\s+[A-Z]{2}\s+\d{5}(-\d{4})?/.test(str);
+                        };
                         
-                        // Extract addresses
-                        const startIndex = jsonData[0] && jsonData[0][addressColumnIndex] && 
-                                          jsonData[0][addressColumnIndex].toString().toLowerCase().includes('address') ? 1 : 0;
+                        // Helper function to check if a string looks like just a street address
+                        const isStreetOnly = (str) => {
+                            if (!str) return false;
+                            // Has numbers and street name but no state abbreviation or zip
+                            return /^\d+\s+[A-Za-z\s]+$/.test(str) && !/[A-Z]{2}\s+\d{5}/.test(str);
+                        };
                         
-                        for (let i = startIndex; i < jsonData.length; i++) {
+                        // Process all rows
+                        for (let i = 0; i < jsonData.length; i++) {
                             const row = jsonData[i];
-                            if (row && row[addressColumnIndex]) {
-                                const address = row[addressColumnIndex].toString().trim();
-                                if (address) {
-                                    addresses.push(address);
+                            if (!row || row.length === 0) continue;
+                            
+                            // Process each cell in the row
+                            for (let j = 0; j < row.length; j++) {
+                                const cellValue = row[j] ? row[j].toString().trim() : '';
+                                if (!cellValue) continue;
+                                
+                                // Skip headers
+                                if (i === 0 && cellValue.toLowerCase().includes('address')) continue;
+                                
+                                // Check if this looks like a street address only
+                                if (isStreetOnly(cellValue)) {
+                                    // Look for city/state/zip in the next cell
+                                    const nextCellValue = row[j + 1] ? row[j + 1].toString().trim() : '';
+                                    if (isCityStateZip(nextCellValue)) {
+                                        // Combine street + city/state/zip
+                                        addresses.push(`${cellValue}, ${nextCellValue}`);
+                                        j++; // Skip the next cell since we used it
+                                        continue;
+                                    }
+                                }
+                                
+                                // Check if this is a complete address or city/state/zip
+                                if (cellValue.match(/\d+\s+[A-Za-z]/) || isCityStateZip(cellValue)) {
+                                    // Only add if it's not just a city/state/zip without street
+                                    if (!isCityStateZip(cellValue) || cellValue.match(/^\d+/)) {
+                                        addresses.push(cellValue);
+                                    }
                                 }
                             }
                         }
                         
-                        resolve(addresses);
+                        // Remove duplicates
+                        const uniqueAddresses = [...new Set(addresses)];
+                        
+                        console.log('Parsed addresses from Excel:', uniqueAddresses);
+                        resolve(uniqueAddresses);
                     } catch (error) {
                         reject(error);
                     }
