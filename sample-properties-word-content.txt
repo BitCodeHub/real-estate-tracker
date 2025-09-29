@@ -1,0 +1,24 @@
+Property List for Import
+
+Here are the properties to import:
+
+2312 Beverly Way
+Las Vegas, NV 89104-2760
+
+1615 Palora Avenue
+Las Vegas, NV 89169-2575
+
+2313 Van Patten Place, Las Vegas, NV 89104-2757
+
+4567 Sunset Boulevard
+Henderson, NV 89014
+
+7890 Rainbow Drive, North Las Vegas, NV 89031
+
+Additional properties:
+Address: 1234 Charleston Blvd, Las Vegas, NV 89102-1234
+Property: 5678 Desert Inn Road, Las Vegas, NV 89109
+
+Property addresses in table format:
+Location: 9876 Sahara Avenue, Las Vegas, NV 89117
+Address: 3456 Spring Mountain Rd, Las Vegas, NV 89102

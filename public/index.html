@@ -996,6 +996,8 @@
     </style>
     <!-- XLSX library for Excel file parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Mammoth.js library for Word document parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
 <body>
     <div class="header">
@@ -1133,14 +1135,14 @@
                     
                     <!-- Bulk Import Section -->
                     <div class="form-group" style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <label style="font-weight: 600; color: var(--accent-primary);">Bulk Import: Upload Excel/CSV File</label>
-                        <input type="file" id="bulkImportFile" accept=".csv,.xlsx,.xls" 
+                        <label style="font-weight: 600; color: var(--accent-primary);">Bulk Import: Upload Excel/CSV/Word File</label>
+                        <input type="file" id="bulkImportFile" accept=".csv,.xlsx,.xls,.docx,.doc" 
                                style="display: none;" onchange="handleFileUpload(event)">
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('bulkImportFile').click()" style="width: 100%; margin-top: 10px;">
-                            <i class="fas fa-file-upload"></i> Choose Excel/CSV File
+                            <i class="fas fa-file-upload"></i> Choose Excel/CSV/Word File
                         </button>
                         <small style="color: var(--text-muted); display: block; margin-top: 10px;">
-                            <i class="fas fa-info-circle"></i> Upload a file with property addresses. Supported formats: CSV, Excel (.xlsx, .xls)
+                            <i class="fas fa-info-circle"></i> Upload a file with property addresses. Supported formats: CSV, Excel (.xlsx, .xls), Word (.docx)
                         </small>
                         <div id="fileUploadStatus" style="margin-top: 10px; display: none;">
                             <div class="loading"></div>
@@ -1567,8 +1569,10 @@
                     addresses = await parseCSVFile(file);
                 } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
                     addresses = await parseExcelFile(file);
+                } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+                    addresses = await parseWordFile(file);
                 } else {
-                    throw new Error('Unsupported file format. Please use CSV or Excel files.');
+                    throw new Error('Unsupported file format. Please use CSV, Excel, or Word files.');
                 }
 
                 if (addresses.length === 0) {
@@ -1582,16 +1586,17 @@
                 showImportPreview(addresses);
                 
                 // If we found incomplete addresses, show a warning
-                if (addresses.length === 0 && file.name.endsWith('.xlsx')) {
+                if (addresses.length === 0 && (file.name.endsWith('.xlsx') || file.name.endsWith('.docx'))) {
+                    const fileType = file.name.endsWith('.xlsx') ? 'Excel' : 'Word';
                     const warningDiv = document.createElement('div');
                     warningDiv.style.cssText = 'background: var(--accent-warning); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;';
                     warningDiv.innerHTML = `
-                        <h4 style="margin-bottom: 10px;">⚠️ Could not parse addresses from Excel file</h4>
-                        <p style="margin-bottom: 10px;">Make sure your Excel file has complete addresses in one of these formats:</p>
+                        <h4 style="margin-bottom: 10px;">⚠️ Could not parse addresses from ${fileType} file</h4>
+                        <p style="margin-bottom: 10px;">Make sure your ${fileType} file has complete addresses in one of these formats:</p>
                         <ul style="margin-left: 20px;">
-                            <li>Single cell: "123 Main St, Las Vegas, NV 89101"</li>
-                            <li>Two cells: "123 Main St" | "Las Vegas, NV 89101"</li>
-                            <li>Three cells: "123 Main St" | "Las Vegas" | "NV 89101"</li>
+                            <li>Single line: "123 Main St, Las Vegas, NV 89101"</li>
+                            <li>Two lines: "123 Main St" (next line) "Las Vegas, NV 89101"</li>
+                            ${fileType === 'Excel' ? '<li>Two cells: "123 Main St" | "Las Vegas, NV 89101"</li>' : ''}
                         </ul>
                         <p style="margin-top: 10px;">Check the browser console for detailed parsing information.</p>
                     `;
@@ -1888,6 +1893,101 @@
                         resolve(uniqueAddresses);
                     } catch (error) {
                         console.error('Excel parsing error:', error);
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Parse Word document file
+        async function parseWordFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const arrayBuffer = e.target.result;
+                        
+                        // Use mammoth to extract text from the Word document
+                        mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                            .then(function(result) {
+                                const text = result.value;
+                                console.log('Extracted text from Word document:', text);
+                                
+                                // Parse addresses from the extracted text
+                                const addresses = [];
+                                
+                                // Split text by newlines
+                                const lines = text.split(/\r?\n/).filter(line => line.trim());
+                                
+                                console.log('Parsing', lines.length, 'lines from Word document');
+                                
+                                let i = 0;
+                                while (i < lines.length) {
+                                    const line = lines[i].trim();
+                                    
+                                    if (!line) {
+                                        i++;
+                                        continue;
+                                    }
+                                    
+                                    console.log(`Line ${i}: "${line}"`);
+                                    
+                                    // Check if it's a complete address
+                                    if (line.match(/,.*[A-Z]{2}\s+\d{5}/) || line.match(/\d{5}(?:-\d{4})?$/)) {
+                                        // Looks like a complete address
+                                        addresses.push(line);
+                                        console.log('  -> Complete address found');
+                                    } else {
+                                        // Might be a street address, check next line for city/state/zip
+                                        const streetPattern = /^\d+\s+[A-Za-z\s]+$/;
+                                        const cityStateZipPattern = /[A-Za-z\s]+,?\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?/;
+                                        
+                                        if (streetPattern.test(line) && i + 1 < lines.length) {
+                                            const nextLine = lines[i + 1].trim();
+                                            console.log(`  Checking next line: "${nextLine}"`);
+                                            
+                                            if (cityStateZipPattern.test(nextLine)) {
+                                                // Combine the two lines
+                                                const fullAddress = `${line}, ${nextLine}`;
+                                                addresses.push(fullAddress);
+                                                console.log('  -> Combined address:', fullAddress);
+                                                i++; // Skip the next line since we used it
+                                            }
+                                        }
+                                    }
+                                    
+                                    i++;
+                                }
+                                
+                                // Also try to find addresses in table format (common in Word docs)
+                                // Look for patterns like "Address" followed by actual addresses
+                                const tablePattern = /(?:address|property|location)[\s:]*([^\n]+)/gi;
+                                let match;
+                                while ((match = tablePattern.exec(text)) !== null) {
+                                    const potentialAddress = match[1].trim();
+                                    // Validate it looks like an address
+                                    if (potentialAddress.match(/\d+.*[A-Z]{2}\s+\d{5}/) && 
+                                        !addresses.includes(potentialAddress)) {
+                                        addresses.push(potentialAddress);
+                                        console.log('Found address in table format:', potentialAddress);
+                                    }
+                                }
+                                
+                                // Remove duplicates
+                                const uniqueAddresses = [...new Set(addresses)];
+                                
+                                console.log('Final parsed addresses from Word:', uniqueAddresses);
+                                resolve(uniqueAddresses);
+                            })
+                            .catch(function(err) {
+                                console.error('Mammoth parsing error:', err);
+                                reject(new Error('Failed to parse Word document: ' + err.message));
+                            });
+                            
+                    } catch (error) {
+                        console.error('Word parsing error:', error);
                         reject(error);
                     }
                 };
