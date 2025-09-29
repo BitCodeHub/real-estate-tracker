@@ -2080,7 +2080,7 @@
                         beds: null,
                         baths: null,
                         sqft: null,
-                        dateAdded: new Date().toISOString(),
+                        // Don't include dateAdded - let database handle created_at
                         status: 'available',
                         // Mark as not having RentCast data yet
                         rentcastCache: null,
@@ -2588,6 +2588,81 @@
             updateDisplay();
         }
 
+        // Sanitize property data for database - remove invalid fields and map field names
+        function sanitizePropertyForDatabase(property) {
+            // Define valid database fields (based on schema.sql)
+            const validFields = [
+                'address', 'city', 'state', 'zip', 'purchase_price', 'monthly_rent',
+                'hoa', 'property_tax', 'insurance', 'management_fees', 'repairs',
+                'vacancy', 'capex', 'mortgage', 'coc_return', 'rent_to_value', 'cap_rate',
+                'crime_score', 'flood_risk', 'market_risk', 'bedrooms', 'bathrooms',
+                'square_footage', 'year_built', 'lot_size', 'property_type', 'county',
+                'rent_estimate', 'value_estimate', 'status', 'notes', 'last_updated',
+                'data_source', 'rentcast_data'
+            ];
+
+            // Field mapping from frontend names to database column names
+            const fieldMapping = {
+                'beds': 'bedrooms',
+                'baths': 'bathrooms', 
+                'sqft': 'square_footage',
+                'yearBuilt': 'year_built',
+                'purchasePrice': 'purchase_price',
+                'monthlyRent': 'monthly_rent',
+                'propertyTax': 'property_tax',
+                'managementFees': 'management_fees',
+                'cashFlow': null, // This is a calculated field, don't send it
+                'cocReturn': 'coc_return',
+                'rentToValue': 'rent_to_value',
+                'capRate': 'cap_rate',
+                'crimeScore': 'crime_score',
+                'floodRisk': 'flood_risk',
+                'marketRisk': 'market_risk',
+                'squareFootage': 'square_footage',
+                'propertyType': 'property_type',
+                'rentEstimate': 'rent_estimate',
+                'valueEstimate': 'value_estimate',
+                'estimatedValue': 'value_estimate',
+                'currentValue': 'value_estimate',
+                'lastUpdated': 'last_updated',
+                'dataSource': 'data_source',
+                'lastRentCastUpdate': 'last_updated',
+                // Remove invalid fields that don't exist in database
+                'dateAdded': null,
+                'date_added': null,
+                'owner': null,
+                'monthly_cash_flow': null,
+                'needsRentCastData': null,
+                'rentcastCache': null,
+                'realTimeData': null,
+                '_isTemporary': null,
+                'created_at': null, // Don't send this, let database handle it
+                'updated_at': null  // Don't send this, let database handle it
+            };
+
+            const cleanProperty = {};
+
+            // Process each field in the property
+            Object.keys(property).forEach(key => {
+                if (fieldMapping.hasOwnProperty(key)) {
+                    // Field has a mapping
+                    const mappedKey = fieldMapping[key];
+                    if (mappedKey) {
+                        // Valid mapped field
+                        cleanProperty[mappedKey] = property[key];
+                    }
+                    // If mappedKey is null, skip this field (it's invalid)
+                } else if (validFields.includes(key)) {
+                    // Field is already in correct database format
+                    cleanProperty[key] = property[key];
+                }
+                // Skip unknown fields that aren't in mapping or valid fields
+            });
+
+            console.log(`🧹 Sanitized property fields: ${Object.keys(cleanProperty).length} valid fields`);
+            return cleanProperty;
+        }
+
         // Save properties
         async function saveProperties() {
             // Always save to localStorage
@@ -2621,31 +2696,8 @@
                             `🔄 Re-creating temporary property in database: ${property.address} (old ID: ${property.id})` : 
                             `Creating new property in database: ${property.address}`);
                         
-                        // Clean up temporary fields and prepare for database creation
-                        const { id, _isTemporary, ...cleanProperty } = property;
-                        
-                        // Ensure we send all required fields with both naming conventions
-                        const propertyToCreate = {
-                            ...cleanProperty,
-                            // Include both camelCase and snake_case versions
-                            purchasePrice: property.purchasePrice || property.purchase_price || 0,
-                            monthlyRent: property.monthlyRent || property.monthly_rent || 0,
-                            propertyTax: property.propertyTax || property.property_tax || 0,
-                            managementFees: property.managementFees || property.management_fees || 0,
-                            cashFlow: property.cashFlow || property.cash_flow || 0,
-                            cocReturn: property.cocReturn || property.coc_return || 0,
-                            rentToValue: property.rentToValue || property.rent_to_value || 0,
-                            capRate: property.capRate || property.cap_rate || 0,
-                            // Also include snake_case versions for database
-                            purchase_price: property.purchasePrice || property.purchase_price || 0,
-                            monthly_rent: property.monthlyRent || property.monthly_rent || 0,
-                            property_tax: property.propertyTax || property.property_tax || 0,
-                            management_fees: property.managementFees || property.management_fees || 0,
-                            cash_flow: property.cashFlow || property.cash_flow || 0,
-                            coc_return: property.cocReturn || property.coc_return || 0,
-                            rent_to_value: property.rentToValue || property.rent_to_value || 0,
-                            cap_rate: property.capRate || property.cap_rate || 0
-                        };
+                        // Clean property data and map field names properly
+                        const propertyToCreate = sanitizePropertyForDatabase(property);
                         
                         console.log('📦 Data being sent to server:', {
                             address: propertyToCreate.address,
@@ -2741,16 +2793,8 @@
                             });
                         }
                         
-                        // Ensure we send all necessary fields with proper names
-                        const propertyToSave = {
-                            ...property,
-                            // Ensure both field name variants are included
-                            bedrooms: property.beds || property.bedrooms,
-                            bathrooms: property.baths || property.bathrooms,
-                            square_footage: property.sqft || property.square_footage,
-                            value_estimate: property.estimatedValue || property.value_estimate || property.currentValue,
-                            rent_estimate: property.rentEstimate || property.rent_estimate
-                        };
+                        // Clean property data and map field names properly
+                        const propertyToSave = sanitizePropertyForDatabase(property);
                         
                         const response = await fetch(`/api/properties/${property.id}`, {
                             method: 'PUT',
