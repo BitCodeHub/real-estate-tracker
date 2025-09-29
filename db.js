@@ -139,7 +139,7 @@ const db = {
     async checkPropertyExists(address, city, state, zip) {
         try {
             const result = await pool.query(
-                'SELECT id, address, city, state, zip, status FROM properties WHERE LOWER(address) = LOWER($1) AND LOWER(city) = LOWER($2) AND LOWER(state) = LOWER($3)',
+                'SELECT * FROM properties WHERE LOWER(address) = LOWER($1) AND LOWER(city) = LOWER($2) AND LOWER(state) = LOWER($3)',
                 [address, city, state]
             );
             return result.rows.length > 0 ? result.rows[0] : null;

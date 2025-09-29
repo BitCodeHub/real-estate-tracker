@@ -487,41 +487,7 @@ app.get('/api/properties', async (req, res) => {
     }
 });
 
-// Get single property
-app.get('/api/properties/:id', async (req, res) => {
-    try {
-        const property = await db.getPropertyById(req.params.id);
-        if (!property) {
-            return res.status(404).json({ success: false, error: 'Property not found' });
-        }
-        
-        // Map database fields and merge rentcast_data JSONB fields
-        const mappedProp = {
-            ...property,
-            // Map snake_case database columns to camelCase
-            beds: property.bedrooms || 0,
-            baths: property.bathrooms || 0,
-            sqft: property.square_footage || 0,
-            yearBuilt: property.year_built || property.yearBuilt,
-            monthlyRent: property.monthly_rent || property.monthlyRent || 0,
-            rentEstimate: property.rent_estimate || property.rentEstimate || 0,
-            estimatedValue: property.value_estimate || property.estimatedValue || 0,
-            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0
-        };
-        
-        if (property.rentcast_data && typeof property.rentcast_data === 'object') {
-            const { rentcast_data, ...mainProps } = mappedProp;
-            res.json({ success: true, data: { ...mainProps, ...rentcast_data } });
-        } else {
-            res.json({ success: true, data: mappedProp });
-        }
-    } catch (error) {
-        console.error('Error fetching property:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Search for property by address
+// Search for property by address (MUST be before :id route)
 app.get('/api/properties/search', async (req, res) => {
     try {
         const { address, city, state } = req.query;
@@ -578,6 +544,40 @@ app.get('/api/properties/search', async (req, res) => {
         
     } catch (error) {
         console.error('Error searching for property:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get single property (MUST be after /search route)
+app.get('/api/properties/:id', async (req, res) => {
+    try {
+        const property = await db.getPropertyById(req.params.id);
+        if (!property) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+        
+        // Map database fields and merge rentcast_data JSONB fields
+        const mappedProp = {
+            ...property,
+            // Map snake_case database columns to camelCase
+            beds: property.bedrooms || 0,
+            baths: property.bathrooms || 0,
+            sqft: property.square_footage || 0,
+            yearBuilt: property.year_built || property.yearBuilt,
+            monthlyRent: property.monthly_rent || property.monthlyRent || 0,
+            rentEstimate: property.rent_estimate || property.rentEstimate || 0,
+            estimatedValue: property.value_estimate || property.estimatedValue || 0,
+            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0
+        };
+        
+        if (property.rentcast_data && typeof property.rentcast_data === 'object') {
+            const { rentcast_data, ...mainProps } = mappedProp;
+            res.json({ success: true, data: { ...mainProps, ...rentcast_data } });
+        } else {
+            res.json({ success: true, data: mappedProp });
+        }
+    } catch (error) {
+        console.error('Error fetching property:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
