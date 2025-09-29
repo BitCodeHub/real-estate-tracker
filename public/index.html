@@ -1581,6 +1581,24 @@
                 // Show preview
                 showImportPreview(addresses);
                 
+                // If we found incomplete addresses, show a warning
+                if (addresses.length === 0 && file.name.endsWith('.xlsx')) {
+                    const warningDiv = document.createElement('div');
+                    warningDiv.style.cssText = 'background: var(--accent-warning); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;';
+                    warningDiv.innerHTML = `
+                        <h4 style="margin-bottom: 10px;">⚠️ Could not parse addresses from Excel file</h4>
+                        <p style="margin-bottom: 10px;">Make sure your Excel file has complete addresses in one of these formats:</p>
+                        <ul style="margin-left: 20px;">
+                            <li>Single cell: "123 Main St, Las Vegas, NV 89101"</li>
+                            <li>Two cells: "123 Main St" | "Las Vegas, NV 89101"</li>
+                            <li>Three cells: "123 Main St" | "Las Vegas" | "NV 89101"</li>
+                        </ul>
+                        <p style="margin-top: 10px;">Check the browser console for detailed parsing information.</p>
+                    `;
+                    document.getElementById('importPreview').insertBefore(warningDiv, document.getElementById('importPreview').firstChild);
+                    document.getElementById('importPreview').style.display = 'block';
+                }
+                
             } catch (error) {
                 console.error('Error processing file:', error);
                 showNotification(`Error: ${error.message}`, 'error');
@@ -1706,52 +1724,158 @@
                         // Convert to JSON - get all data
                         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
                         
-                        const addresses = [];
+                        console.log('Excel raw data:', jsonData); // Debug log
                         
-                        // Helper function to check if a string looks like a city/state/zip
-                        const isCityStateZip = (str) => {
+                        const addresses = [];
+                        const processedRows = new Set(); // Track which rows we've processed
+                        
+                        // Helper function to check if a string contains city/state/zip components
+                        const hasCityStateZip = (str) => {
                             if (!str) return false;
-                            // Check for patterns like "Las Vegas, NV 89169" or "Las Vegas NV 89169-2575"
-                            return /[A-Za-z\s]+,?\s+[A-Z]{2}\s+\d{5}(-\d{4})?/.test(str);
+                            // More flexible patterns - check for various formats
+                            const patterns = [
+                                /[A-Za-z\s]+,\s*[A-Za-z]{2}\s+\d{5}/i,  // "Las Vegas, NV 89101"
+                                /[A-Za-z\s]+\s+[A-Za-z]{2}\s+\d{5}/i,   // "Las Vegas NV 89101"
+                                /^[A-Za-z]{2}\s+\d{5}(-\d{4})?$/i,      // "NV 89101" or "NV 89101-1234"
+                                /\d{5}(-\d{4})?$/                        // Just zip at end
+                            ];
+                            
+                            for (const pattern of patterns) {
+                                if (pattern.test(str)) {
+                                    console.log(`    Pattern matched for "${str}": ${pattern}`);
+                                    return true;
+                                }
+                            }
+                            return false;
                         };
                         
                         // Helper function to check if a string looks like just a street address
-                        const isStreetOnly = (str) => {
+                        const isStreetAddress = (str) => {
                             if (!str) return false;
-                            // Has numbers and street name but no state abbreviation or zip
-                            return /^\d+\s+[A-Za-z\s]+$/.test(str) && !/[A-Z]{2}\s+\d{5}/.test(str);
+                            // Has numbers at start followed by text
+                            return /^\d+\s+[A-Za-z]/.test(str);
                         };
                         
-                        // Process all rows
+                        // Process each row looking for address patterns
                         for (let i = 0; i < jsonData.length; i++) {
+                            if (processedRows.has(i)) continue;
+                            
                             const row = jsonData[i];
                             if (!row || row.length === 0) continue;
                             
-                            // Process each cell in the row
+                            // Debug log
+                            console.log(`Row ${i}:`, row);
+                            
+                            // Skip header rows
+                            if (i === 0) {
+                                const hasHeader = row.some(cell => 
+                                    cell && cell.toString().toLowerCase().match(/address|street|city|state|zip/)
+                                );
+                                if (hasHeader) {
+                                    console.log('Skipping header row');
+                                    continue;
+                                }
+                            }
+                            
+                            // Strategy 1: Look for street address + city/state/zip in adjacent cells
                             for (let j = 0; j < row.length; j++) {
                                 const cellValue = row[j] ? row[j].toString().trim() : '';
                                 if (!cellValue) continue;
                                 
-                                // Skip headers
-                                if (i === 0 && cellValue.toLowerCase().includes('address')) continue;
-                                
-                                // Check if this looks like a street address only
-                                if (isStreetOnly(cellValue)) {
-                                    // Look for city/state/zip in the next cell
-                                    const nextCellValue = row[j + 1] ? row[j + 1].toString().trim() : '';
-                                    if (isCityStateZip(nextCellValue)) {
-                                        // Combine street + city/state/zip
-                                        addresses.push(`${cellValue}, ${nextCellValue}`);
-                                        j++; // Skip the next cell since we used it
-                                        continue;
+                                if (isStreetAddress(cellValue)) {
+                                    // Found a street address, now look for city/state/zip
+                                    let cityStateZip = '';
+                                    
+                                    // Check next cells in the same row
+                                    for (let k = j + 1; k < row.length && k <= j + 3; k++) {
+                                        const nextCell = row[k] ? row[k].toString().trim() : '';
+                                        if (!nextCell) continue;
+                                        
+                                        console.log(`  Checking cell ${k}: "${nextCell}"`);
+                                        
+                                        // Check if this cell has city/state/zip
+                                        if (hasCityStateZip(nextCell)) {
+                                            cityStateZip = nextCell;
+                                            console.log('  -> Found city/state/zip!');
+                                            break;
+                                        }
+                                        
+                                        // Also check if it's just a city name, and combine with next cells
+                                        if (/^[A-Za-z\s]+$/.test(nextCell) && !nextCell.match(/\d/) && k + 1 < row.length) {
+                                            // Might be just city name, check next cell for state/zip
+                                            const possibleStateZip = row[k + 1] ? row[k + 1].toString().trim() : '';
+                                            console.log(`    Checking if "${nextCell}" is city and "${possibleStateZip}" is state/zip`);
+                                            
+                                            if (possibleStateZip && /[A-Z]{2}\s*\d{5}/.test(possibleStateZip)) {
+                                                cityStateZip = `${nextCell}, ${possibleStateZip}`;
+                                                console.log('  -> Found city + state/zip in separate cells!');
+                                                break;
+                                            }
+                                        }
                                     }
-                                }
-                                
-                                // Check if this is a complete address or city/state/zip
-                                if (cellValue.match(/\d+\s+[A-Za-z]/) || isCityStateZip(cellValue)) {
-                                    // Only add if it's not just a city/state/zip without street
-                                    if (!isCityStateZip(cellValue) || cellValue.match(/^\d+/)) {
-                                        addresses.push(cellValue);
+                                    
+                                    // If not found in same row, check the next row (some formats have city/state/zip below)
+                                    if (!cityStateZip && i + 1 < jsonData.length) {
+                                        const nextRow = jsonData[i + 1];
+                                        if (nextRow) {
+                                            console.log(`  Checking next row (${i + 1}):`, nextRow);
+                                            
+                                            // First check the same column index in the next row
+                                            const sameCellBelow = nextRow[j] ? nextRow[j].toString().trim() : '';
+                                            if (sameCellBelow && hasCityStateZip(sameCellBelow)) {
+                                                cityStateZip = sameCellBelow;
+                                                processedRows.add(i + 1); // Mark next row as processed
+                                                console.log(`  -> Found city/state/zip in same column below: "${cityStateZip}"`);
+                                            } else {
+                                                // Check all cells in next row
+                                                for (let k = 0; k < nextRow.length; k++) {
+                                                    const nextRowCell = nextRow[k] ? nextRow[k].toString().trim() : '';
+                                                    if (nextRowCell && hasCityStateZip(nextRowCell)) {
+                                                        cityStateZip = nextRowCell;
+                                                        processedRows.add(i + 1); // Mark next row as processed
+                                                        console.log(`  -> Found city/state/zip in next row: "${cityStateZip}"`);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (cityStateZip) {
+                                        const fullAddress = `${cellValue}, ${cityStateZip}`;
+                                        addresses.push(fullAddress);
+                                        console.log('Found complete address:', fullAddress);
+                                        break; // Move to next row
+                                    } else {
+                                        // Don't add incomplete addresses - log warning instead
+                                        console.warn(`Incomplete address found (missing city/state/zip): "${cellValue}"`);
+                                        console.log('Looking in next few cells/rows for city/state/zip...');
+                                        
+                                        // One more attempt: check if any cell in this row or next has just a city name
+                                        let foundCity = false;
+                                        for (let k = 0; k < row.length; k++) {
+                                            const cell = row[k] ? row[k].toString().trim() : '';
+                                            // Check for common city names
+                                            if (cell && /^(Las Vegas|Henderson|North Las Vegas|Los Angeles|Phoenix)$/i.test(cell)) {
+                                                // Found a city, now find state/zip
+                                                for (let m = 0; m < row.length; m++) {
+                                                    const stateZipCell = row[m] ? row[m].toString().trim() : '';
+                                                    if (stateZipCell && /^[A-Z]{2}\s+\d{5}/.test(stateZipCell)) {
+                                                        const fullAddress = `${cellValue}, ${cell}, ${stateZipCell}`;
+                                                        addresses.push(fullAddress);
+                                                        console.log('Found complete address with separate city:', fullAddress);
+                                                        foundCity = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (foundCity) break;
+                                            }
+                                        }
+                                        
+                                        if (!foundCity) {
+                                            console.error(`Skipping incomplete address: "${cellValue}" - no city/state/zip found`);
+                                        }
+                                        break;
                                     }
                                 }
                             }
@@ -1760,9 +1884,10 @@
                         // Remove duplicates
                         const uniqueAddresses = [...new Set(addresses)];
                         
-                        console.log('Parsed addresses from Excel:', uniqueAddresses);
+                        console.log('Final parsed addresses:', uniqueAddresses);
                         resolve(uniqueAddresses);
                     } catch (error) {
+                        console.error('Excel parsing error:', error);
                         reject(error);
                     }
                 };
@@ -1821,7 +1946,15 @@
                     const parsedAddress = parseAddressComponents(address);
                     
                     if (!parsedAddress || !parsedAddress.address || !parsedAddress.city || !parsedAddress.state || !parsedAddress.zip) {
-                        throw new Error('Invalid address format');
+                        const missing = [];
+                        if (!parsedAddress) {
+                            throw new Error('Could not parse address');
+                        }
+                        if (!parsedAddress.address) missing.push('street');
+                        if (!parsedAddress.city) missing.push('city');
+                        if (!parsedAddress.state) missing.push('state');
+                        if (!parsedAddress.zip) missing.push('ZIP');
+                        throw new Error(`Missing: ${missing.join(', ')}`);
                     }
                     
                     // Create property object
