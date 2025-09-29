@@ -2033,14 +2033,16 @@
             let successCount = 0;
             let failCount = 0;
             const failedAddresses = [];
+            const propertiesToCreate = [];
 
+            // First, parse all addresses and create property objects
             for (let i = 0; i < pendingBulkImportProperties.length; i++) {
                 const address = pendingBulkImportProperties[i];
                 
                 try {
                     // Update progress
                     document.querySelector('#fileUploadStatus p').textContent = 
-                        `Importing property ${i + 1} of ${pendingBulkImportProperties.length}...`;
+                        `Parsing property ${i + 1} of ${pendingBulkImportProperties.length}...`;
                     
                     // Parse address
                     const parsedAddress = parseAddressComponents(address);
@@ -2073,29 +2075,42 @@
                         status: 'available',
                         // Mark as not having RentCast data yet
                         rentcastCache: null,
-                        needsRentCastData: true
+                        needsRentCastData: true,
+                        realTimeData: false
                     };
                     
                     // Skip RentCast API calls during bulk import to minimize API usage
-                    // Users can refresh individual properties later if needed
                     console.log(`Property ${i + 1}: Skipping RentCast API call for bulk import`);
                     
                     // Calculate metrics
                     calculatePropertyMetrics(property);
                     
-                    // Add property
-                    properties.push(property);
-                    successCount++;
+                    // Add to list to create
+                    propertiesToCreate.push(property);
                     
                 } catch (error) {
-                    console.error(`Error importing property "${address}":`, error);
+                    console.error(`Error parsing property "${address}":`, error);
                     failCount++;
                     failedAddresses.push(address);
                 }
             }
             
-            // Save all properties
-            await saveProperties();
+            // Now create all properties in the database
+            document.querySelector('#fileUploadStatus p').textContent = `Saving ${propertiesToCreate.length} properties to database...`;
+            
+            // Add all properties to the array first
+            for (const property of propertiesToCreate) {
+                properties.push(property);
+            }
+            
+            // Save all properties - this will create them in the database and assign IDs
+            const saveResult = await saveProperties();
+            console.log('💾 Bulk import save result:', saveResult);
+            
+            // Count successes based on properties that got IDs
+            successCount = properties.filter(p => p.id).length;
+            
+            // Update display
             updateDisplay();
             
             // Hide loading
@@ -2990,12 +3005,40 @@
                         hasMarketStats: !!property.marketStats
                     });
                     
-                    // Save and update display
+                    // IMPORTANT: Force save to database with updated RentCast data
+                    console.log('💾 Saving RentCast data to database for property:', property.id || 'No ID');
+                    
+                    // If property doesn't have an ID, we need to handle it specially
+                    if (!property.id) {
+                        console.warn('⚠️ Property has no database ID, attempting to create it first');
+                        
+                        // Try to create the property in the database first
+                        try {
+                            const response = await fetch('/api/properties', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(property)
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data.success && data.data && data.data.id) {
+                                    // Update property with database ID
+                                    property.id = data.data.id;
+                                    console.log('✅ Property created in database with ID:', property.id);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('❌ Failed to create property in database:', error);
+                        }
+                    }
+                    
+                    // Save all properties (this will update the database)
                     await saveProperties();
                     updateDisplay();
                     
-                    // Success - data refreshed silently without interrupting the user
-                    console.log('✅ Property data refreshed successfully');
+                    // Success - data refreshed and saved
+                    console.log('✅ Property data refreshed and saved successfully');
                     
                 } else {
                     console.warn('⚠️ No RentCast data returned:', rentcastData);
