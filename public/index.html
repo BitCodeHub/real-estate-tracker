@@ -4626,5 +4626,170 @@ Format your response in clear sections with bullet points where appropriate. Be 
             analyzeNewProperty: typeof window.analyzeNewProperty
         });
     </script>
+    
+    <!-- EMERGENCY FIX: Ensure modal functions are available -->
+    <script>
+        console.log('🚨 EMERGENCY FIX: Redefining modal functions...');
+        
+        // Helper function to safely get element
+        function safeGetElement(id) {
+            const element = document.getElementById(id);
+            if (!element) {
+                console.error(`❌ Element not found: ${id}`);
+            }
+            return element;
+        }
+        
+        // Redefine openModal function
+        window.openModal = function(modalId) {
+            console.log(`🔧 EMERGENCY openModal called with: ${modalId}`);
+            try {
+                const modal = safeGetElement(modalId);
+                if (modal) {
+                    modal.style.display = 'block';
+                    console.log(`✅ Modal opened: ${modalId}`);
+                } else {
+                    console.error(`❌ Cannot open modal - element not found: ${modalId}`);
+                }
+            } catch (error) {
+                console.error('❌ Error in openModal:', error);
+            }
+        };
+        
+        // Redefine closeModal function
+        window.closeModal = function(modalId) {
+            console.log(`🔧 EMERGENCY closeModal called with: ${modalId}`);
+            try {
+                const modal = safeGetElement(modalId);
+                if (modal) {
+                    modal.style.display = 'none';
+                    console.log(`✅ Modal closed: ${modalId}`);
+                }
+            } catch (error) {
+                console.error('❌ Error in closeModal:', error);
+            }
+        };
+        
+        // Redefine openAnalyzeModal function
+        window.openAnalyzeModal = function() {
+            console.log('🔧 EMERGENCY openAnalyzeModal called');
+            try {
+                // Check if analyzeModal exists (note: no hyphen!)
+                const modal = safeGetElement('analyzeModal');
+                if (!modal) {
+                    console.error('❌ analyzeModal not found in DOM');
+                    // List all modals in DOM for debugging
+                    const allModals = document.querySelectorAll('.modal');
+                    console.log('📋 Available modals:', Array.from(allModals).map(m => m.id));
+                    return;
+                }
+                
+                // Open the modal
+                window.openModal('analyzeModal');
+                
+                // Clear form
+                const form = safeGetElement('analyze-form');
+                if (form) {
+                    form.reset();
+                    console.log('✅ Analyze form reset');
+                }
+                
+                // Clear results
+                const results = safeGetElement('analyze-results');
+                if (results) {
+                    results.innerHTML = '';
+                    console.log('✅ Analyze results cleared');
+                }
+            } catch (error) {
+                console.error('❌ Error in openAnalyzeModal:', error);
+            }
+        };
+        
+        // Redefine generateMarketInsights function
+        window.generateMarketInsights = function() {
+            console.log('🔧 EMERGENCY generateMarketInsights called');
+            try {
+                // Check if marketInsightsModal exists (note: camelCase!)
+                const modal = safeGetElement('marketInsightsModal');
+                if (!modal) {
+                    console.error('❌ marketInsightsModal not found in DOM');
+                    // List all modals in DOM for debugging
+                    const allModals = document.querySelectorAll('.modal');
+                    console.log('📋 Available modals:', Array.from(allModals).map(m => m.id));
+                    return;
+                }
+                
+                // Check if properties exist
+                if (typeof window.properties === 'undefined' || !Array.isArray(window.properties)) {
+                    console.error('❌ Properties array not found or invalid');
+                    window.properties = [];
+                }
+                
+                if (window.properties.length === 0) {
+                    alert('Add some properties first to generate insights!');
+                    return;
+                }
+                
+                // Open the modal
+                window.openModal('marketInsightsModal');
+                
+                // Generate insights
+                if (typeof window.generateAIInsights === 'function') {
+                    console.log('✅ Calling generateAIInsights...');
+                    window.generateAIInsights();
+                } else {
+                    console.error('❌ generateAIInsights function not found');
+                    // Fallback: Show basic message
+                    const content = safeGetElement('insights-content');
+                    if (content) {
+                        content.innerHTML = '<p>AI insights generation is currently unavailable. Please refresh the page and try again.</p>';
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error in generateMarketInsights:', error);
+            }
+        };
+        
+        // Test modal existence on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 EMERGENCY FIX: Checking modal elements...');
+            
+            const modalsToCheck = ['analyzeModal', 'marketInsightsModal', 'addPropertyModal', 'propertyModal'];
+            modalsToCheck.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    console.log(`✅ Modal found: ${modalId}`);
+                } else {
+                    console.error(`❌ Modal NOT found: ${modalId}`);
+                }
+            });
+            
+            // Check if buttons exist and have correct onclick handlers
+            const analyzeBtn = document.querySelector('button[onclick*="openAnalyzeModal"]');
+            const insightsBtn = document.querySelector('button[onclick*="generateMarketInsights"]');
+            
+            if (analyzeBtn) {
+                console.log('✅ Analyze button found');
+            } else {
+                console.error('❌ Analyze button NOT found');
+            }
+            
+            if (insightsBtn) {
+                console.log('✅ Insights button found');
+            } else {
+                console.error('❌ Insights button NOT found');
+            }
+            
+            // Final function availability check
+            console.log('📋 Final function check:', {
+                openModal: typeof window.openModal,
+                closeModal: typeof window.closeModal,
+                openAnalyzeModal: typeof window.openAnalyzeModal,
+                generateMarketInsights: typeof window.generateMarketInsights
+            });
+        });
+        
+        console.log('✅ EMERGENCY FIX: Modal functions redefined successfully');
+    </script>
 </body>
 </html>

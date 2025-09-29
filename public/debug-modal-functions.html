@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Modal Functions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #22c55e;
+            font-weight: bold;
+        }
+        .error {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .warning {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Modal Functions</h1>
+    
+    <div class="debug-section">
+        <h2>1. Function Availability Check</h2>
+        <div id="functionCheck"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>2. Modal Elements Check</h2>
+        <div id="modalCheck"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>3. Button Elements Check</h2>
+        <div id="buttonCheck"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>4. Test Functions Directly</h2>
+        <button onclick="testOpenAnalyzeModal()">Test openAnalyzeModal()</button>
+        <button onclick="testGenerateMarketInsights()">Test generateMarketInsights()</button>
+        <div id="testResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>5. Console Output</h2>
+        <pre id="consoleOutput"></pre>
+    </div>
+    
+    <div class="debug-section">
+        <h2>6. Recommendations</h2>
+        <div id="recommendations"></div>
+    </div>
+
+    <script>
+        // Override console.log to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleOutput = [];
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            consoleOutput.push('[LOG] ' + args.join(' '));
+            updateConsoleDisplay();
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            consoleOutput.push('[ERROR] ' + args.join(' '));
+            updateConsoleDisplay();
+        };
+        
+        function updateConsoleDisplay() {
+            document.getElementById('consoleOutput').textContent = consoleOutput.join('\n');
+        }
+        
+        // Load the main index.html in an iframe to check functions
+        function checkFunctions() {
+            const iframe = document.createElement('iframe');
+            iframe.src = 'index.html';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            iframe.onload = function() {
+                const iframeWindow = iframe.contentWindow;
+                const results = [];
+                
+                // Check window functions
+                const functionsToCheck = [
+                    'openModal',
+                    'closeModal',
+                    'openAddPropertyModal',
+                    'openAnalyzeModal',
+                    'analyzeNewProperty',
+                    'generateMarketInsights',
+                    'generateAIInsights'
+                ];
+                
+                results.push('<h3>Window Functions:</h3>');
+                functionsToCheck.forEach(func => {
+                    const exists = typeof iframeWindow[func] === 'function';
+                    const existsOnParent = typeof window[func] === 'function';
+                    results.push(`<div class="${exists ? 'success' : 'error'}">
+                        ${func}: ${exists ? '✓ Found' : '✗ Not found'} in iframe
+                        ${existsOnParent ? ' (also in parent window)' : ''}
+                    </div>`);
+                });
+                
+                // Check modal elements
+                const modalIds = ['analyzeModal', 'marketInsightsModal', 'addPropertyModal'];
+                results.push('<h3>Modal Elements:</h3>');
+                modalIds.forEach(id => {
+                    const modal = iframeWindow.document.getElementById(id);
+                    results.push(`<div class="${modal ? 'success' : 'error'}">
+                        ${id}: ${modal ? '✓ Found' : '✗ Not found'}
+                    </div>`);
+                });
+                
+                document.getElementById('functionCheck').innerHTML = results.join('');
+                
+                // Check buttons
+                checkButtons(iframeWindow);
+                
+                // Remove iframe after check
+                setTimeout(() => document.body.removeChild(iframe), 1000);
+            };
+        }
+        
+        function checkButtons(iframeWindow) {
+            const results = [];
+            const buttons = iframeWindow.document.querySelectorAll('button');
+            
+            results.push(`<p>Total buttons found: ${buttons.length}</p>`);
+            
+            // Find specific buttons
+            const analyzeButton = Array.from(buttons).find(btn => 
+                btn.textContent.includes('Analyze Property')
+            );
+            const marketButton = Array.from(buttons).find(btn => 
+                btn.textContent.includes('Market Overview')
+            );
+            
+            if (analyzeButton) {
+                results.push('<div class="success">✓ "Analyze Property" button found</div>');
+                results.push(`<pre>onclick: ${analyzeButton.getAttribute('onclick')}</pre>`);
+                results.push(`<pre>outerHTML: ${analyzeButton.outerHTML}</pre>`);
+            } else {
+                results.push('<div class="error">✗ "Analyze Property" button not found</div>');
+            }
+            
+            if (marketButton) {
+                results.push('<div class="success">✓ "Market Overview" button found</div>');
+                results.push(`<pre>onclick: ${marketButton.getAttribute('onclick')}</pre>`);
+                results.push(`<pre>outerHTML: ${marketButton.outerHTML}</pre>`);
+            } else {
+                results.push('<div class="error">✗ "Market Overview" button not found</div>');
+            }
+            
+            document.getElementById('buttonCheck').innerHTML = results.join('');
+        }
+        
+        // Test functions directly
+        function testOpenAnalyzeModal() {
+            const results = [];
+            try {
+                if (typeof window.openAnalyzeModal === 'function') {
+                    results.push('<div class="success">✓ openAnalyzeModal is a function</div>');
+                    // Try to call it
+                    window.openAnalyzeModal();
+                    results.push('<div class="success">✓ Function called successfully</div>');
+                } else {
+                    results.push('<div class="error">✗ openAnalyzeModal is not a function</div>');
+                    results.push(`<div>Type: ${typeof window.openAnalyzeModal}</div>`);
+                }
+            } catch (error) {
+                results.push(`<div class="error">✗ Error: ${error.message}</div>`);
+            }
+            document.getElementById('testResults').innerHTML = results.join('');
+        }
+        
+        function testGenerateMarketInsights() {
+            const results = [];
+            try {
+                if (typeof window.generateMarketInsights === 'function') {
+                    results.push('<div class="success">✓ generateMarketInsights is a function</div>');
+                    // Try to call it
+                    window.generateMarketInsights();
+                    results.push('<div class="success">✓ Function called successfully</div>');
+                } else {
+                    results.push('<div class="error">✗ generateMarketInsights is not a function</div>');
+                    results.push(`<div>Type: ${typeof window.generateMarketInsights}</div>`);
+                }
+            } catch (error) {
+                results.push(`<div class="error">✗ Error: ${error.message}</div>`);
+            }
+            document.getElementById('testResults').innerHTML = results.join('');
+        }
+        
+        // Run checks on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Debug page loaded');
+            checkFunctions();
+            
+            // Generate recommendations
+            setTimeout(() => {
+                const recommendations = [];
+                
+                recommendations.push('<h3>Debugging Steps:</h3>');
+                recommendations.push('<ol>');
+                recommendations.push('<li>Open index.html in a browser</li>');
+                recommendations.push('<li>Open the browser console (F12)</li>');
+                recommendations.push('<li>Type: <code>window.openAnalyzeModal</code> and press Enter</li>');
+                recommendations.push('<li>If it shows "undefined", the function is not properly attached to window</li>');
+                recommendations.push('<li>Check for any JavaScript errors in the console</li>');
+                recommendations.push('<li>Try clicking the buttons and watch the console for errors</li>');
+                recommendations.push('</ol>');
+                
+                recommendations.push('<h3>Common Issues:</h3>');
+                recommendations.push('<ul>');
+                recommendations.push('<li>Functions defined inside a closure or IIFE</li>');
+                recommendations.push('<li>Script execution order issues</li>');
+                recommendations.push('<li>Syntax errors preventing script execution</li>');
+                recommendations.push('<li>Functions being overwritten later in the code</li>');
+                recommendations.push('</ul>');
+                
+                document.getElementById('recommendations').innerHTML = recommendations.join('');
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

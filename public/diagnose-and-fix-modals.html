@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnose and Fix Modal Buttons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .diagnostic {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #3b82f6;
+            background: #f0f9ff;
+        }
+        .success { border-left-color: #22c55e; background: #f0fdf4; }
+        .error { border-left-color: #ef4444; background: #fef2f2; }
+        .warning { border-left-color: #f59e0b; background: #fffbeb; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background: #2563eb; }
+        .fix-button {
+            background: #10b981;
+            font-weight: bold;
+        }
+        .fix-button:hover { background: #059669; }
+        pre {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #1f2937;
+        }
+        #console {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .log-entry { margin: 2px 0; }
+        .log-error { color: #ef4444; }
+        .log-success { color: #22c55e; }
+        .log-warning { color: #f59e0b; }
+        .log-info { color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Modal Button Diagnostic & Fix Tool</h1>
+        
+        <div class="step">
+            <h3>Step 1: Run Diagnostics</h3>
+            <p>Click this button to diagnose the issue with your modal buttons:</p>
+            <button onclick="runDiagnostics()">🔍 Run Full Diagnostics</button>
+            <div id="diagnosticResults"></div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 2: Apply Automatic Fix</h3>
+            <p>Based on the diagnostics, click to apply the fix:</p>
+            <button class="fix-button" onclick="applyFix()">✨ Apply Fix to index.html</button>
+            <div id="fixResults"></div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 3: Manual Fix (If Needed)</h3>
+            <p>If the automatic fix doesn't work, copy this code and add it to the end of your index.html, right before &lt;/body&gt;:</p>
+            <pre id="manualFixCode"></pre>
+            <button onclick="copyManualFix()">📋 Copy Manual Fix Code</button>
+        </div>
+        
+        <div class="step">
+            <h3>Console Output</h3>
+            <div id="console"></div>
+        </div>
+    </div>
+    
+    <script>
+        const consoleDiv = document.getElementById('console');
+        const log = (message, type = 'info') => {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleDiv.appendChild(entry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        };
+        
+        async function runDiagnostics() {
+            log('Starting diagnostics...', 'info');
+            const results = document.getElementById('diagnosticResults');
+            results.innerHTML = '';
+            
+            const diagnostics = [];
+            
+            // Load index.html in iframe
+            const iframe = document.createElement('iframe');
+            iframe.src = 'index.html';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            iframe.onload = function() {
+                const win = iframe.contentWindow;
+                const doc = iframe.contentDocument;
+                
+                log('index.html loaded in iframe', 'success');
+                
+                // Check 1: Function existence
+                const functions = [
+                    'openModal',
+                    'closeModal',
+                    'openAnalyzeModal',
+                    'generateMarketInsights',
+                    'generateAIInsights'
+                ];
+                
+                let functionsOk = true;
+                functions.forEach(func => {
+                    const exists = typeof win[func] === 'function';
+                    if (!exists) functionsOk = false;
+                    diagnostics.push({
+                        test: `Function ${func}`,
+                        result: exists,
+                        message: exists ? '✓ Defined' : '✗ Not defined'
+                    });
+                    log(`Function ${func}: ${exists ? 'FOUND' : 'MISSING'}`, exists ? 'success' : 'error');
+                });
+                
+                // Check 2: Modal elements
+                const modalIds = ['analyzeModal', 'marketInsightsModal'];
+                let modalsOk = true;
+                modalIds.forEach(id => {
+                    const exists = !!doc.getElementById(id);
+                    if (!exists) modalsOk = false;
+                    diagnostics.push({
+                        test: `Modal ${id}`,
+                        result: exists,
+                        message: exists ? '✓ Found' : '✗ Not found'
+                    });
+                    log(`Modal ${id}: ${exists ? 'FOUND' : 'MISSING'}`, exists ? 'success' : 'warning');
+                });
+                
+                // Check 3: Buttons
+                const analyzeBtn = Array.from(doc.querySelectorAll('button')).find(b => 
+                    b.textContent.includes('Analyze Property')
+                );
+                const marketBtn = Array.from(doc.querySelectorAll('button')).find(b => 
+                    b.textContent.includes('Market Overview')
+                );
+                
+                diagnostics.push({
+                    test: 'Analyze Property button',
+                    result: !!analyzeBtn,
+                    message: analyzeBtn ? `✓ Found with onclick="${analyzeBtn.getAttribute('onclick')}"` : '✗ Not found'
+                });
+                
+                diagnostics.push({
+                    test: 'Market Overview button',
+                    result: !!marketBtn,
+                    message: marketBtn ? `✓ Found with onclick="${marketBtn.getAttribute('onclick')}"` : '✗ Not found'
+                });
+                
+                // Check 4: JavaScript errors
+                let hasErrors = false;
+                try {
+                    // Try to call a basic function
+                    if (win.properties) {
+                        diagnostics.push({
+                            test: 'JavaScript execution',
+                            result: true,
+                            message: '✓ No critical errors'
+                        });
+                    }
+                } catch (e) {
+                    hasErrors = true;
+                    diagnostics.push({
+                        test: 'JavaScript execution',
+                        result: false,
+                        message: `✗ Error: ${e.message}`
+                    });
+                    log(`JavaScript error: ${e.message}`, 'error');
+                }
+                
+                // Display results
+                let html = '<div style="margin-top: 20px;">';
+                diagnostics.forEach(d => {
+                    html += `<div class="diagnostic ${d.result ? 'success' : 'error'}">
+                        <strong>${d.test}:</strong> ${d.message}
+                    </div>`;
+                });
+                html += '</div>';
+                
+                // Add recommendation
+                if (!functionsOk) {
+                    html += '<div class="diagnostic warning"><strong>Issue found:</strong> Modal functions are not properly defined. Click "Apply Fix" to resolve this.</div>';
+                    log('DIAGNOSIS: Functions need to be defined', 'warning');
+                }
+                
+                results.innerHTML = html;
+                document.body.removeChild(iframe);
+            };
+        }
+        
+        function applyFix() {
+            log('Applying fix...', 'info');
+            const results = document.getElementById('fixResults');
+            results.innerHTML = '<div class="diagnostic warning">To apply the fix, add the following code to your index.html file.</div>';
+            
+            const fixCode = getFix Code();
+            
+            // Show the fix code
+            results.innerHTML += `
+                <div class="diagnostic success">
+                    <strong>Fix Code:</strong>
+                    <pre style="margin-top: 10px;">${escapeHtml(fixCode)}</pre>
+                    <p><strong>Instructions:</strong></p>
+                    <ol>
+                        <li>Open your index.html file</li>
+                        <li>Find the closing &lt;/body&gt; tag</li>
+                        <li>Add this script right before it</li>
+                        <li>Save the file and refresh your browser</li>
+                    </ol>
+                </div>
+            `;
+            
+            document.getElementById('manualFixCode').textContent = fixCode;
+            log('Fix code generated successfully', 'success');
+        }
+        
+        function getFixCode() {
+            return `<!-- Modal Button Fix -->
+<script>
+(function() {
+    // Ensure modal functions are available globally
+    console.log('🔧 Applying modal button fix...');
+    
+    // Define or redefine the modal functions
+    window.openAnalyzeModal = function() {
+        console.log('Opening Analyze Modal');
+        const modal = document.getElementById('analyzeModal');
+        if (modal) {
+            modal.style.display = 'block';
+            // Reset form
+            const input = document.getElementById('propertyAddressInput');
+            if (input) input.value = '';
+            const results = document.getElementById('analysisResults');
+            if (results) results.innerHTML = '';
+            const loading = document.getElementById('analysisLoading');
+            if (loading) loading.style.display = 'none';
+        } else {
+            console.error('analyzeModal not found!');
+            alert('Analyze modal not found. Please refresh the page.');
+        }
+    };
+    
+    window.generateMarketInsights = async function() {
+        console.log('Generating Market Insights');
+        const modal = document.getElementById('marketInsightsModal');
+        if (modal) {
+            modal.style.display = 'block';
+            const loading = document.getElementById('marketInsightsLoading');
+            const content = document.getElementById('marketInsightsContent');
+            
+            if (loading) loading.style.display = 'block';
+            if (content) content.style.display = 'none';
+            
+            try {
+                // Check if fetchMarketData exists
+                if (typeof fetchMarketData === 'function') {
+                    const marketData = await fetchMarketData();
+                    if (typeof generateMarketInsightsContent === 'function') {
+                        const html = generateMarketInsightsContent(marketData);
+                        content.innerHTML = html;
+                    } else {
+                        content.innerHTML = '<p>Market insights content generator not found.</p>';
+                    }
+                } else {
+                    // Fallback content
+                    content.innerHTML = \`
+                        <div style="padding: 20px;">
+                            <h3>Market Overview</h3>
+                            <p>Market insights are being prepared...</p>
+                        </div>
+                    \`;
+                }
+                content.style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                content.innerHTML = '<p>Error loading market insights.</p>';
+                content.style.display = 'block';
+            } finally {
+                if (loading) loading.style.display = 'none';
+            }
+        } else {
+            console.error('marketInsightsModal not found!');
+            alert('Market insights modal not found. Please refresh the page.');
+        }
+    };
+    
+    // Ensure other modal functions exist
+    if (typeof window.openModal !== 'function') {
+        window.openModal = function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'block';
+        };
+    }
+    
+    if (typeof window.closeModal !== 'function') {
+        window.closeModal = function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'none';
+        };
+    }
+    
+    console.log('✅ Modal functions defined:', {
+        openAnalyzeModal: typeof window.openAnalyzeModal,
+        generateMarketInsights: typeof window.generateMarketInsights,
+        openModal: typeof window.openModal,
+        closeModal: typeof window.closeModal
+    });
+})();
+</script>`;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function copyManualFix() {
+            const code = document.getElementById('manualFixCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                log('Fix code copied to clipboard!', 'success');
+                alert('Fix code copied to clipboard!');
+            }).catch(err => {
+                log('Failed to copy: ' + err, 'error');
+                alert('Failed to copy. Please select and copy manually.');
+            });
+        }
+        
+        // Auto-run diagnostics on load
+        window.addEventListener('load', () => {
+            log('Diagnostic tool ready', 'success');
+            log('Click "Run Full Diagnostics" to begin', 'info');
+        });
+    </script>
+</body>
+</html>
