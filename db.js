@@ -81,7 +81,8 @@ const db = {
     // Get all properties
     async getAllProperties(filters = {}) {
         try {
-            let query = 'SELECT * FROM properties WHERE status != $1';
+            // Fix: Include properties with NULL status or any status except 'deleted'
+            let query = 'SELECT * FROM properties WHERE (status IS NULL OR status != $1)';
             const params = ['deleted'];
             let paramCount = 1;
 
@@ -124,13 +125,27 @@ const db = {
     async getPropertyById(id) {
         try {
             const result = await pool.query(
-                'SELECT * FROM properties WHERE id = $1 AND status != $2',
+                'SELECT * FROM properties WHERE id = $1 AND (status IS NULL OR status != $2)',
                 [id, 'deleted']
             );
             return result.rows[0];
         } catch (error) {
             console.error('Error fetching property:', error);
             throw error;
+        }
+    },
+    
+    // Check if property exists by address
+    async checkPropertyExists(address, city, state, zip) {
+        try {
+            const result = await pool.query(
+                'SELECT id, address, city, state, zip, status FROM properties WHERE LOWER(address) = LOWER($1) AND LOWER(city) = LOWER($2) AND LOWER(state) = LOWER($3)',
+                [address, city, state]
+            );
+            return result.rows.length > 0 ? result.rows[0] : null;
+        } catch (error) {
+            console.error('Error checking property existence:', error);
+            return null;
         }
     },
 
@@ -421,6 +436,9 @@ const db = {
 
     // Initialize database on startup
     initialize: initializeDatabase,
+    
+    // Check if property exists
+    checkPropertyExists,
 
     // Export pool for raw queries if needed
     pool

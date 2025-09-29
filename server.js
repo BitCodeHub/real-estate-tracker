@@ -553,6 +553,41 @@ app.post('/api/properties', async (req, res) => {
             });
         }
         
+        // Check if property already exists
+        const existingProperty = await db.checkPropertyExists(
+            req.body.address,
+            req.body.city,
+            req.body.state,
+            req.body.zip
+        );
+        
+        if (existingProperty) {
+            console.log('⚠️ Property already exists:', existingProperty);
+            
+            // If the existing property is marked as deleted or has NULL status, update it instead
+            if (existingProperty.status === 'deleted' || existingProperty.status === null) {
+                console.log('📝 Reactivating existing property with ID:', existingProperty.id);
+                const updatedProperty = await db.updateProperty(existingProperty.id, {
+                    ...req.body,
+                    status: 'active'
+                });
+                return res.status(200).json({ 
+                    success: true, 
+                    data: updatedProperty,
+                    message: 'Property reactivated successfully'
+                });
+            }
+            
+            // Property exists and is active
+            return res.status(409).json({ 
+                success: false, 
+                error: `Property "${req.body.address}" already exists in your portfolio. Each property must have a unique address.`,
+                existingProperty: true,
+                propertyId: existingProperty.id
+            });
+        }
+        
+        // Create new property
         const property = await db.createProperty(req.body);
         console.log('✅ Property created successfully with ID:', property.id);
         

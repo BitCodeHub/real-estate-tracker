@@ -2098,17 +2098,74 @@
             // Now create all properties in the database
             document.querySelector('#fileUploadStatus p').textContent = `Saving ${propertiesToCreate.length} properties to database...`;
             
-            // Add all properties to the array first
-            for (const property of propertiesToCreate) {
-                properties.push(property);
+            let existingCount = 0;
+            const existingProperties = [];
+            const createdProperties = [];
+            
+            // Create each property individually to handle duplicates properly
+            for (let i = 0; i < propertiesToCreate.length; i++) {
+                const property = propertiesToCreate[i];
+                
+                try {
+                    // Update progress
+                    document.querySelector('#fileUploadStatus p').textContent = 
+                        `Saving property ${i + 1} of ${propertiesToCreate.length}: ${property.address}...`;
+                    
+                    // Try to create in database
+                    const response = await fetch('/api/properties', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(property)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.success) {
+                        // Property created successfully
+                        const createdProperty = {
+                            ...property,
+                            ...data.data,
+                            // Preserve camelCase fields
+                            purchasePrice: data.data.purchasePrice || data.data.purchase_price || property.purchasePrice,
+                            monthlyRent: data.data.monthlyRent || data.data.monthly_rent || property.monthlyRent
+                        };
+                        
+                        properties.push(createdProperty);
+                        createdProperties.push(createdProperty);
+                        successCount++;
+                        
+                        console.log(`✅ Property created: ${property.address} with ID ${createdProperty.id}`);
+                    } else if (response.status === 409) {
+                        // Property already exists
+                        existingCount++;
+                        existingProperties.push(property.address);
+                        console.log(`⚠️ Property already exists: ${property.address}`);
+                        
+                        // If it was reactivated, still count as success
+                        if (data.message === 'Property reactivated successfully') {
+                            const reactivatedProperty = {
+                                ...property,
+                                ...data.data
+                            };
+                            properties.push(reactivatedProperty);
+                            successCount++;
+                        }
+                    } else {
+                        // Other error
+                        failCount++;
+                        failedAddresses.push(property.address);
+                        console.error(`❌ Failed to create property: ${property.address}`, data.error);
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error saving property "${property.address}":`, error);
+                    failCount++;
+                    failedAddresses.push(property.address);
+                }
             }
             
-            // Save all properties - this will create them in the database and assign IDs
-            const saveResult = await saveProperties();
-            console.log('💾 Bulk import save result:', saveResult);
-            
-            // Count successes based on properties that got IDs
-            successCount = properties.filter(p => p.id).length;
+            // Update localStorage with all properties
+            localStorage.setItem('properties', JSON.stringify(properties));
             
             // Update display
             updateDisplay();
@@ -2117,22 +2174,38 @@
             document.getElementById('fileUploadStatus').style.display = 'none';
             
             // Show results
-            let message = `Successfully imported ${successCount} properties`;
+            let message = '';
+            if (successCount > 0) {
+                message = `Successfully imported ${successCount} properties`;
+            }
+            if (existingCount > 0) {
+                message += (message ? '. ' : '') + `${existingCount} properties already exist`;
+            }
             if (failCount > 0) {
-                message += `. Failed to import ${failCount} properties`;
+                message += (message ? '. ' : '') + `Failed to import ${failCount} properties`;
                 console.log('Failed addresses:', failedAddresses);
             }
-            showNotification(message, successCount > 0 ? 'success' : 'error');
+            
+            // Show notification
+            showNotification(message || 'No properties imported', successCount > 0 ? 'success' : 'warning');
+            
+            // Show detailed info about existing properties if any
+            if (existingProperties.length > 0) {
+                console.log('🏠 Properties that already exist:', existingProperties);
+                setTimeout(() => {
+                    showNotification(`Already in portfolio: ${existingProperties.slice(0, 3).join(', ')}${existingProperties.length > 3 ? ` and ${existingProperties.length - 3} more` : ''}`, 'info');
+                }, 2000);
+            }
             
             // Show additional notification about RentCast data
             if (successCount > 0) {
                 setTimeout(() => {
                     showNotification('Click the refresh icon (🔄) on each property to fetch market data from RentCast', 'info');
-                }, 2000);
+                }, existingProperties.length > 0 ? 4000 : 2000);
             }
             
-            // Close modal if all successful
-            if (failCount === 0) {
+            // Close modal if all successful or only duplicates
+            if (failCount === 0 && propertiesToCreate.length > 0) {
                 closeModal('addPropertyModal');
             }
             
