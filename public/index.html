@@ -2182,6 +2182,15 @@
             // Update localStorage with all properties
             localStorage.setItem('properties', JSON.stringify(properties));
             
+            // CRITICAL: Sync all properties with database to ensure persistence
+            console.log('🔄 Syncing all properties with database...');
+            const saveResult = await saveProperties();
+            if (saveResult && saveResult.warning) {
+                console.warn('⚠️ Save warning:', saveResult.warning);
+            } else {
+                console.log('✅ All properties synced with database');
+            }
+            
             // Update display
             updateDisplay();
             
@@ -2343,6 +2352,23 @@
         // Load properties from server/localStorage
         async function loadProperties() {
             console.log('📥 Loading properties...');
+            
+            // First check what's in localStorage
+            const localStorageData = localStorage.getItem('properties');
+            if (localStorageData) {
+                const localProperties = JSON.parse(localStorageData);
+                console.log(`📱 LocalStorage has ${localProperties.length} properties`);
+                const localWithIds = localProperties.filter(p => p.id);
+                const localWithoutIds = localProperties.filter(p => !p.id);
+                console.log(`  - With IDs: ${localWithIds.length}`);
+                console.log(`  - Without IDs: ${localWithoutIds.length}`);
+                if (localWithoutIds.length > 0) {
+                    console.warn('  - Properties without IDs:', localWithoutIds.map(p => p.address));
+                }
+            } else {
+                console.log('📱 No properties in localStorage');
+            }
+            
             try {
                 // Try to load from server first
                 const response = await fetch('/api/properties');
@@ -2546,12 +2572,27 @@
                                 showNotification(data.error, 'error');
                             }
                             
-                            // If it's a duplicate property error, remove it from the array
-                            if (data.existingProperty) {
-                                const index = properties.indexOf(property);
-                                if (index > -1) {
-                                    properties.splice(index, 1);
-                                    console.log('Removed duplicate property from local array');
+                            // If it's a duplicate property error, fetch it from the database
+                            if (data.existingProperty && data.propertyId) {
+                                console.log('🔍 Property already exists, fetching from database...');
+                                try {
+                                    const existingPropResponse = await fetch(`/api/properties/${data.propertyId}`);
+                                    if (existingPropResponse.ok) {
+                                        const existingPropData = await existingPropResponse.json();
+                                        if (existingPropData.success && existingPropData.data) {
+                                            // Update the property in the array with database data
+                                            properties[i] = {
+                                                ...property,
+                                                ...existingPropData.data,
+                                                // Preserve camelCase fields
+                                                purchasePrice: existingPropData.data.purchasePrice || existingPropData.data.purchase_price || property.purchasePrice,
+                                                monthlyRent: existingPropData.data.monthlyRent || existingPropData.data.monthly_rent || property.monthlyRent
+                                            };
+                                            console.log('✅ Updated property with database ID:', properties[i].id);
+                                        }
+                                    }
+                                } catch (fetchError) {
+                                    console.error('Failed to fetch existing property:', fetchError);
                                 }
                             }
                         }
@@ -2608,13 +2649,24 @@
                 }
                 
                 // Log summary of save operation
-                if (createdCount > 0 || updatedCount > 0) {
-                    console.log(`💾 Save complete: ${createdCount} created, ${updatedCount} updated`);
-                    
-                    // IMPORTANT: Update localStorage again with all the new IDs
-                    localStorage.setItem('properties', JSON.stringify(properties));
-                    console.log('✅ Updated localStorage with new IDs');
+                console.log(`💾 Save complete: ${createdCount} created, ${updatedCount} updated`);
+                
+                // Check which properties have IDs
+                const withIds = properties.filter(p => p.id);
+                const withoutIds = properties.filter(p => !p.id);
+                
+                console.log(`📊 Property Status:
+                - Total properties: ${properties.length}
+                - With database IDs: ${withIds.length}
+                - Without database IDs: ${withoutIds.length}`);
+                
+                if (withoutIds.length > 0) {
+                    console.warn('⚠️ Properties without database IDs:', withoutIds.map(p => p.address));
                 }
+                
+                // IMPORTANT: Update localStorage again with all the new IDs
+                localStorage.setItem('properties', JSON.stringify(properties));
+                console.log('✅ Updated localStorage with all property data');
             } catch (error) {
                 console.error('Error saving to server:', error);
                 failedCount = properties.filter(p => !p.id).length;
