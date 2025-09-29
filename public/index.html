@@ -990,6 +990,8 @@
             visibility: visible !important;
         }
     </style>
+    <!-- XLSX library for Excel file parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="header">
@@ -1123,6 +1125,37 @@
                         <small style="color: var(--text-muted); display: block; margin-top: 5px;">
                             <i class="fas fa-info-circle"></i> Paste or type a complete address to auto-fill the fields below
                         </small>
+                    </div>
+                    
+                    <!-- Bulk Import Section -->
+                    <div class="form-group" style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <label style="font-weight: 600; color: var(--accent-primary);">Bulk Import: Upload Excel/CSV File</label>
+                        <input type="file" id="bulkImportFile" accept=".csv,.xlsx,.xls" 
+                               style="display: none;" onchange="handleFileUpload(event)">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('bulkImportFile').click()" style="width: 100%; margin-top: 10px;">
+                            <i class="fas fa-file-upload"></i> Choose Excel/CSV File
+                        </button>
+                        <small style="color: var(--text-muted); display: block; margin-top: 10px;">
+                            <i class="fas fa-info-circle"></i> Upload a file with property addresses. Supported formats: CSV, Excel (.xlsx, .xls)
+                        </small>
+                        <div id="fileUploadStatus" style="margin-top: 10px; display: none;">
+                            <div class="loading"></div>
+                            <p style="color: var(--text-secondary);">Processing file...</p>
+                        </div>
+                        <div id="importPreview" style="margin-top: 15px; display: none;">
+                            <h4 style="color: var(--accent-primary); margin-bottom: 10px;">Properties to Import:</h4>
+                            <div id="importPreviewList" style="max-height: 200px; overflow-y: auto; background: var(--bg-primary); padding: 10px; border-radius: 4px;"></div>
+                            <button type="button" class="btn btn-primary" onclick="confirmBulkImport()" style="margin-top: 10px;">
+                                <i class="fas fa-check"></i> Import All Properties
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="cancelBulkImport()" style="margin-top: 10px; margin-left: 10px;">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 20px 0;">
+                        <span style="color: var(--text-muted);">— OR —</span>
                     </div>
                     
                     <div class="form-group">
@@ -1494,6 +1527,268 @@
             } finally {
                 document.getElementById('marketInsightsLoading').style.display = 'none';
             }
+        }
+
+        // Global variables for bulk import
+        let pendingBulkImportProperties = [];
+
+        // Handle file upload
+        window.handleFileUpload = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log('File selected:', file.name);
+            document.getElementById('fileUploadStatus').style.display = 'block';
+            document.getElementById('importPreview').style.display = 'none';
+
+            try {
+                let addresses = [];
+                
+                if (file.name.endsWith('.csv')) {
+                    addresses = await parseCSVFile(file);
+                } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    addresses = await parseExcelFile(file);
+                } else {
+                    throw new Error('Unsupported file format. Please use CSV or Excel files.');
+                }
+
+                if (addresses.length === 0) {
+                    throw new Error('No valid addresses found in the file.');
+                }
+
+                // Store for bulk import
+                pendingBulkImportProperties = addresses;
+                
+                // Show preview
+                showImportPreview(addresses);
+                
+            } catch (error) {
+                console.error('Error processing file:', error);
+                showNotification(`Error: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('fileUploadStatus').style.display = 'none';
+                // Reset file input
+                event.target.value = '';
+            }
+        }
+
+        // Parse CSV file
+        async function parseCSVFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const text = e.target.result;
+                        const lines = text.split('\n').filter(line => line.trim());
+                        const addresses = [];
+                        
+                        // Skip header if it exists
+                        const startIndex = lines[0].toLowerCase().includes('address') ? 1 : 0;
+                        
+                        for (let i = startIndex; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (line) {
+                                // Handle quoted values
+                                const address = line.replace(/^"|"$/g, '').trim();
+                                if (address) {
+                                    addresses.push(address);
+                                }
+                            }
+                        }
+                        
+                        resolve(addresses);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        // Parse Excel file
+        async function parseExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Get first sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Convert to JSON
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        const addresses = [];
+                        
+                        // Find address column
+                        let addressColumnIndex = 0;
+                        if (jsonData.length > 0) {
+                            const header = jsonData[0];
+                            if (Array.isArray(header)) {
+                                const addressIndex = header.findIndex(col => 
+                                    col && col.toString().toLowerCase().includes('address')
+                                );
+                                if (addressIndex !== -1) {
+                                    addressColumnIndex = addressIndex;
+                                }
+                            }
+                        }
+                        
+                        // Extract addresses
+                        const startIndex = jsonData[0] && jsonData[0][addressColumnIndex] && 
+                                          jsonData[0][addressColumnIndex].toString().toLowerCase().includes('address') ? 1 : 0;
+                        
+                        for (let i = startIndex; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            if (row && row[addressColumnIndex]) {
+                                const address = row[addressColumnIndex].toString().trim();
+                                if (address) {
+                                    addresses.push(address);
+                                }
+                            }
+                        }
+                        
+                        resolve(addresses);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Show import preview
+        function showImportPreview(addresses) {
+            const previewList = document.getElementById('importPreviewList');
+            previewList.innerHTML = '';
+            
+            addresses.forEach((address, index) => {
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 5px 0; border-bottom: 1px solid var(--border-color);';
+                item.innerHTML = `
+                    <small style="color: var(--text-muted);">${index + 1}.</small> 
+                    <span style="color: var(--text-primary);">${address}</span>
+                `;
+                previewList.appendChild(item);
+            });
+            
+            document.getElementById('importPreview').style.display = 'block';
+            
+            // Update preview header
+            const header = document.querySelector('#importPreview h4');
+            header.textContent = `Properties to Import (${addresses.length} found):`;
+        }
+
+        // Confirm bulk import
+        window.confirmBulkImport = async function() {
+            if (pendingBulkImportProperties.length === 0) {
+                showNotification('No properties to import', 'error');
+                return;
+            }
+
+            // Hide preview and show progress
+            document.getElementById('importPreview').style.display = 'none';
+            document.getElementById('fileUploadStatus').style.display = 'block';
+            document.querySelector('#fileUploadStatus p').textContent = `Importing ${pendingBulkImportProperties.length} properties...`;
+
+            let successCount = 0;
+            let failCount = 0;
+            const failedAddresses = [];
+
+            for (let i = 0; i < pendingBulkImportProperties.length; i++) {
+                const address = pendingBulkImportProperties[i];
+                
+                try {
+                    // Update progress
+                    document.querySelector('#fileUploadStatus p').textContent = 
+                        `Importing property ${i + 1} of ${pendingBulkImportProperties.length}...`;
+                    
+                    // Parse address
+                    const parsedAddress = parseAddressComponents(address);
+                    
+                    if (!parsedAddress || !parsedAddress.address || !parsedAddress.city || !parsedAddress.state || !parsedAddress.zip) {
+                        throw new Error('Invalid address format');
+                    }
+                    
+                    // Create property object
+                    const property = {
+                        ...parsedAddress,
+                        propertyType: 'single-family', // Default
+                        purchasePrice: null,
+                        monthlyRent: null,
+                        beds: null,
+                        baths: null,
+                        sqft: null
+                    };
+                    
+                    // Try to fetch data from RentCast
+                    try {
+                        const rentcastData = await fetchRentCastData(parsedAddress);
+                        if (rentcastData && rentcastData.success && rentcastData.data) {
+                            property.purchasePrice = rentcastData.data.price || null;
+                            property.monthlyRent = rentcastData.data.rent || null;
+                            property.beds = rentcastData.data.bedrooms || null;
+                            property.baths = rentcastData.data.bathrooms || null;
+                            property.sqft = rentcastData.data.squareFootage || null;
+                        }
+                    } catch (apiError) {
+                        console.error('RentCast API error for address:', address, apiError);
+                        // Continue without API data
+                    }
+                    
+                    // Calculate metrics
+                    calculatePropertyMetrics(property);
+                    
+                    // Add property
+                    properties.push(property);
+                    successCount++;
+                    
+                } catch (error) {
+                    console.error(`Error importing property "${address}":`, error);
+                    failCount++;
+                    failedAddresses.push(address);
+                }
+                
+                // Small delay to prevent overwhelming the API
+                if (i < pendingBulkImportProperties.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+            
+            // Save all properties
+            await saveProperties();
+            updateDisplay();
+            
+            // Hide loading
+            document.getElementById('fileUploadStatus').style.display = 'none';
+            
+            // Show results
+            let message = `Successfully imported ${successCount} properties`;
+            if (failCount > 0) {
+                message += `. Failed to import ${failCount} properties`;
+                console.log('Failed addresses:', failedAddresses);
+            }
+            showNotification(message, successCount > 0 ? 'success' : 'error');
+            
+            // Close modal if all successful
+            if (failCount === 0) {
+                closeModal('addPropertyModal');
+            }
+            
+            // Reset
+            pendingBulkImportProperties = [];
+        }
+
+        // Cancel bulk import
+        window.cancelBulkImport = function() {
+            pendingBulkImportProperties = [];
+            document.getElementById('importPreview').style.display = 'none';
+            showNotification('Import cancelled', 'info');
         }
 
         // Generate AI Market Insights with Gemini
