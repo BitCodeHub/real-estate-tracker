@@ -4714,10 +4714,9 @@ Format your response in clear sections with bullet points where appropriate. Be 
         });
     </script>
     
-    <!-- EMERGENCY FIX COMPLETELY REMOVED - It was breaking working modal functions -->
-    <!--
+    <!-- EMERGENCY FIX: Ensure modal functions are available -->
+    <!-- COMMENTED OUT - This emergency fix is no longer needed and was causing conflicts
     <script>
-    /* COMPLETELY DISABLED AND REMOVED
         console.log('🚨 EMERGENCY FIX: Redefining modal functions...');
         
         // Helper function to safely get element
@@ -4895,14 +4894,12 @@ Format your response in clear sections with bullet points where appropriate. Be 
         });
         
         console.log('✅ EMERGENCY FIX: Modal functions redefined successfully');
-    */ // END OF DISABLED EMERGENCY FIX
     </script>
-    -->
+    END OF EMERGENCY FIX COMMENT -->
         
-        <!-- ============= MODAL LAG FIX COMPLETELY REMOVED ============= -->
-        <!--
+        <!-- ============= MODAL LAG FIX ============= -->
+        <!-- COMMENTED OUT - This lag fix is no longer needed and was causing conflicts
         <script>
-        /* DISABLED AND REMOVED - This was overriding working modal functions
         // Fix for delayed modal response - Final override
         setTimeout(() => {
             console.log('🚀 Applying final modal lag fix...');
@@ -5017,8 +5014,7 @@ Format your response in clear sections with bullet points where appropriate. Be 
             
             console.log('✅ Modal lag fix applied - immediate response enabled');
         }, 100); // Small delay to ensure everything is loaded
-        */ // END OF DISABLED MODAL LAG FIX
     </script>
-    -->
+    END OF MODAL LAG FIX COMMENT -->
 </body>
 </html>

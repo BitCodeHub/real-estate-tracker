@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Fix Complete</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #0a0a0a;
+            color: white;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .success {
+            background: #10b981;
+            color: white;
+        }
+        .error {
+            background: #ef4444;
+            color: white;
+        }
+        .info {
+            background: #3b82f6;
+            color: white;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #333;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Verify Modal Fix is Complete</h1>
+    
+    <button onclick="runVerification()">Run Verification</button>
+    
+    <div id="results"></div>
+    
+    <iframe id="app" src="index.html"></iframe>
+    
+    <script>
+        let appWindow = null;
+        
+        window.onload = function() {
+            const iframe = document.getElementById('app');
+            iframe.onload = function() {
+                appWindow = iframe.contentWindow;
+                console.log('App loaded');
+                setTimeout(runVerification, 1500);
+            };
+        };
+        
+        async function runVerification() {
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+            
+            if (!appWindow) {
+                results.innerHTML = '<div class="result error">Error: Application not loaded</div>';
+                return;
+            }
+            
+            results.innerHTML += '<div class="result info">Starting verification...</div>';
+            
+            // Step 1: Check functions exist and are not overridden
+            const functionsToCheck = [
+                'openAddPropertyModal',
+                'openAnalyzeModal', 
+                'generateMarketInsights'
+            ];
+            
+            let allFunctionsGood = true;
+            
+            for (const funcName of functionsToCheck) {
+                const func = appWindow[funcName];
+                if (typeof func === 'function') {
+                    // Check if function contains emergency fix code
+                    const funcString = func.toString();
+                    const isEmergencyVersion = funcString.includes('EMERGENCY') || funcString.includes('safeGetElement');
+                    
+                    if (isEmergencyVersion) {
+                        results.innerHTML += `<div class="result error">✗ ${funcName} is still using EMERGENCY version</div>`;
+                        allFunctionsGood = false;
+                    } else {
+                        results.innerHTML += `<div class="result success">✓ ${funcName} exists and is original version</div>`;
+                    }
+                } else {
+                    results.innerHTML += `<div class="result error">✗ ${funcName} is not defined</div>`;
+                    allFunctionsGood = false;
+                }
+            }
+            
+            if (!allFunctionsGood) {
+                results.innerHTML += '<div class="result error">Functions are not properly defined!</div>';
+                return;
+            }
+            
+            // Step 2: Test actual button clicks
+            results.innerHTML += '<div class="result info">Testing button clicks...</div>';
+            
+            // Find buttons
+            const buttons = appWindow.document.querySelectorAll('button');
+            let addBtn = null, analyzeBtn = null, marketBtn = null;
+            
+            buttons.forEach(btn => {
+                if (btn.textContent.includes('Add Property')) addBtn = btn;
+                else if (btn.textContent.includes('Analyze Property')) analyzeBtn = btn;
+                else if (btn.textContent.includes('Market Overview')) marketBtn = btn;
+            });
+            
+            // Test Add Property
+            if (addBtn) {
+                addBtn.click();
+                await new Promise(r => setTimeout(r, 100));
+                const modal = appWindow.document.getElementById('addPropertyModal');
+                if (modal && modal.style.display === 'block') {
+                    results.innerHTML += '<div class="result success">✓ Add Property button works!</div>';
+                    modal.style.display = 'none';
+                } else {
+                    results.innerHTML += '<div class="result error">✗ Add Property button FAILED</div>';
+                }
+            }
+            
+            await new Promise(r => setTimeout(r, 300));
+            
+            // Test Analyze Property
+            if (analyzeBtn) {
+                analyzeBtn.click();
+                await new Promise(r => setTimeout(r, 100));
+                const modal = appWindow.document.getElementById('analyzeModal');
+                if (modal && modal.style.display === 'block') {
+                    results.innerHTML += '<div class="result success">✓ Analyze Property button works!</div>';
+                    modal.style.display = 'none';
+                } else {
+                    results.innerHTML += '<div class="result error">✗ Analyze Property button FAILED</div>';
+                }
+            }
+            
+            await new Promise(r => setTimeout(r, 300));
+            
+            // Test Market Overview
+            if (marketBtn) {
+                marketBtn.click();
+                await new Promise(r => setTimeout(r, 100));
+                const modal = appWindow.document.getElementById('marketInsightsModal');
+                if (modal && modal.style.display === 'block') {
+                    results.innerHTML += '<div class="result success">✓ Market Overview button works!</div>';
+                    modal.style.display = 'none';
+                } else {
+                    results.innerHTML += '<div class="result error">✗ Market Overview button FAILED</div>';
+                }
+            }
+            
+            results.innerHTML += '<div class="result info">Verification complete!</div>';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Modal Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .console-output {
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+        }
+        .log-entry.error {
+            color: #ff6b6b;
+        }
+        .log-entry.success {
+            color: #51cf66;
+        }
+        .log-entry.info {
+            color: #74c0fc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Real Estate Tracker - Modal Function Test</h1>
+        
+        <h2>Test Modal Functions Directly</h2>
+        <p>Click the buttons below to test if the modal functions are working:</p>
+        
+        <div>
+            <button class="btn-primary" onclick="testFunction('openAddPropertyModal')">
+                Test Add Property Modal
+            </button>
+            <button class="btn-success" onclick="testFunction('openAnalyzeModal')">
+                Test Analyze Property Modal
+            </button>
+            <button class="btn-primary" onclick="testFunction('generateMarketInsights')">
+                Test Market Overview Modal
+            </button>
+        </div>
+        
+        <button class="btn-danger" onclick="clearConsole()">Clear Console</button>
+        
+        <div class="console-output" id="console"></div>
+    </div>
+    
+    <script>
+        const consoleDiv = document.getElementById('console');
+        
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            consoleDiv.appendChild(entry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        function clearConsole() {
+            consoleDiv.innerHTML = '';
+            log('Console cleared', 'info');
+        }
+        
+        function testFunction(functionName) {
+            log(`\\n========== Testing ${functionName} ==========`, 'info');
+            
+            // First, check if we're in the main app
+            if (!window.parent || window.parent === window) {
+                log('ERROR: This test must be run inside the real estate tracker app', 'error');
+                log('Please open index.html and run this test in the console', 'error');
+                return;
+            }
+            
+            const targetWindow = window.parent;
+            
+            // Check if function exists
+            if (typeof targetWindow[functionName] !== 'function') {
+                log(`ERROR: ${functionName} is not defined`, 'error');
+                log(`Type of ${functionName}: ${typeof targetWindow[functionName]}`, 'error');
+                
+                // List all available functions
+                const availableFunctions = Object.keys(targetWindow).filter(key => 
+                    typeof targetWindow[key] === 'function' && 
+                    (key.includes('Modal') || key.includes('Market'))
+                );
+                log(`Available modal-related functions: ${availableFunctions.join(', ')}`, 'info');
+                return;
+            }
+            
+            log(`✓ ${functionName} exists and is a function`, 'success');
+            
+            // Override console methods temporarily
+            const originalLog = console.log;
+            const originalError = console.error;
+            
+            console.log = function(...args) {
+                log('LOG: ' + args.join(' '), 'info');
+                originalLog.apply(console, args);
+            };
+            
+            console.error = function(...args) {
+                log('ERROR: ' + args.join(' '), 'error');
+                originalError.apply(console, args);
+            };
+            
+            try {
+                log(`Calling ${functionName}()...`, 'info');
+                targetWindow[functionName]();
+                log(`✓ ${functionName} called successfully`, 'success');
+                
+                // Check if modal opened
+                setTimeout(() => {
+                    const modals = targetWindow.document.querySelectorAll('.modal');
+                    let openModal = null;
+                    modals.forEach(modal => {
+                        if (modal.style.display === 'block' || modal.style.display === 'flex') {
+                            openModal = modal;
+                        }
+                    });
+                    
+                    if (openModal) {
+                        log(`✓ Modal opened successfully: ${openModal.id}`, 'success');
+                    } else {
+                        log(`✗ No modal appears to be open`, 'error');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                log(`✗ Exception thrown: ${error.message}`, 'error');
+                log(`Stack trace: ${error.stack}`, 'error');
+            } finally {
+                // Restore console methods
+                console.log = originalLog;
+                console.error = originalError;
+            }
+        }
+        
+        // Instructions
+        log('Modal Function Tester Ready', 'success');
+        log('Instructions:', 'info');
+        log('1. Open index.html in your browser', 'info');
+        log('2. Open the browser console (F12)', 'info');
+        log('3. Run this code:', 'info');
+        log("   const testScript = document.createElement('script');", 'info');
+        log("   testScript.src = 'test-modal-direct.html';", 'info');
+        log("   document.body.appendChild(testScript);", 'info');
+        log('4. Or manually test by clicking the buttons above', 'info');
+    </script>
+</body>
+</html>
