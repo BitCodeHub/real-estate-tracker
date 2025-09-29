@@ -1096,6 +1096,14 @@
                     <!-- Properties will be loaded here -->
                 </tbody>
             </table>
+            
+            <!-- Legend for visual indicators -->
+            <div id="tableLegend" style="margin-top: 10px; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px; font-size: 12px; color: var(--text-secondary); display: none;">
+                <strong>Legend:</strong> 
+                <span style="color: #f59e0b;">⚠️</span> = Property saved locally only (not in database) | 
+                <span style="color: #10b981;">📊</span> = Real-time market data available | 
+                <span style="color: #ef4444;">❌</span> = No market data - click refresh
+            </div>
         </div>
     </div>
 
@@ -2121,10 +2129,21 @@
                     const data = await response.json();
                     
                     if (response.ok && data.success) {
-                        // Property created successfully
+                        // Check if this is a temporary save (database not connected)
+                        const hasWarning = data.warning && data.warning.includes('locally only');
+                        const hasTemporaryId = data.data.id && typeof data.data.id === 'number' && data.data.id > 1700000000000; // Timestamp-based IDs
+                        
+                        if (hasWarning || hasTemporaryId) {
+                            console.warn(`⚠️ Property "${property.address}" saved locally only (database not connected)`);
+                            console.log('Temporary ID:', data.data.id, 'Warning:', data.warning);
+                        }
+                        
+                        // Property created successfully (but might be temporary)
                         const createdProperty = {
                             ...property,
                             ...data.data,
+                            // Mark if this is a temporary save
+                            _isTemporary: hasWarning || hasTemporaryId,
                             // Preserve camelCase fields
                             purchasePrice: data.data.purchasePrice || data.data.purchase_price || property.purchasePrice,
                             monthlyRent: data.data.monthlyRent || data.data.monthly_rent || property.monthlyRent
@@ -2134,7 +2153,7 @@
                         createdProperties.push(createdProperty);
                         successCount++;
                         
-                        console.log(`✅ Property created: ${property.address} with ID ${createdProperty.id}`);
+                        console.log(`${hasWarning ? '⚠️' : '✅'} Property created: ${property.address} with ID ${createdProperty.id}${hasWarning ? ' (TEMPORARY)' : ''}`);
                     } else if (response.status === 409) {
                         // Property already exists
                         existingCount++;
@@ -2210,8 +2229,17 @@
                 console.log('Failed addresses:', failedAddresses);
             }
             
+            // Check for temporary properties
+            const temporaryProperties = properties.filter(p => p._isTemporary);
+            if (temporaryProperties.length > 0) {
+                message += `. WARNING: ${temporaryProperties.length} properties saved locally only (database not connected)`;
+                console.warn(`⚠️ ${temporaryProperties.length} properties have temporary IDs and are not saved to database:`, 
+                    temporaryProperties.map(p => ({ address: p.address, id: p.id })));
+            }
+            
             // Show notification
-            showNotification(message || 'No properties imported', successCount > 0 ? 'success' : 'warning');
+            showNotification(message || 'No properties imported', 
+                temporaryProperties.length > 0 ? 'warning' : (successCount > 0 ? 'success' : 'warning'));
             
             // Show detailed info about existing properties if any
             if (existingProperties.length > 0) {
@@ -2219,6 +2247,13 @@
                 setTimeout(() => {
                     showNotification(`Already in portfolio: ${existingProperties.slice(0, 3).join(', ')}${existingProperties.length > 3 ? ` and ${existingProperties.length - 3} more` : ''}`, 'info');
                 }, 2000);
+            }
+            
+            // Show warning about temporary saves
+            if (temporaryProperties.length > 0) {
+                setTimeout(() => {
+                    showNotification(`⚠️ ${temporaryProperties.length} properties saved locally only. Refresh the page when database is connected to persist them.`, 'warning');
+                }, existingProperties.length > 0 ? 4000 : 2000);
             }
             
             // Show additional notification about RentCast data
@@ -2503,13 +2538,22 @@
                 for (let i = 0; i < properties.length; i++) {
                     const property = properties[i];
                     
-                    if (!property.id) {
-                        // New property, create it
-                        console.log('Creating new property in database:', property.address);
+                    // Check if this property has a temporary ID (timestamp-based)
+                    const hasTemporaryId = property.id && typeof property.id === 'number' && property.id > 1700000000000;
+                    const isTemporary = property._isTemporary || hasTemporaryId;
+                    
+                    if (!property.id || isTemporary) {
+                        // New property or temporary property, create it
+                        console.log(isTemporary ? 
+                            `🔄 Re-creating temporary property in database: ${property.address} (old ID: ${property.id})` : 
+                            `Creating new property in database: ${property.address}`);
+                        
+                        // Clean up temporary fields and prepare for database creation
+                        const { id, _isTemporary, ...cleanProperty } = property;
                         
                         // Ensure we send all required fields with both naming conventions
                         const propertyToCreate = {
-                            ...property,
+                            ...cleanProperty,
                             // Include both camelCase and snake_case versions
                             purchasePrice: property.purchasePrice || property.purchase_price || 0,
                             monthlyRent: property.monthlyRent || property.monthly_rent || 0,
@@ -2548,17 +2592,30 @@
                         const data = await response.json();
                         
                         if (response.ok && data.success) {
+                            // Check if this is still a temporary save
+                            const stillTemporary = data.warning && data.warning.includes('locally only');
+                            
                             // CRITICAL: Update the property in the array with the server response
                             properties[i] = {
                                 ...property,
                                 ...data.data,
+                                // Mark if still temporary
+                                _isTemporary: stillTemporary,
                                 // Ensure camelCase fields are preserved
                                 purchasePrice: data.data.purchasePrice || data.data.purchase_price || property.purchasePrice,
                                 monthlyRent: data.data.monthlyRent || data.data.monthly_rent || property.monthlyRent
                             };
+                            
+                            // Remove _isTemporary flag if property was saved to database
+                            if (!stillTemporary && properties[i]._isTemporary !== undefined) {
+                                delete properties[i]._isTemporary;
+                            }
+                            
                             createdCount++;
-                            console.log('✅ Property created with ID:', properties[i].id);
-                            console.log('Updated property in array:', properties[i]);
+                            console.log(`✅ Property ${stillTemporary ? 'saved locally' : 'created in database'} with ID:`, properties[i].id);
+                            if (isTemporary && !stillTemporary) {
+                                console.log('✅ Temporary property successfully persisted to database!');
+                            }
                             
                             // Show warning if database wasn't available
                             if (data.warning) {
@@ -2706,11 +2763,29 @@
             const avgCashOnCash = availableProperties.length > 0 ? 
                 availableProperties.reduce((sum, p) => sum + (p.cashOnCashReturn || 0), 0) / availableProperties.length : 0;
             
+            // Count temporary properties
+            const temporaryCount = properties.filter(p => p._isTemporary).length;
+            
             document.getElementById('totalProperties').textContent = totalProperties;
             document.getElementById('totalValue').textContent = formatCurrency(totalValue);
             document.getElementById('totalEquity').textContent = formatCurrency(totalEquity);
             document.getElementById('monthlyCashFlow').textContent = formatCurrency(totalCashFlow);
             document.getElementById('avgCashOnCash').textContent = avgCashOnCash.toFixed(1) + '%';
+            
+            // Update total properties display with warning if there are temporary properties
+            if (temporaryCount > 0) {
+                const totalPropertiesElement = document.getElementById('totalProperties');
+                totalPropertiesElement.innerHTML = `${totalProperties} <span style="color: #f59e0b; font-size: 14px;" title="${temporaryCount} properties saved locally only">⚠️</span>`;
+            }
+            
+            // Show legend if there are indicators to explain
+            const hasRealTimeData = properties.some(p => p.realTimeData);
+            const hasNoRentCastData = properties.some(p => !p.rentcastCache);
+            if (temporaryCount > 0 || hasRealTimeData || hasNoRentCastData) {
+                document.getElementById('tableLegend').style.display = 'block';
+            } else {
+                document.getElementById('tableLegend').style.display = 'none';
+            }
         }
 
         // Update table
@@ -2765,7 +2840,13 @@
             const dscrClass = dscr >= 1.25 ? 'positive' : dscr >= 1.0 ? 'warning' : 'negative';
             
             row.innerHTML = `
-                <td style="min-width: 200px;">${property.address || ''}</td>
+                <td style="min-width: 200px;">
+                    ${property.address || ''}
+                    ${property._isTemporary ? 
+                        '<span style="color: #f59e0b; font-size: 12px; margin-left: 8px;" title="Property saved locally only - Database not connected">⚠️</span>' : 
+                        ''
+                    }
+                </td>
                 <td style="min-width: 120px;">${property.city || ''}</td>
                 <td style="min-width: 100px;">${property.propertyType || 'Single Family'}</td>
                 <td style="min-width: 80px; text-align: center;">
@@ -2874,6 +2955,15 @@
             const capRate = property.purchasePrice > 0 ? (noi / property.purchasePrice) * 100 : 0;
             
             return `
+                ${property._isTemporary ? `
+                <div style="background: #451a03; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <span style="color: #f59e0b; font-size: 20px;">⚠️</span>
+                    <div>
+                        <strong style="color: #f59e0b;">Property Saved Locally Only</strong>
+                        <p style="color: #fbbf24; margin: 0; font-size: 14px;">This property is not yet saved to the database. It will be persisted when the database connection is restored.</p>
+                    </div>
+                </div>
+                ` : ''}
                 <div class="analysis-section">
                     <h3>Property Information</h3>
                     <div class="property-details">
