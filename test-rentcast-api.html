@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RentCast API Field Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .success {
+            color: #28a745;
+        }
+        .highlight {
+            background: yellow;
+            font-weight: bold;
+        }
+        .api-calls {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RentCast API Field Tester</h1>
+        <p>Test what fields RentCast API returns for a property</p>
+        
+        <form id="testForm">
+            <div class="form-group">
+                <label for="address">Street Address:</label>
+                <input type="text" id="address" name="address" placeholder="123 Main St" required>
+            </div>
+            <div class="form-group">
+                <label for="city">City:</label>
+                <input type="text" id="city" name="city" placeholder="Los Angeles" required>
+            </div>
+            <div class="form-group">
+                <label for="state">State:</label>
+                <input type="text" id="state" name="state" placeholder="CA" maxlength="2" required>
+            </div>
+            <div class="form-group">
+                <label for="zip">ZIP Code:</label>
+                <input type="text" id="zip" name="zip" placeholder="90001" maxlength="5" required>
+            </div>
+            <button type="submit" id="testBtn">Test RentCast API</button>
+        </form>
+        
+        <div id="results" class="results" style="display: none;"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('testForm');
+        const resultsDiv = document.getElementById('results');
+        const testBtn = document.getElementById('testBtn');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const address = document.getElementById('address').value;
+            const city = document.getElementById('city').value;
+            const state = document.getElementById('state').value;
+            const zip = document.getElementById('zip').value;
+            
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing...';
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = 'Calling RentCast API...';
+            
+            try {
+                // Build query parameters
+                const params = new URLSearchParams({
+                    address: address,
+                    city: city,
+                    state: state,
+                    zipcode: zip
+                });
+                
+                resultsDiv.innerHTML = `<div class="api-calls">
+                    <strong>API Call:</strong> /api/rentcast/properties?${params}
+                </div>Fetching...`;
+                
+                // Make API call
+                const response = await fetch(`/api/rentcast/properties?${params}`);
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    const property = data.data[0];
+                    
+                    // Analyze the fields
+                    let output = '<span class="success">✅ SUCCESS - Property Found!</span>\n\n';
+                    output += '<strong>📋 ALL FIELDS RETURNED BY RENTCAST:</strong>\n';
+                    output += Object.keys(property).sort().map(key => `  • ${key}`).join('\n');
+                    
+                    // Check for critical fields
+                    output += '\n\n<strong>🎯 CRITICAL FIELDS CHECK:</strong>\n';
+                    
+                    // Check for rent estimate fields
+                    output += '\n<strong>Rent Estimate Fields:</strong>\n';
+                    const rentFields = ['rent', 'rentEstimate', 'rentValue', 'monthlyRent', 
+                                       'estimatedRent', 'rentRangeLow', 'rentRangeHigh'];
+                    rentFields.forEach(field => {
+                        if (property[field] !== undefined && property[field] !== null) {
+                            output += `  ✅ ${field}: <span class="highlight">${property[field]}</span>\n`;
+                        } else {
+                            output += `  ❌ ${field}: not found\n`;
+                        }
+                    });
+                    
+                    // Check for value estimate fields
+                    output += '\n<strong>Value Estimate Fields:</strong>\n';
+                    const valueFields = ['value', 'price', 'estimatedValue', 'valueEstimate', 
+                                        'marketValue', 'currentValue', 'assessedValue', 
+                                        'priceRangeLow', 'priceRangeHigh'];
+                    valueFields.forEach(field => {
+                        if (property[field] !== undefined && property[field] !== null) {
+                            output += `  ✅ ${field}: <span class="highlight">${property[field]}</span>\n`;
+                        } else {
+                            output += `  ❌ ${field}: not found\n`;
+                        }
+                    });
+                    
+                    // Show all non-null values
+                    output += '\n<strong>📊 ALL NON-NULL VALUES:</strong>\n';
+                    Object.entries(property).forEach(([key, value]) => {
+                        if (value !== null && value !== undefined && value !== '') {
+                            output += `  ${key}: ${JSON.stringify(value)}\n`;
+                        }
+                    });
+                    
+                    // Show raw JSON
+                    output += '\n<strong>📄 RAW JSON RESPONSE:</strong>\n';
+                    output += JSON.stringify(property, null, 2);
+                    
+                    resultsDiv.innerHTML = output;
+                } else {
+                    resultsDiv.innerHTML = `<span class="error">❌ No property data returned</span>\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Test RentCast API';
+            }
+        });
+    </script>
+</body>
+</html>

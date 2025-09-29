@@ -4281,7 +4281,17 @@
                         square_footage: rentcastData.data.sqft || rentcastData.data.squareFootage,
                         // Ensure yearBuilt is set
                         yearBuilt: rentcastData.data.yearBuilt,
-                        year_built: rentcastData.data.yearBuilt
+                        year_built: rentcastData.data.yearBuilt,
+                        // CRITICAL: Ensure rentEstimate and estimatedValue are properly set
+                        rentEstimate: rentcastData.data.rentEstimate || rentcastData.data.rent_estimate || 
+                                     property.rentEstimate || property.monthlyRent,
+                        estimatedValue: rentcastData.data.estimatedValue || rentcastData.data.value_estimate || 
+                                       rentcastData.data.currentValue || property.estimatedValue || property.purchasePrice,
+                        // Also set the alternative field names for compatibility
+                        rent_estimate: rentcastData.data.rentEstimate || rentcastData.data.rent_estimate,
+                        value_estimate: rentcastData.data.estimatedValue || rentcastData.data.value_estimate,
+                        currentValue: rentcastData.data.estimatedValue || rentcastData.data.value_estimate || 
+                                     rentcastData.data.currentValue || property.currentValue || property.purchasePrice
                     };
                     
                     Object.assign(property, mappedData);
@@ -4472,6 +4482,10 @@
                     const property = data.data[0];
                     console.log('✅ Found property data:', property);
                     
+                    // DEBUG: Log ALL fields returned by RentCast to identify correct field names
+                    console.log('🔍 ALL RentCast fields:', Object.keys(property));
+                    console.log('📋 Full RentCast response:', JSON.stringify(property, null, 2));
+                    
                     // Check if property data already includes rent and value estimates
                     const hasRentEstimate = property.rent || property.rentEstimate || property.rentRangeLow;
                     const hasValueEstimate = property.price || property.value || property.estimatedValue;
@@ -4503,34 +4517,10 @@
                         }
                     });
                     
-                    // MAJOR OPTIMIZATION: Don't fetch additional data if properties endpoint provided it
-                    const needsRent = false; // Properties endpoint usually has rent data
-                    const needsValue = false; // Properties endpoint usually has value data
-                    const needsMarket = false; // Skip market stats entirely
-                    
-                    if (needsRent || needsValue || needsMarket) {
-                        console.log('🔄 Fetching only missing data:', {
-                            needsRent,
-                            needsValue,
-                            needsMarket
-                        });
-                        
-                        // OPTIMIZATION: Only fetch if absolutely necessary
-                        // This should rarely happen as properties endpoint usually has all data
-                        if (!property.rent && !property.rentRangeLow && !property.price && !property.priceRangeLow) {
-                            console.log('⚠️ Properties endpoint missing ALL data, fetching rent estimate only...');
-                            apiCallCount++;
-                            rentData = await fetchRentEstimate(address);
-                        }
-                        
-                        console.log('📊 Additional data fetched:', {
-                            rentData: rentData?.rent ? `$${rentData.rent}` : (hasRentEstimate ? 'Already had data' : 'No data'),
-                            valueData: valueData?.value ? `$${valueData.value.toLocaleString()}` : (hasValueEstimate ? 'Already had data' : 'No data'),
-                            marketData: marketData?.zipCode ? `ZIP ${marketData.zipCode}` : 'No data'
-                        });
-                    } else {
-                        console.log('✅ Property data already contains all estimates, skipping additional API calls');
-                    }
+                    // OPTIMIZATION: Use ONLY the data from the properties endpoint
+                    // NO additional API calls - everything comes from the first call
+                    console.log('✅ Using data from single properties API call only');
+                    console.log('📊 Total API calls for this property: 1');
                     
                     // Extract ALL available data from RentCast response
                     // This preserves all fields returned by the API for maximum data capture
@@ -4552,15 +4542,25 @@
                         square_footage: property.squareFootage || property.squareFeet || property.sqft,
                         year_built: property.yearBuilt,
                         
-                        // Extract rent data (use most accurate value available)
-                        rentEstimate: property.rent || property.rentEstimate || property.rentRangeLow || rentData?.rent,
-                        rent_estimate: property.rent || property.rentEstimate || property.rentRangeLow || rentData?.rent,
+                        // Extract rent data - check ALL possible field names RentCast might use
+                        rentEstimate: property.rent || property.rentEstimate || property.rentEst || property.rentValue || 
+                                    property.monthlyRent || property.estimatedRent || property.estimatedMonthlyRent ||
+                                    property.rentRangeLow || property.rentLow || property.minRent,
+                        rent_estimate: property.rent || property.rentEstimate || property.rentEst || property.rentValue || 
+                                     property.monthlyRent || property.estimatedRent || property.estimatedMonthlyRent ||
+                                     property.rentRangeLow || property.rentLow || property.minRent,
                         rentRangeLow: property.rentRangeLow,
                         rentRangeHigh: property.rentRangeHigh,
                         
-                        // Extract value/price data
-                        estimatedValue: property.price || property.value || property.estimatedValue || property.priceRangeLow || valueData?.price || valueData?.value,
-                        value_estimate: property.price || property.value || property.estimatedValue || property.priceRangeLow || valueData?.price || valueData?.value,
+                        // Extract value/price data - check ALL possible field names RentCast might use
+                        estimatedValue: property.price || property.value || property.valueEstimate || property.estimatedValue || 
+                                      property.estimatedPrice || property.marketValue || property.currentValue || 
+                                      property.assessedValue || property.priceEst || property.valueEst ||
+                                      property.priceRangeLow || property.priceLow || property.minPrice,
+                        value_estimate: property.price || property.value || property.valueEstimate || property.estimatedValue || 
+                                      property.estimatedPrice || property.marketValue || property.currentValue || 
+                                      property.assessedValue || property.priceEst || property.valueEst ||
+                                      property.priceRangeLow || property.priceLow || property.minPrice,
                         priceRangeLow: property.priceRangeLow,
                         priceRangeHigh: property.priceRangeHigh,
                         
@@ -4636,6 +4636,24 @@
                         }
                     });
                     
+                    // CRITICAL DEBUG: Show what rent/value fields we actually found
+                    console.log('🎯 CRITICAL VALUES CHECK:', {
+                        rentEstimate: extractedData.rentEstimate || 'NOT FOUND',
+                        estimatedValue: extractedData.estimatedValue || 'NOT FOUND',
+                        alternativeRentFields: {
+                            rent: property.rent,
+                            rentEstimate: property.rentEstimate,
+                            rentValue: property.rentValue,
+                            monthlyRent: property.monthlyRent
+                        },
+                        alternativeValueFields: {
+                            value: property.value,
+                            price: property.price,
+                            estimatedValue: property.estimatedValue,
+                            marketValue: property.marketValue
+                        }
+                    });
+                    
                     return {
                         success: true,
                         data: extractedData
@@ -4643,29 +4661,9 @@
                 } else {
                     console.warn('⚠️ Properties API returned no data:', data);
                     
-                    // OPTIMIZATION: If properties API fails, only try rent estimate as fallback
-                    // This reduces from 3 API calls to just 1
-                    console.log('🔄 Trying minimal fallback: rent estimate only...');
-                    apiCallCount++;
-                    const rentData = await fetchRentEstimate(address);
-                    
-                    if (rentData?.rent) {
-                        console.log('✅ Found fallback rent data');
-                        return {
-                            success: true,
-                            data: {
-                                address: `${address.streetAddress || address.address}, ${address.city}, ${address.state} ${address.zip}`,
-                                rentEstimate: rentData.rent,
-                                estimatedValue: null, // No value data in minimal mode
-                                marketStats: {}, // No market stats in minimal mode
-                                dataSource: 'RentCast API (Rent Estimate Only)',
-                                fetchedAt: new Date().toISOString(),
-                                realTimeData: true,
-                                minimalData: true, // Flag to indicate limited data
-                                apiCallCount: apiCallCount // Track how many API calls were made
-                            }
-                        };
-                    }
+                    // NO FALLBACK CALLS - Keep it to 1 API call only
+                    console.log('⚠️ Properties API returned no data - NOT making additional calls');
+                    console.log('📊 Total API calls: 1 (as requested)');
                     
                     return { 
                         success: false, 
