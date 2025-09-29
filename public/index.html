@@ -3364,28 +3364,62 @@
                     // IMPORTANT: Force save to database with updated RentCast data
                     console.log('💾 Saving RentCast data to database for property:', property.id || 'No ID');
                     
-                    // If property doesn't have an ID, we need to handle it specially
-                    if (!property.id) {
-                        console.warn('⚠️ Property has no database ID, attempting to create it first');
+                    // Check if property has a valid integer ID
+                    const hasValidId = property.id && Number.isInteger(property.id) && property.id > 0;
+                    
+                    if (!hasValidId) {
+                        console.warn('⚠️ Property has invalid or missing database ID:', property.id, 'type:', typeof property.id);
                         
-                        // Try to create the property in the database first
+                        // First check if property already exists in database by address
                         try {
-                            const response = await fetch('/api/properties', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(property)
-                            });
+                            const checkResponse = await fetch(`/api/properties/search?address=${encodeURIComponent(property.address)}&city=${encodeURIComponent(property.city)}&state=${encodeURIComponent(property.state)}`);
                             
-                            if (response.ok) {
-                                const data = await response.json();
-                                if (data.success && data.data && data.data.id) {
-                                    // Update property with database ID
-                                    property.id = data.data.id;
-                                    console.log('✅ Property created in database with ID:', property.id);
+                            if (checkResponse.ok) {
+                                const checkData = await checkResponse.json();
+                                if (checkData.success && checkData.data && checkData.data.id) {
+                                    // Property exists, update with correct ID
+                                    property.id = checkData.data.id;
+                                    console.log('✅ Found existing property in database with ID:', property.id);
+                                } else {
+                                    // Property doesn't exist, create it
+                                    console.log('🔄 Property not found in database, creating new one');
+                                    const sanitizedProperty = sanitizePropertyForDatabase(property);
+                                    
+                                    const createResponse = await fetch('/api/properties', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(sanitizedProperty)
+                                    });
+                                    
+                                    if (createResponse.ok) {
+                                        const createData = await createResponse.json();
+                                        if (createData.success && createData.data && createData.data.id) {
+                                            property.id = createData.data.id;
+                                            console.log('✅ Property created in database with ID:', property.id);
+                                        }
+                                    } else {
+                                        const errorData = await createResponse.json();
+                                        console.error('❌ Failed to create property:', errorData.error);
+                                        
+                                        // If it's a duplicate error, try to find the existing property
+                                        if (errorData.error?.includes('already exists')) {
+                                            console.log('🔍 Duplicate detected, searching for existing property...');
+                                            // The property was created between our check and create attempt
+                                            // Try the search again
+                                            const recheckResponse = await fetch(`/api/properties/search?address=${encodeURIComponent(property.address)}&city=${encodeURIComponent(property.city)}&state=${encodeURIComponent(property.state)}`);
+                                            if (recheckResponse.ok) {
+                                                const recheckData = await recheckResponse.json();
+                                                if (recheckData.success && recheckData.data && recheckData.data.id) {
+                                                    property.id = recheckData.data.id;
+                                                    console.log('✅ Found existing property after duplicate error, ID:', property.id);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         } catch (error) {
-                            console.error('❌ Failed to create property in database:', error);
+                            console.error('❌ Failed to check/create property in database:', error);
                         }
                     }
                     

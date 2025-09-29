@@ -521,6 +521,67 @@ app.get('/api/properties/:id', async (req, res) => {
     }
 });
 
+// Search for property by address
+app.get('/api/properties/search', async (req, res) => {
+    try {
+        const { address, city, state } = req.query;
+        
+        if (!address || !city || !state) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Address, city, and state are required for search' 
+            });
+        }
+        
+        console.log(`🔍 Searching for property: ${address}, ${city}, ${state}`);
+        
+        // Check database connection
+        let dbConnected = false;
+        try {
+            await db.pool.query('SELECT 1');
+            dbConnected = true;
+        } catch (error) {
+            console.log('⚠️ Database connection check failed:', error.message);
+        }
+        
+        if (!dbConnected) {
+            return res.json({ 
+                success: false, 
+                error: 'Database not connected'
+            });
+        }
+        
+        // Use the existing checkPropertyExists method
+        const existingProperty = await db.checkPropertyExists(address, city, state);
+        
+        if (existingProperty) {
+            console.log(`✅ Found existing property with ID: ${existingProperty.id}`);
+            
+            // Return the property data in the same format as other endpoints
+            const mappedProp = {
+                ...existingProperty,
+                beds: existingProperty.bedrooms || 0,
+                baths: existingProperty.bathrooms || 0,
+                sqft: existingProperty.square_footage || 0,
+                yearBuilt: existingProperty.year_built || existingProperty.yearBuilt,
+                monthlyRent: existingProperty.monthly_rent || existingProperty.monthlyRent || 0,
+                rentEstimate: existingProperty.rent_estimate || existingProperty.rentEstimate || 0,
+                estimatedValue: existingProperty.value_estimate || existingProperty.estimatedValue || 0,
+                currentValue: existingProperty.value_estimate || existingProperty.current_value || existingProperty.currentValue || existingProperty.purchase_price || 0
+            };
+            
+            res.json({ success: true, data: mappedProp });
+        } else {
+            console.log('❌ Property not found in database');
+            res.json({ success: false, error: 'Property not found' });
+        }
+        
+    } catch (error) {
+        console.error('Error searching for property:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Create new property
 app.post('/api/properties', async (req, res) => {
     try {
