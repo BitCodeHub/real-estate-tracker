@@ -697,7 +697,7 @@
         }
         
         .mobile-nav {
-            display: none;
+            display: block;
             position: fixed;
             top: 0;
             left: -300px;
@@ -766,7 +766,7 @@
         
         /* Mobile Property Cards */
         .mobile-property-card {
-            display: none;
+            display: block;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
@@ -2032,20 +2032,35 @@
             if (isMobile) {
                 container.style.display = 'block';
                 
-                // Get filtered properties
-                const filteredProperties = filterPropertiesData();
+                // Use the same filter function as the table for consistency
+                const filteredProperties = getFilteredProperties();
                 
-                if (filteredProperties.length === 0) {
+                if (properties.length === 0) {
+                    // No properties at all
                     container.innerHTML = `
                         <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
                             <i class="fas fa-home" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
-                            <p>No properties found</p>
+                            <h3>No Properties Yet</h3>
+                            <p style="margin-bottom: 20px;">Start building your real estate portfolio!</p>
                             <button class="btn btn-primary" onclick="openAddPropertyModal()" style="margin-top: 20px;">
                                 <i class="fas fa-plus"></i> Add Your First Property
                             </button>
                         </div>
                     `;
+                } else if (filteredProperties.length === 0) {
+                    // Properties exist but filtered out
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                            <i class="fas fa-filter" style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;"></i>
+                            <h3>No Properties Match Filters</h3>
+                            <p>Try adjusting your search criteria</p>
+                            <button class="btn btn-secondary" onclick="resetFilters()" style="margin-top: 20px;">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </button>
+                        </div>
+                    `;
                 } else {
+                    // Show property cards
                     container.innerHTML = filteredProperties.map((property, index) => 
                         createMobilePropertyCard(property, properties.indexOf(property))
                     ).join('');
@@ -3144,6 +3159,14 @@
             
             // Update display after everything is loaded
             updateDisplay();
+            
+            // Force mobile cards update on initial load for mobile devices
+            if (window.innerWidth <= 768) {
+                setTimeout(() => {
+                    updateMobilePropertyCards();
+                    console.log('📱 Mobile view initialized');
+                }, 100);
+            }
         });
         
         // Check API and database connection status
@@ -3653,20 +3676,44 @@
             const availableProperties = properties.filter(p => p.status !== 'sold');
             
             const totalProperties = properties.length;
-            const totalValue = availableProperties.reduce((sum, p) => sum + (p.currentValue || p.purchasePrice || 0), 0);
-            const totalEquity = availableProperties.reduce((sum, p) => {
-                const value = p.currentValue || p.purchasePrice || 0;
-                const loan = (p.purchasePrice || 0) * 0.8;
-                return sum + (value - loan);
-            }, 0);
-            const totalCashFlow = availableProperties.reduce((sum, p) => sum + (p.monthlyCashFlow || 0), 0);
             
-            const avgCashOnCash = availableProperties.length > 0 ? 
-                availableProperties.reduce((sum, p) => sum + (p.cashOnCashReturn || 0), 0) / availableProperties.length : 0;
+            // Calculate total value safely
+            const totalValue = availableProperties.reduce((sum, p) => {
+                const value = parseFloat(p.estimatedValue) || parseFloat(p.currentValue) || parseFloat(p.purchasePrice) || 0;
+                return sum + (isNaN(value) ? 0 : value);
+            }, 0);
+            
+            // Calculate total equity safely
+            const totalEquity = availableProperties.reduce((sum, p) => {
+                const value = parseFloat(p.estimatedValue) || parseFloat(p.currentValue) || parseFloat(p.purchasePrice) || 0;
+                const purchasePrice = parseFloat(p.purchasePrice) || 0;
+                const loan = purchasePrice * 0.8;
+                const equity = value - loan;
+                return sum + (isNaN(equity) ? 0 : equity);
+            }, 0);
+            
+            // Calculate total cash flow safely
+            const totalCashFlow = availableProperties.reduce((sum, p) => {
+                const cashFlow = parseFloat(p.monthlyCashFlow) || parseFloat(p.cashFlow) || 0;
+                return sum + (isNaN(cashFlow) ? 0 : cashFlow);
+            }, 0);
+            
+            // Calculate average cash-on-cash safely
+            let avgCashOnCash = 0;
+            if (availableProperties.length > 0) {
+                const validCocReturns = availableProperties
+                    .map(p => parseFloat(p.cashOnCashReturn) || parseFloat(p.cocReturn) || 0)
+                    .filter(coc => !isNaN(coc) && coc !== 0);
+                
+                if (validCocReturns.length > 0) {
+                    avgCashOnCash = validCocReturns.reduce((sum, coc) => sum + coc, 0) / validCocReturns.length;
+                }
+            }
             
             // Count temporary properties
             const temporaryCount = properties.filter(p => p._isTemporary).length;
             
+            // Update DOM elements
             document.getElementById('totalProperties').textContent = totalProperties;
             document.getElementById('totalValue').textContent = formatCurrency(totalValue);
             document.getElementById('totalEquity').textContent = formatCurrency(totalEquity);
@@ -6380,6 +6427,7 @@
         // Filter properties
         function filterProperties() {
             updateTable();
+            updateMobilePropertyCards(); // Also update mobile view when filtering
         }
 
         // Get filtered properties
