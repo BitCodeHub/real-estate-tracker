@@ -2141,13 +2141,28 @@
                         existingProperties.push(property.address);
                         console.log(`⚠️ Property already exists: ${property.address}`);
                         
+                        // Check if property exists in database and load it
+                        if (data.propertyId) {
+                            try {
+                                const existingPropResponse = await fetch(`/api/properties/${data.propertyId}`);
+                                if (existingPropResponse.ok) {
+                                    const existingPropData = await existingPropResponse.json();
+                                    if (existingPropData.success && existingPropData.data) {
+                                        // Add to local array if not already there
+                                        const alreadyInArray = properties.find(p => p.id === data.propertyId);
+                                        if (!alreadyInArray) {
+                                            properties.push(existingPropData.data);
+                                            console.log(`📥 Loaded existing property from database: ${property.address}`);
+                                        }
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('Failed to load existing property:', error);
+                            }
+                        }
+                        
                         // If it was reactivated, still count as success
                         if (data.message === 'Property reactivated successfully') {
-                            const reactivatedProperty = {
-                                ...property,
-                                ...data.data
-                            };
-                            properties.push(reactivatedProperty);
                             successCount++;
                         }
                     } else {
@@ -3182,12 +3197,25 @@
                     let valueData = null;
                     let marketData = null;
                     
-                    // Determine what additional data we need
-                    const needsRent = !hasRentEstimate;
-                    const needsValue = !hasValueEstimate;
-                    // OPTIMIZATION: Skip market stats - it's not essential for property data
-                    // Market stats can be fetched separately if needed
-                    const needsMarket = false; // Skip to reduce API calls
+                    // OPTIMIZATION: The properties endpoint often includes rent/value estimates
+                    // Check if we actually need additional calls
+                    console.log('🔍 Property data contains:', {
+                        rentFields: {
+                            rent: property.rent,
+                            rentRangeLow: property.rentRangeLow,
+                            rentRangeHigh: property.rentRangeHigh
+                        },
+                        valueFields: {
+                            price: property.price,
+                            priceRangeLow: property.priceRangeLow,
+                            priceRangeHigh: property.priceRangeHigh
+                        }
+                    });
+                    
+                    // MAJOR OPTIMIZATION: Don't fetch additional data if properties endpoint provided it
+                    const needsRent = false; // Properties endpoint usually has rent data
+                    const needsValue = false; // Properties endpoint usually has value data
+                    const needsMarket = false; // Skip market stats entirely
                     
                     if (needsRent || needsValue || needsMarket) {
                         console.log('🔄 Fetching only missing data:', {
@@ -3196,28 +3224,13 @@
                             needsMarket
                         });
                         
-                        // Fetch only what's needed
-                        const promises = [];
-                        if (needsRent) {
-                            promises.push(fetchRentEstimate(address));
+                        // OPTIMIZATION: Only fetch if absolutely necessary
+                        // This should rarely happen as properties endpoint usually has all data
+                        if (!property.rent && !property.rentRangeLow && !property.price && !property.priceRangeLow) {
+                            console.log('⚠️ Properties endpoint missing ALL data, fetching rent estimate only...');
                             apiCallCount++;
+                            rentData = await fetchRentEstimate(address);
                         }
-                        if (needsValue) {
-                            promises.push(fetchValueEstimate(address));
-                            apiCallCount++;
-                        }
-                        if (needsMarket) {
-                            promises.push(fetchMarketStats(address.zip));
-                            apiCallCount++;
-                        }
-                        
-                        const results = await Promise.all(promises);
-                        
-                        // Assign results based on what was fetched
-                        let resultIndex = 0;
-                        if (needsRent) rentData = results[resultIndex++];
-                        if (needsValue) valueData = results[resultIndex++];
-                        if (needsMarket) marketData = results[resultIndex++];
                         
                         console.log('📊 Additional data fetched:', {
                             rentData: rentData?.rent ? `$${rentData.rent}` : (hasRentEstimate ? 'Already had data' : 'No data'),
