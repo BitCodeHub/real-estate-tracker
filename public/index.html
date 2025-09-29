@@ -340,19 +340,6 @@
             border-bottom: none;
         }
         
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(5px);
-            animation: fadeIn 0.3s ease;
-        }
         
         .modal-content {
             position: relative;
@@ -789,7 +776,7 @@
             }
         }
         
-        /* Modal Styles */
+        /* Modal Styles - Fixed for immediate response */
         .modal {
             display: none;
             position: fixed;
@@ -800,7 +787,15 @@
             height: 100%;
             overflow: auto;
             background-color: rgba(0, 0, 0, 0.7);
-            animation: fadeIn 0.3s ease;
+            /* No animations for immediate response */
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        
+        /* Ensure modal shows immediately when display:block */
+        .modal[style*="display: block"] {
+            opacity: 1 !important;
+            visibility: visible !important;
         }
         
         .modal-content {
@@ -4640,14 +4635,30 @@ Format your response in clear sections with bullet points where appropriate. Be 
             return element;
         }
         
-        // Redefine openModal function
+        // Redefine openModal function with lag fix
         window.openModal = function(modalId) {
             console.log(`🔧 EMERGENCY openModal called with: ${modalId}`);
             try {
                 const modal = safeGetElement(modalId);
                 if (modal) {
+                    // Remove any animations temporarily
+                    const originalAnimation = modal.style.animation;
+                    modal.style.animation = 'none';
+                    
+                    // Show modal
                     modal.style.display = 'block';
-                    console.log(`✅ Modal opened: ${modalId}`);
+                    
+                    // Force immediate repaint to fix lag
+                    void modal.offsetWidth; // Force reflow
+                    modal.style.opacity = '1';
+                    modal.style.visibility = 'visible';
+                    
+                    // Restore animation after repaint
+                    requestAnimationFrame(() => {
+                        modal.style.animation = originalAnimation || '';
+                    });
+                    
+                    console.log(`✅ Modal opened with repaint fix: ${modalId}`);
                 } else {
                     console.error(`❌ Cannot open modal - element not found: ${modalId}`);
                 }
@@ -4790,6 +4801,78 @@ Format your response in clear sections with bullet points where appropriate. Be 
         });
         
         console.log('✅ EMERGENCY FIX: Modal functions redefined successfully');
+        
+        // ============= MODAL LAG FIX =============
+        // Fix for delayed modal response - Final override
+        setTimeout(() => {
+            console.log('🚀 Applying final modal lag fix...');
+            
+            // Store references to current functions
+            const _openModal = window.openModal;
+            const _openAnalyzeModal = window.openAnalyzeModal;
+            const _generateMarketInsights = window.generateMarketInsights;
+            
+            // Enhanced openModal with immediate response
+            window.openModal = function(modalId) {
+                console.log(`⚡ Fast openModal: ${modalId}`);
+                const modal = document.getElementById(modalId);
+                if (!modal) return;
+                
+                // Disable transitions/animations
+                modal.style.transition = 'none';
+                modal.style.animation = 'none';
+                
+                // Show immediately
+                modal.style.display = 'block';
+                modal.style.opacity = '1';
+                
+                // Force repaint
+                void modal.offsetHeight;
+                
+                // Re-enable animations next frame
+                requestAnimationFrame(() => {
+                    modal.style.transition = '';
+                    modal.style.animation = '';
+                });
+            };
+            
+            // Fast openAnalyzeModal
+            window.openAnalyzeModal = function() {
+                console.log('⚡ Fast openAnalyzeModal');
+                // Clear fields
+                const input = document.getElementById('propertyAddressInput');
+                const results = document.getElementById('analysisResults');
+                const loading = document.getElementById('analysisLoading');
+                
+                if (input) input.value = '';
+                if (results) results.innerHTML = '';
+                if (loading) loading.style.display = 'none';
+                
+                // Use fast openModal
+                window.openModal('analyzeModal');
+            };
+            
+            // Fast generateMarketInsights
+            window.generateMarketInsights = function() {
+                console.log('⚡ Fast generateMarketInsights');
+                // Use fast openModal
+                window.openModal('marketInsightsModal');
+                
+                // Then load content
+                const loading = document.getElementById('marketInsightsLoading');
+                const content = document.getElementById('marketInsightsContent');
+                
+                if (loading) loading.style.display = 'block';
+                if (content) content.style.display = 'none';
+                
+                // Load data asynchronously
+                if (typeof _generateMarketInsights === 'function') {
+                    setTimeout(() => _generateMarketInsights.call(this), 10);
+                }
+            };
+            
+            console.log('✅ Modal lag fix applied - immediate response enabled');
+        }, 100); // Small delay to ensure everything is loaded
     </script>
 </body>
 </html>
