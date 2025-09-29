@@ -1945,12 +1945,12 @@
                     // Parse address
                     const parsedAddress = parseAddressComponents(address);
                     
-                    if (!parsedAddress || !parsedAddress.address || !parsedAddress.city || !parsedAddress.state || !parsedAddress.zip) {
+                    if (!parsedAddress || !parsedAddress.streetAddress || !parsedAddress.city || !parsedAddress.state || !parsedAddress.zip) {
                         const missing = [];
                         if (!parsedAddress) {
                             throw new Error('Could not parse address');
                         }
-                        if (!parsedAddress.address) missing.push('street');
+                        if (!parsedAddress.streetAddress) missing.push('street');
                         if (!parsedAddress.city) missing.push('city');
                         if (!parsedAddress.state) missing.push('state');
                         if (!parsedAddress.zip) missing.push('ZIP');
@@ -1959,7 +1959,10 @@
                     
                     // Create property object
                     const property = {
-                        ...parsedAddress,
+                        address: parsedAddress.streetAddress,
+                        city: parsedAddress.city,
+                        state: parsedAddress.state,
+                        zip: parsedAddress.zip,
                         propertyType: 'single-family', // Default
                         purchasePrice: null,
                         monthlyRent: null,
