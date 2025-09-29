@@ -2041,6 +2041,7 @@
             let successCount = 0;
             let failCount = 0;
             const failedAddresses = [];
+            const failedProperties = []; // Track detailed failure info
             const propertiesToCreate = [];
 
             // First, parse all addresses and create property objects
@@ -2100,6 +2101,11 @@
                     console.error(`Error parsing property "${address}":`, error);
                     failCount++;
                     failedAddresses.push(address);
+                    failedProperties.push({
+                        address: address,
+                        error: `Address parsing error: ${error.message}`,
+                        stage: 'parsing'
+                    });
                 }
             }
             
@@ -2118,6 +2124,15 @@
                     // Update progress
                     document.querySelector('#fileUploadStatus p').textContent = 
                         `Saving property ${i + 1} of ${propertiesToCreate.length}: ${property.address}...`;
+                    
+                    // Log what we're about to send
+                    console.log(`🔄 Saving property ${i + 1}/${propertiesToCreate.length}:`, {
+                        address: property.address,
+                        city: property.city,
+                        state: property.state,
+                        zip: property.zip,
+                        hasAllRequired: !!(property.address && property.city && property.state)
+                    });
                     
                     // Try to create in database
                     const response = await fetch('/api/properties', {
@@ -2185,16 +2200,55 @@
                             successCount++;
                         }
                     } else {
-                        // Other error
+                        // Other error - log detailed information
                         failCount++;
                         failedAddresses.push(property.address);
-                        console.error(`❌ Failed to create property: ${property.address}`, data.error);
+                        failedProperties.push({
+                            address: property.address,
+                            error: data.error || 'Unknown server error',
+                            status: response.status,
+                            stage: 'database_save',
+                            propertyData: {
+                                address: property.address,
+                                city: property.city,
+                                state: property.state,
+                                zip: property.zip,
+                                propertyType: property.propertyType
+                            }
+                        });
+                        
+                        console.error(`❌ PROPERTY IMPORT FAILED: ${property.address}`);
+                        console.error(`   Error: ${data.error || 'Unknown error'}`);
+                        console.error(`   Status: ${response.status}`);
+                        console.error(`   Property data sent:`, {
+                            address: property.address,
+                            city: property.city,
+                            state: property.state,
+                            zip: property.zip,
+                            propertyType: property.propertyType,
+                            purchasePrice: property.purchasePrice,
+                            monthlyRent: property.monthlyRent,
+                            dataKeys: Object.keys(property)
+                        });
+                        console.error(`   Full server response:`, data);
                     }
                     
                 } catch (error) {
-                    console.error(`Error saving property "${property.address}":`, error);
+                    console.error(`❌ NETWORK ERROR saving property "${property.address}":`, error);
+                    console.error(`   Property data that failed:`, property);
                     failCount++;
                     failedAddresses.push(property.address);
+                    failedProperties.push({
+                        address: property.address,
+                        error: `Network error: ${error.message}`,
+                        stage: 'network',
+                        propertyData: {
+                            address: property.address,
+                            city: property.city,
+                            state: property.state,
+                            zip: property.zip
+                        }
+                    });
                 }
             }
             
@@ -2227,6 +2281,25 @@
             if (failCount > 0) {
                 message += (message ? '. ' : '') + `Failed to import ${failCount} properties`;
                 console.log('Failed addresses:', failedAddresses);
+                
+                // Show detailed failure summary
+                console.error('\n🚨 IMPORT FAILURE SUMMARY:');
+                console.error(`Total failed properties: ${failedProperties.length}`);
+                failedProperties.forEach((failure, index) => {
+                    console.error(`\n--- Failed Property ${index + 1} ---`);
+                    console.error(`Address: ${failure.address}`);
+                    console.error(`Stage: ${failure.stage}`);
+                    console.error(`Error: ${failure.error}`);
+                    if (failure.status) console.error(`HTTP Status: ${failure.status}`);
+                    if (failure.propertyData) {
+                        console.error('Property Data:', failure.propertyData);
+                    }
+                });
+                console.error('\n💡 TROUBLESHOOTING TIPS:');
+                console.error('- Check that all addresses have city, state, and ZIP');
+                console.error('- Ensure no special characters in addresses');
+                console.error('- Verify addresses are not duplicates');
+                console.error('- Check server logs for database errors');
             }
             
             // Check for temporary properties
