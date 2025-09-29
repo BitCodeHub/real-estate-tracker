@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real Estate Investment Tracker</title>
+    <!-- Cache control for development - remove in production -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Dark Theme Variables */
@@ -4590,7 +4594,7 @@
                         
                         // Need value estimate?
                         if (!gotValueFromProperties) {
-                            console.log('🏠 Fetching value estimate...');
+                            console.log('🏠 Fetching value estimate from /api/rentcast/value-estimate...');
                             promises.push(
                                 fetch(`/api/rentcast/value-estimate?${params}`)
                                     .then(res => res.json())
