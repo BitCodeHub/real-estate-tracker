@@ -436,9 +436,6 @@ const db = {
 
     // Initialize database on startup
     initialize: initializeDatabase,
-    
-    // Check if property exists
-    checkPropertyExists,
 
     // Export pool for raw queries if needed
     pool
