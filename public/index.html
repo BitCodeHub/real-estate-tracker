@@ -999,18 +999,6 @@
                 <button class="btn btn-primary" onclick="openAddPropertyModal()">
                     <i class="fas fa-plus"></i> Add Property
                 </button>
-                <button class="btn btn-success" onclick="openAnalyzeModal()">
-                    <i class="fas fa-search"></i> Analyze Property
-                </button>
-                <button class="btn btn-primary" onclick="generateMarketInsights()">
-                    <i class="fas fa-chart-line"></i> Market Overview
-                </button>
-                <button class="btn btn-success" onclick="generateAIInsights()">
-                    <i class="fas fa-brain"></i> AI Market Insights
-                </button>
-                <button class="btn btn-secondary" onclick="addTestProperty()" style="background: #6b7280;">
-                    <i class="fas fa-flask"></i> Add Test Property
-                </button>
             </div>
         </div>
     </div>
@@ -4662,6 +4650,7 @@ Format your response in clear sections with bullet points where appropriate. Be 
             window.URL.revokeObjectURL(url);
         }
 
+        /* REMOVED - Test property button was removed
         // Add test property for RentCast testing
         async function addTestProperty() {
             const testProperty = {
@@ -4699,6 +4688,8 @@ Format your response in clear sections with bullet points where appropriate. Be 
             console.log(`📍 Address: ${testProperty.address}, ${testProperty.city}, ${testProperty.state} ${testProperty.zip}`);
             console.log(`💡 This address is known to work with RentCast API for testing!`);
         }
+        */ // End of removed addTestProperty function
+        
         // Debug: Log that we reached the end of script
         console.log('✅ Main script loaded completely');
         
