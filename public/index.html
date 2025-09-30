@@ -1804,14 +1804,6 @@
                     <!-- Properties will be loaded here -->
                 </tbody>
             </table>
-            
-            <!-- Legend for visual indicators -->
-            <div id="tableLegend" style="margin-top: 10px; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px; font-size: 12px; color: var(--text-secondary); display: none;">
-                <strong>Legend:</strong> 
-                <span style="color: #f59e0b;">⚠️</span> = Property saved locally only (not in database) | 
-                <span style="color: #10b981;">📊</span> = Real-time market data available | 
-                <span style="color: #ef4444;">❌</span> = No market data - click refresh
-            </div>
         </div>
     </div>
 
@@ -3934,14 +3926,6 @@
                 totalPropertiesElement.innerHTML = `${totalProperties} <span style="color: #f59e0b; font-size: 14px;" title="${temporaryCount} properties saved locally only">⚠️</span>`;
             }
             
-            // Show legend if there are indicators to explain
-            const hasRealTimeData = properties.some(p => p.realTimeData);
-            const hasNoRentCastData = properties.some(p => !p.rentcastCache);
-            if (temporaryCount > 0 || hasRealTimeData || hasNoRentCastData) {
-                document.getElementById('tableLegend').style.display = 'block';
-            } else {
-                document.getElementById('tableLegend').style.display = 'none';
-            }
         }
 
         // Update table
@@ -5641,18 +5625,23 @@
         // - Down Payment: 20% of purchase price (or custom)
         // - Vacancy Rate: 7% (or custom)
         function calculatePropertyMetrics(property) {
-            const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
-            const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
-            const downPayment = property.downPayment || (purchasePrice * 0.2);
-            const loanAmount = purchasePrice - downPayment;
-            const vacancyRate = property.vacancyRate !== undefined ? property.vacancyRate : 7.00;
+            const purchasePrice = Number(property.purchasePrice || property.estimatedValue || 0) || 0;
+            const monthlyRent = Number(property.monthlyRent || property.rentEstimate || 0) || 0;
+            const downPayment = Number(property.downPayment || (purchasePrice * 0.2)) || 0;
+            const loanAmount = Math.max(0, purchasePrice - downPayment);
+            const vacancyRate = property.vacancyRate !== undefined && !isNaN(property.vacancyRate) ?
+                Number(property.vacancyRate) : 7.00;
 
             // Calculate or use stored mortgage
-            const monthlyMortgage = property.mortgage || calculateMortgagePayment(loanAmount, 0.065, 30);
+            const monthlyMortgage = property.mortgage !== undefined && !isNaN(property.mortgage) ?
+                Number(property.mortgage) : calculateMortgagePayment(loanAmount, 0.065, 30);
 
-            // Store calculated mortgage back to property if not already set
-            if (!property.mortgage) {
-                property.mortgage = monthlyMortgage;
+            // Store calculated mortgage back to property if not already set (ensure no NaN)
+            if (property.mortgage === undefined || isNaN(property.mortgage)) {
+                property.mortgage = monthlyMortgage || 0;
+            }
+            if (property.vacancyRate === undefined || isNaN(property.vacancyRate)) {
+                property.vacancyRate = 7.00;
             }
 
             const totalExpenses = calculateTotalExpenses(property);
@@ -5664,6 +5653,12 @@
 
             const noi = (monthlyRent * 12 * (1 - vacancyRate / 100)) - (totalExpenses * 12);
             property.capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
+
+            // Ensure no NaN values
+            if (isNaN(property.monthlyCashFlow)) property.monthlyCashFlow = 0;
+            if (isNaN(property.annualCashFlow)) property.annualCashFlow = 0;
+            if (isNaN(property.cashOnCashReturn)) property.cashOnCashReturn = 0;
+            if (isNaN(property.capRate)) property.capRate = 0;
         }
 
         // Calculate total expenses
@@ -5675,24 +5670,30 @@
         // - Property Management: 8% of monthly rent (standard range: 8-10%)
         // - HOA: User-provided or $0
         function calculateTotalExpenses(property) {
-            const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
-            const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
+            const purchasePrice = Number(property.purchasePrice || property.estimatedValue || 0) || 0;
+            const monthlyRent = Number(property.monthlyRent || property.rentEstimate || 0) || 0;
 
-            // Use stored values or calculate defaults
-            const propertyTax = property.propertyTax !== undefined ? property.propertyTax : (purchasePrice * 0.012) / 12;
-            const insurance = property.insurance !== undefined ? property.insurance : (purchasePrice * 0.004) / 12;
-            const hoa = property.hoa !== undefined ? property.hoa : 0;
-            const maintenance = property.maintenance !== undefined ? property.maintenance : (purchasePrice * 0.01) / 12;
-            const managementFees = property.managementFees !== undefined ? property.managementFees : (monthlyRent * 0.08);
+            // Use stored values or calculate defaults, ensure no NaN
+            const propertyTax = property.propertyTax !== undefined && !isNaN(property.propertyTax) ?
+                Number(property.propertyTax) : (purchasePrice * 0.012) / 12;
+            const insurance = property.insurance !== undefined && !isNaN(property.insurance) ?
+                Number(property.insurance) : (purchasePrice * 0.004) / 12;
+            const hoa = property.hoa !== undefined && !isNaN(property.hoa) ?
+                Number(property.hoa) : 0;
+            const maintenance = property.maintenance !== undefined && !isNaN(property.maintenance) ?
+                Number(property.maintenance) : (purchasePrice * 0.01) / 12;
+            const managementFees = property.managementFees !== undefined && !isNaN(property.managementFees) ?
+                Number(property.managementFees) : (monthlyRent * 0.08);
 
-            // Store calculated values back to property if not already set
-            if (property.propertyTax === undefined) property.propertyTax = propertyTax;
-            if (property.insurance === undefined) property.insurance = insurance;
-            if (property.hoa === undefined) property.hoa = hoa;
-            if (property.maintenance === undefined) property.maintenance = maintenance;
-            if (property.managementFees === undefined) property.managementFees = managementFees;
+            // Store calculated values back to property if not already set (ensure no NaN)
+            if (property.propertyTax === undefined || isNaN(property.propertyTax)) property.propertyTax = propertyTax || 0;
+            if (property.insurance === undefined || isNaN(property.insurance)) property.insurance = insurance || 0;
+            if (property.hoa === undefined || isNaN(property.hoa)) property.hoa = hoa || 0;
+            if (property.maintenance === undefined || isNaN(property.maintenance)) property.maintenance = maintenance || 0;
+            if (property.managementFees === undefined || isNaN(property.managementFees)) property.managementFees = managementFees || 0;
 
-            return propertyTax + insurance + hoa + maintenance + managementFees;
+            const total = propertyTax + insurance + hoa + maintenance + managementFees;
+            return isNaN(total) ? 0 : total;
         }
 
         // Calculate mortgage payment
