@@ -280,40 +280,110 @@
         
         table {
             width: 100%;
-            min-width: 2800px;
-            border-collapse: collapse;
+            min-width: 2900px;
+            border-collapse: separate;
+            border-spacing: 0;
         }
-        
+
         th {
             background: var(--bg-secondary);
             color: var(--text-primary);
             font-weight: 600;
             text-align: left;
-            padding: 16px;
-            font-size: 14px;
+            padding: 16px 12px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
             position: sticky;
             top: 0;
             z-index: 10;
         }
-        
+
         td {
-            padding: 16px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 14px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             color: var(--text-primary);
             font-size: 14px;
         }
+
+        /* Zebra striping for better readability */
+        tbody tr:nth-child(odd) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        tbody tr:nth-child(even) {
+            background: var(--bg-card);
+        }
+
+        /* Column grouping with subtle backgrounds - adjusted for rank column */
+        tbody td:nth-child(2),
+        tbody td:nth-child(3),
+        tbody td:nth-child(4),
+        tbody td:nth-child(5),
+        tbody td:nth-child(6) {
+            background: rgba(59, 130, 246, 0.03); /* Property info - blue tint */
+        }
+
+        tbody td:nth-child(11),
+        tbody td:nth-child(12),
+        tbody td:nth-child(13),
+        tbody td:nth-child(14),
+        tbody td:nth-child(15),
+        tbody td:nth-child(16) {
+            background: rgba(239, 68, 68, 0.03); /* Expenses - red tint */
+        }
+
+        tbody td:nth-child(18),
+        tbody td:nth-child(19),
+        tbody td:nth-child(20),
+        tbody td:nth-child(21) {
+            background: rgba(34, 197, 94, 0.03); /* Returns - green tint */
+        }
+
+        /* Rank column styling */
+        tbody td:first-child {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--accent-primary);
+            text-align: center;
+        }
+
+        /* Top 3 ranks get special colors */
+        tbody tr:nth-child(1) td:first-child {
+            color: #fbbf24; /* Gold */
+            font-size: 18px;
+        }
+
+        tbody tr:nth-child(2) td:first-child {
+            color: #94a3b8; /* Silver */
+            font-size: 17px;
+        }
+
+        tbody tr:nth-child(3) td:first-child {
+            color: #cd7f32; /* Bronze */
+            font-size: 16px;
+        }
         
-        /* Sticky first column (Address) */
-        thead th:first-child,
+        /* Sticky rank column */
+        thead th:first-child {
+            position: sticky;
+            left: 0;
+            background: var(--bg-secondary);
+            z-index: 11;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 60px;
+            min-width: 60px;
+        }
+
         tbody td:first-child {
             position: sticky;
             left: 0;
-            background: var(--bg-card);
             z-index: 5;
-            box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+            width: 60px;
+            min-width: 60px;
         }
         
         /* Rental listings table styling */
@@ -331,19 +401,42 @@
             border: 1px solid var(--border-color);
         }
         
-        thead th:first-child {
-            background: var(--bg-secondary);
-            z-index: 11;
-        }
-        
-        /* Ensure proper hover state for sticky column */
-        tbody tr:hover td:first-child {
-            background: var(--bg-hover);
-        }
-        
-        tr:hover {
-            background: var(--bg-hover);
+        /* Improved hover state */
+        tbody tr:hover {
+            background: rgba(59, 130, 246, 0.08) !important;
             cursor: pointer;
+            transition: all 0.2s ease;
+            transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Maintain column group colors on hover */
+        tbody tr:hover td:nth-child(1) {
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        tbody tr:hover td:nth-child(2),
+        tbody tr:hover td:nth-child(3),
+        tbody tr:hover td:nth-child(4),
+        tbody tr:hover td:nth-child(5),
+        tbody tr:hover td:nth-child(6) {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        tbody tr:hover td:nth-child(11),
+        tbody tr:hover td:nth-child(12),
+        tbody tr:hover td:nth-child(13),
+        tbody tr:hover td:nth-child(14),
+        tbody tr:hover td:nth-child(15),
+        tbody tr:hover td:nth-child(16) {
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        tbody tr:hover td:nth-child(18),
+        tbody tr:hover td:nth-child(19),
+        tbody tr:hover td:nth-child(20),
+        tbody tr:hover td:nth-child(21) {
+            background: rgba(34, 197, 94, 0.08);
         }
         
         tr:last-child td {
@@ -1689,6 +1782,12 @@
             <table id="propertyTable">
                 <thead>
                     <tr>
+                        <th style="text-align: center;">
+                            #
+                            <span class="info-icon" data-tooltip="Ranking by Monthly Cash Flow (highest to lowest). Top 3 get special colors: 🥇 Gold, 🥈 Silver, 🥉 Bronze.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
                         <th>Address</th>
                         <th>City</th>
                         <th>Type</th>
@@ -3974,12 +4073,13 @@
             filteredProperties.forEach((property, index) => {
                 try {
                     const globalIndex = properties.indexOf(property);
-                    console.log(`Creating row ${index + 1}/${filteredProperties.length} for:`, property.address);
-                    const row = createPropertyRow(property, globalIndex);
+                    const rank = index + 1; // Add rank based on position after sorting
+                    console.log(`Creating row ${rank}/${filteredProperties.length} for:`, property.address);
+                    const row = createPropertyRow(property, globalIndex, rank);
                     if (row) {
                         tbody.appendChild(row);
                         successCount++;
-                        console.log(`✅ Row ${index + 1} appended successfully`);
+                        console.log(`✅ Row ${rank} appended successfully`);
                     } else {
                         failCount++;
                         console.error('❌ createPropertyRow returned null for property:', property.address);
@@ -3995,8 +4095,8 @@
         }
 
         // Create property row
-        function createPropertyRow(property, index) {
-            console.log('🏠 Creating row for:', property.address, 'Index:', index);
+        function createPropertyRow(property, index, rank = null) {
+            console.log('🏠 Creating row for:', property.address, 'Index:', index, 'Rank:', rank);
 
             // Add validation
             if (!property) {
@@ -4044,10 +4144,13 @@
                 const dscrClass = dscr >= 1.25 ? 'positive' : dscr >= 1.0 ? 'warning' : 'negative';
 
                 row.innerHTML = `
+                <td onclick="event.stopPropagation();" style="text-align: center;">
+                    ${rank !== null ? rank : '-'}
+                </td>
                 <td style="min-width: 200px;">
                     ${property.address || ''}
-                    ${property._isTemporary ? 
-                        '<span style="color: #f59e0b; font-size: 12px; margin-left: 8px;" title="Property saved locally only - Database not connected">⚠️</span>' : 
+                    ${property._isTemporary ?
+                        '<span style="color: #f59e0b; font-size: 12px; margin-left: 8px;" title="Property saved locally only - Database not connected">⚠️</span>' :
                         ''
                     }
                 </td>
@@ -6840,13 +6943,20 @@
             }
             
             if (searchText) {
-                filtered = filtered.filter(p => 
+                filtered = filtered.filter(p =>
                     (p.address && p.address.toLowerCase().includes(searchText)) ||
                     (p.city && p.city.toLowerCase().includes(searchText)) ||
                     (p.zip && p.zip.includes(searchText))
                 );
             }
-            
+
+            // Sort by monthly cash flow (highest first)
+            filtered.sort((a, b) => {
+                const cashFlowA = Number(a.monthlyCashFlow) || 0;
+                const cashFlowB = Number(b.monthlyCashFlow) || 0;
+                return cashFlowB - cashFlowA; // Descending order
+            });
+
             return filtered;
         }
 
