@@ -343,6 +343,32 @@
         tr:last-child td {
             border-bottom: none;
         }
+
+        /* Info icon tooltip styling */
+        .info-icon {
+            display: inline-block;
+            margin-left: 6px;
+            cursor: help;
+            color: var(--accent-info);
+            font-size: 12px;
+            opacity: 0.7;
+            transition: opacity 0.2s ease, color 0.2s ease;
+            vertical-align: middle;
+        }
+
+        .info-icon:hover {
+            opacity: 1;
+            color: var(--accent-primary);
+        }
+
+        .info-icon i {
+            font-size: 13px;
+        }
+
+        /* Ensure th with info icons have proper spacing */
+        th {
+            white-space: nowrap;
+        }
         
         
         .modal-content {
@@ -1608,16 +1634,66 @@
                         <th>Type</th>
                         <th>Bed/Bath</th>
                         <th>Sqft</th>
-                        <th>Purchase Price</th>
-                        <th>Est. Value</th>
-                        <th>Monthly Rent</th>
-                        <th>Rent Est.</th>
-                        <th>Cash Flow</th>
-                        <th>Annual CF</th>
-                        <th>Cash-on-Cash</th>
-                        <th>Cap Rate</th>
-                        <th>Down Payment</th>
-                        <th>DSCR</th>
+                        <th>
+                            Purchase Price
+                            <span class="info-icon" title="The actual or estimated price paid to acquire the property. This is the basis for calculating returns and equity.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            Est. Value
+                            <span class="info-icon" title="Current estimated market value from RentCast API based on comparable properties and market trends.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            Monthly Rent
+                            <span class="info-icon" title="Actual monthly rental income collected (or expected) from the property. Click to edit.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            Rent Est.
+                            <span class="info-icon" title="Estimated monthly rent from RentCast API based on similar properties in the area.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            Cash Flow
+                            <span class="info-icon" title="Monthly profit after all expenses. Formula: Monthly Rent - Mortgage - (Property Tax + Insurance + HOA + Maintenance + Management).">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            Annual CF
+                            <span class="info-icon" title="Total yearly cash flow. Formula: Monthly Cash Flow × 12. Positive means profit, negative means loss.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            Cash-on-Cash
+                            <span class="info-icon" title="Annual return on your down payment investment. Formula: (Annual Cash Flow ÷ Down Payment) × 100. Good: >8%, Great: >12%.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            Cap Rate
+                            <span class="info-icon" title="Return on investment if paid all cash. Formula: (Net Operating Income ÷ Purchase Price) × 100. Excludes mortgage. Good: >6%, Great: >10%.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            Down Payment
+                            <span class="info-icon" title="Upfront cash investment to purchase the property. Defaults to 20% of purchase price. Click to edit custom amount.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
+                        <th>
+                            DSCR
+                            <span class="info-icon" title="Debt Service Coverage Ratio - Measures ability to cover mortgage. Formula: Net Operating Income ÷ Annual Debt Service. Minimum: 1.0, Good: >1.25.">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -5374,34 +5450,51 @@
         }
 
         // Calculate property metrics
+        // Financial calculation formulas:
+        // 1. Monthly Cash Flow = Monthly Rent - Mortgage Payment - Total Expenses
+        // 2. Annual Cash Flow = Monthly Cash Flow × 12
+        // 3. Cash-on-Cash Return = (Annual Cash Flow ÷ Down Payment) × 100
+        // 4. Net Operating Income (NOI) = Annual Rent - Annual Expenses (excludes mortgage)
+        // 5. Cap Rate = (NOI ÷ Purchase Price) × 100
+        // 6. DSCR = NOI ÷ Annual Debt Service (mortgage payments)
+        //
+        // Assumptions:
+        // - Mortgage: 30-year fixed at 6.5% interest rate
+        // - Down Payment: 20% of purchase price (or custom)
         function calculatePropertyMetrics(property) {
             const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
             const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
             const downPayment = property.downPayment || (purchasePrice * 0.2);
             const loanAmount = purchasePrice - downPayment;
-            
+
             const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
             const totalExpenses = calculateTotalExpenses(property);
-            
+
             property.monthlyCashFlow = monthlyRent - monthlyMortgage - totalExpenses;
             property.annualCashFlow = property.monthlyCashFlow * 12;
             property.cashOnCashReturn = downPayment > 0 ? (property.annualCashFlow / downPayment) * 100 : 0;
-            
+
             const noi = monthlyRent * 12 - totalExpenses * 12;
             property.capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
         }
 
         // Calculate total expenses
+        // Default assumptions (industry standard):
+        // - Property Tax: 1.2% of purchase price annually (varies by location)
+        // - Insurance: 0.4% of purchase price annually
+        // - Maintenance: 1% of purchase price annually (the "1% rule")
+        // - Property Management: 8% of monthly rent (standard range: 8-10%)
+        // - HOA: User-provided or $0
         function calculateTotalExpenses(property) {
             const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
             const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
-            
-            const propertyTax = (purchasePrice * 0.012) / 12;
-            const insurance = (purchasePrice * 0.004) / 12;
-            const hoa = property.hoaMonthly || 0;
-            const maintenance = (purchasePrice * 0.01) / 12;
-            const propertyManagement = monthlyRent * 0.08;
-            
+
+            const propertyTax = (purchasePrice * 0.012) / 12;        // 1.2% annually
+            const insurance = (purchasePrice * 0.004) / 12;          // 0.4% annually
+            const hoa = property.hoaMonthly || 0;                    // User input
+            const maintenance = (purchasePrice * 0.01) / 12;         // 1% annually
+            const propertyManagement = monthlyRent * 0.08;           // 8% of rent
+
             return propertyTax + insurance + hoa + maintenance + propertyManagement;
         }
 
