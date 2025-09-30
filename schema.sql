@@ -12,6 +12,7 @@ CREATE TABLE properties (
     state VARCHAR(50),
     zip VARCHAR(20),
     purchase_price DECIMAL(12, 2),
+    down_payment DECIMAL(12, 2),
     monthly_rent DECIMAL(10, 2),
     hoa DECIMAL(10, 2) DEFAULT 0,
     property_tax DECIMAL(10, 2) DEFAULT 0,

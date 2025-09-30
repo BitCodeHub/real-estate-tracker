@@ -57,17 +57,31 @@ async function initializeDatabase() {
             
             // Check if rentcast_data column exists (for existing databases)
             const columnCheck = await pool.query(`
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'properties' 
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'properties'
                 AND column_name = 'rentcast_data'
             `);
-            
+
             if (columnCheck.rows.length === 0) {
                 console.log('Adding missing rentcast_data column...');
                 await pool.query('ALTER TABLE properties ADD COLUMN IF NOT EXISTS rentcast_data JSONB');
                 await pool.query('CREATE INDEX IF NOT EXISTS idx_properties_rentcast_data ON properties USING GIN (rentcast_data)');
                 console.log('✅ rentcast_data column added successfully');
+            }
+
+            // Check if down_payment column exists (for existing databases)
+            const downPaymentColumnCheck = await pool.query(`
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'properties'
+                AND column_name = 'down_payment'
+            `);
+
+            if (downPaymentColumnCheck.rows.length === 0) {
+                console.log('Adding missing down_payment column...');
+                await pool.query('ALTER TABLE properties ADD COLUMN IF NOT EXISTS down_payment DECIMAL(12, 2)');
+                console.log('✅ down_payment column added successfully');
             }
         }
     } catch (error) {
@@ -168,7 +182,7 @@ const db = {
             };
             
             const {
-                address, city, state, zip, purchasePrice, monthlyRent,
+                address, city, state, zip, purchasePrice, downPayment, monthlyRent,
                 hoa, propertyTax, insurance, managementFees, repairs,
                 vacancy, capex, mortgage, cocReturn, rentToValue, capRate,
                 crimeScore, floodRisk, marketRisk, bedrooms, bathrooms,
@@ -220,25 +234,25 @@ const db = {
 
             // Count columns and values for debugging
             const columns = [
-                'address', 'city', 'state', 'zip', 'purchase_price', 'monthly_rent',
+                'address', 'city', 'state', 'zip', 'purchase_price', 'down_payment', 'monthly_rent',
                 'hoa', 'property_tax', 'insurance', 'management_fees', 'repairs',
                 'vacancy', 'capex', 'mortgage', 'coc_return', 'rent_to_value', 'cap_rate',
                 'crime_score', 'flood_risk', 'market_risk', 'bedrooms', 'bathrooms',
                 'square_footage', 'year_built', 'lot_size', 'property_type', 'county',
-                'rent_estimate', 'value_estimate', 'status', 'notes', 'last_updated', 
+                'rent_estimate', 'value_estimate', 'status', 'notes', 'last_updated',
                 'data_source', 'rentcast_data'
             ];
-            
+
             const values = [
-                address, city, state, zip, purchasePrice || null, monthlyRent || null,
+                address, city, state, zip, purchasePrice || null, downPayment || null, monthlyRent || null,
                 hoa || 0, propertyTax || 0, insurance || 0, managementFees || 0,
                 repairs || 0, vacancy || 0, capex || 0, mortgage || 0,
-                cocReturn || null, rentToValue || null, capRate || null, 
-                crimeScore || null, floodRisk || null, marketRisk || null, 
-                bedrooms || null, bathrooms || null, squareFootage || null, 
-                yearBuilt || null, lotSize || null, propertyType || null, 
+                cocReturn || null, rentToValue || null, capRate || null,
+                crimeScore || null, floodRisk || null, marketRisk || null,
+                bedrooms || null, bathrooms || null, squareFootage || null,
+                yearBuilt || null, lotSize || null, propertyType || null,
                 county || null, rentEstimate || null, valueEstimate || null,
-                status || 'active', notes || null, lastUpdated || null, 
+                status || 'active', notes || null, lastUpdated || null,
                 dataSource || null, JSON.stringify(rentcastData)
             ];
             
@@ -249,7 +263,7 @@ const db = {
             const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
             const query = `
                 INSERT INTO properties (
-                    address, city, state, zip, purchase_price, monthly_rent,
+                    address, city, state, zip, purchase_price, down_payment, monthly_rent,
                     hoa, property_tax, insurance, management_fees, repairs,
                     vacancy, capex, mortgage, coc_return, rent_to_value, cap_rate,
                     crime_score, flood_risk, market_risk, bedrooms, bathrooms,
@@ -321,6 +335,7 @@ const db = {
                 'estimatedValue': 'value_estimate',  // Add this mapping
                 'rentEstimate': 'rent_estimate',     // Add this mapping
                 'monthlyRent': 'monthly_rent',
+                'downPayment': 'down_payment',       // Add downPayment mapping
                 'lastUpdated': 'last_updated',
                 'dataSource': 'data_source',
                 'lastRentCastUpdate': 'last_updated' // Map this too

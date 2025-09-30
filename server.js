@@ -441,6 +441,8 @@ app.get('/api/properties', async (req, res) => {
                 baths: prop.bathrooms || 0,
                 sqft: prop.square_footage || 0,
                 yearBuilt: prop.year_built || prop.yearBuilt,
+                purchasePrice: prop.purchase_price || prop.purchasePrice || 0,
+                downPayment: prop.down_payment || prop.downPayment,
                 monthlyRent: prop.monthly_rent || prop.monthlyRent || 0,
                 rentEstimate: prop.rent_estimate || prop.rentEstimate || 0,
                 estimatedValue: prop.value_estimate || prop.estimatedValue || 0,
@@ -550,6 +552,8 @@ app.get('/api/properties/search', async (req, res) => {
                 baths: existingProperty.bathrooms || 0,
                 sqft: existingProperty.square_footage || 0,
                 yearBuilt: existingProperty.year_built || existingProperty.yearBuilt,
+                purchasePrice: existingProperty.purchase_price || existingProperty.purchasePrice || 0,
+                downPayment: existingProperty.down_payment || existingProperty.downPayment,
                 monthlyRent: existingProperty.monthly_rent || existingProperty.monthlyRent || 0,
                 rentEstimate: existingProperty.rent_estimate || existingProperty.rentEstimate || 0,
                 estimatedValue: existingProperty.value_estimate || existingProperty.estimatedValue || 0,
@@ -584,6 +588,8 @@ app.get('/api/properties/:id', async (req, res) => {
             baths: property.bathrooms || 0,
             sqft: property.square_footage || 0,
             yearBuilt: property.year_built || property.yearBuilt,
+            purchasePrice: property.purchase_price || property.purchasePrice || 0,
+            downPayment: property.down_payment || property.downPayment,
             monthlyRent: property.monthly_rent || property.monthlyRent || 0,
             rentEstimate: property.rent_estimate || property.rentEstimate || 0,
             estimatedValue: property.value_estimate || property.estimatedValue || 0,
@@ -681,7 +687,7 @@ app.post('/api/properties', async (req, res) => {
         
         const property = await db.createProperty(req.body);
         console.log('✅ Property created successfully with ID:', property.id);
-        
+
         // Map database fields and merge rentcast_data back into response
         const mappedProp = {
             ...property,
@@ -689,6 +695,8 @@ app.post('/api/properties', async (req, res) => {
             baths: property.bathrooms || 0,
             sqft: property.square_footage || 0,
             yearBuilt: property.year_built || property.yearBuilt,
+            purchasePrice: property.purchase_price || property.purchasePrice || 0,
+            downPayment: property.down_payment || property.downPayment,
             monthlyRent: property.monthly_rent || property.monthlyRent || 0,
             rentEstimate: property.rent_estimate || property.rentEstimate || 0,
             estimatedValue: property.value_estimate || property.estimatedValue || 0,
@@ -770,7 +778,7 @@ app.put('/api/properties/:id', async (req, res) => {
         if (!property) {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
-        
+
         // Map database fields and merge rentcast_data back into response
         const mappedProp = {
             ...property,
@@ -778,6 +786,8 @@ app.put('/api/properties/:id', async (req, res) => {
             baths: property.bathrooms || 0,
             sqft: property.square_footage || 0,
             yearBuilt: property.year_built || property.yearBuilt,
+            purchasePrice: property.purchase_price || property.purchasePrice || 0,
+            downPayment: property.down_payment || property.downPayment,
             monthlyRent: property.monthly_rent || property.monthlyRent || 0,
             rentEstimate: property.rent_estimate || property.rentEstimate || 0,
             estimatedValue: property.value_estimate || property.estimatedValue || 0,

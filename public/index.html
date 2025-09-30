@@ -1832,7 +1832,7 @@
             input.className = 'inline-edit-input';
             input.value = currentValue;
             input.min = '0';
-            input.step = field === 'monthlyRent' ? '50' : '10000';
+            input.step = field === 'monthlyRent' ? '50' : (field === 'downPayment' ? '1000' : '10000');
             
             // Get the element that was clicked
             const clickedElement = event.target;
@@ -1876,7 +1876,10 @@
                         }
                         
                         // Show success notification
-                        showNotification(`${field === 'purchasePrice' ? 'Purchase price' : 'Monthly rent'} updated to ${formatCurrency(newValue)}`, 'success');
+                        const fieldName = field === 'purchasePrice' ? 'Purchase price' :
+                                         field === 'monthlyRent' ? 'Monthly rent' :
+                                         field === 'downPayment' ? 'Down payment' : field;
+                        showNotification(`${fieldName} updated to ${formatCurrency(newValue)}`, 'success');
                     }
                 } else {
                     // Restore original value if invalid or unchanged
@@ -3385,7 +3388,7 @@
         function sanitizePropertyForDatabase(property) {
             // Define valid database fields (based on schema.sql)
             const validFields = [
-                'address', 'city', 'state', 'zip', 'purchase_price', 'monthly_rent',
+                'address', 'city', 'state', 'zip', 'purchase_price', 'down_payment', 'monthly_rent',
                 'hoa', 'property_tax', 'insurance', 'management_fees', 'repairs',
                 'vacancy', 'capex', 'mortgage', 'coc_return', 'rent_to_value', 'cap_rate',
                 'crime_score', 'flood_risk', 'market_risk', 'bedrooms', 'bathrooms',
@@ -3397,10 +3400,11 @@
             // Field mapping from frontend names to database column names
             const fieldMapping = {
                 'beds': 'bedrooms',
-                'baths': 'bathrooms', 
+                'baths': 'bathrooms',
                 'sqft': 'square_footage',
                 'yearBuilt': 'year_built',
                 'purchasePrice': 'purchase_price',
+                'downPayment': 'down_payment',
                 'monthlyRent': 'monthly_rent',
                 'propertyTax': 'property_tax',
                 'managementFees': 'management_fees',
@@ -3775,7 +3779,7 @@
             
             // Calculate DSCR (Debt Service Coverage Ratio)
             const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
-            const downPayment = purchasePrice * 0.2;
+            const downPayment = property.downPayment || (purchasePrice * 0.2);
             const loanAmount = purchasePrice - downPayment;
             const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
             const noi = (property.monthlyRent || property.rentEstimate || 0) * 12 - (calculateTotalExpenses(property) * 12);
@@ -3838,7 +3842,11 @@
                     ${(property.capRate || 0).toFixed(1)}%
                 </td>
                 <td style="min-width: 120px; text-align: right;">
-                    ${formatCurrency(downPayment)}
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'downPayment', ${downPayment})"
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(downPayment)}
+                    </span>
                 </td>
                 <td class="${dscrClass}" style="min-width: 80px; text-align: right; font-weight: 500;">
                     ${dscr > 0 ? dscr.toFixed(2) : 'N/A'}
@@ -3891,13 +3899,13 @@
                 currentValue: property.currentValue,
                 realTimeData: property.realTimeData
             });
-            
-            const monthlyMortgage = calculateMortgagePayment(
-                (property.purchasePrice || 0) * 0.8,
-                0.065,
-                30
-            );
-            
+
+            const purchasePrice = property.purchasePrice || 0;
+            const downPayment = property.downPayment || (purchasePrice * 0.2);
+            const loanAmount = purchasePrice - downPayment;
+
+            const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
+
             const totalExpenses = calculateTotalExpenses(property);
             const noi = (property.monthlyRent || 0) * 12 - totalExpenses * 12;
             const capRate = property.purchasePrice > 0 ? (noi / property.purchasePrice) * 100 : 0;
@@ -3999,6 +4007,15 @@
                             <div class="metric-label">Cap Rate</div>
                             <div class="metric-value ${capRate >= 6 ? 'positive' : 'warning'}">
                                 ${capRate.toFixed(1)}%
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Down Payment</div>
+                            <div class="metric-value editable-field"
+                                 onclick="event.stopPropagation(); editField(${propertyIndex}, 'downPayment', ${downPayment}, true)"
+                                 style="cursor: pointer; border-bottom: 2px dashed var(--border-light);"
+                                 title="Click to edit">
+                                ${formatCurrency(downPayment)}
                             </div>
                         </div>
                     </div>
@@ -5360,7 +5377,7 @@
         function calculatePropertyMetrics(property) {
             const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
             const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
-            const downPayment = purchasePrice * 0.2;
+            const downPayment = property.downPayment || (purchasePrice * 0.2);
             const loanAmount = purchasePrice - downPayment;
             
             const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
@@ -5608,7 +5625,7 @@
         function generateEnhancedPropertyAnalysis(address, propertyData) {
             const purchasePrice = propertyData.estimatedValue || propertyData.price || 500000;
             const monthlyRent = propertyData.rentEstimate || 2500;
-            const downPayment = purchasePrice * 0.2;
+            const downPayment = propertyData.downPayment || (purchasePrice * 0.2);
             const loanAmount = purchasePrice - downPayment;
             const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
             
@@ -5885,7 +5902,7 @@
         function generateReportHTML(address, propertyData) {
             const purchasePrice = propertyData.estimatedValue || propertyData.price || 500000;
             const monthlyRent = propertyData.rentEstimate || 2500;
-            const downPayment = purchasePrice * 0.2;
+            const downPayment = propertyData.downPayment || (purchasePrice * 0.2);
             const loanAmount = purchasePrice - downPayment;
             const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
             
@@ -6672,7 +6689,7 @@
                 // Calculate financial metrics
                 const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
                 const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
-                const downPayment = purchasePrice * 0.2;
+                const downPayment = property.downPayment || (purchasePrice * 0.2);
                 const loanAmount = purchasePrice - downPayment;
                 const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
                 const totalExpenses = calculateTotalExpenses(property);
@@ -6791,8 +6808,8 @@ Format your response in clear sections with bullet points where appropriate. Be 
         function exportAIInsightsReport(address, propertyData, aiAnalysis) {
             const purchasePrice = propertyData.estimatedValue || propertyData.price || 500000;
             const monthlyRent = propertyData.rentEstimate || 2500;
-            const downPayment = purchasePrice * 0.2;
-            const loanAmount = purchasePrice * 0.8;
+            const downPayment = propertyData.downPayment || (purchasePrice * 0.2);
+            const loanAmount = purchasePrice - downPayment;
             const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.07, 30);
             
             const propertyTax = (purchasePrice * 0.012) / 12;
