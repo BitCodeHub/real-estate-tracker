@@ -354,6 +354,7 @@
             opacity: 0.7;
             transition: opacity 0.2s ease, color 0.2s ease;
             vertical-align: middle;
+            position: relative;
         }
 
         .info-icon:hover {
@@ -365,9 +366,61 @@
             font-size: 13px;
         }
 
+        /* Custom tooltip */
+        .info-icon[data-tooltip] {
+            position: relative;
+        }
+
+        .info-icon[data-tooltip]::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: normal;
+            width: 280px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-light);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+            font-weight: normal;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .info-icon[data-tooltip]::after {
+            content: '';
+            position: absolute;
+            bottom: 115%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--bg-secondary);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 1000;
+        }
+
+        .info-icon[data-tooltip]:hover::before,
+        .info-icon[data-tooltip]:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
         /* Ensure th with info icons have proper spacing */
         th {
             white-space: nowrap;
+            position: relative;
         }
         
         
@@ -1636,61 +1689,61 @@
                         <th>Sqft</th>
                         <th>
                             Purchase Price
-                            <span class="info-icon" title="The actual or estimated price paid to acquire the property. This is the basis for calculating returns and equity.">
+                            <span class="info-icon" data-tooltip="The actual or estimated price paid to acquire the property. This is the basis for calculating returns and equity.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Est. Value
-                            <span class="info-icon" title="Current estimated market value from RentCast API based on comparable properties and market trends.">
+                            <span class="info-icon" data-tooltip="Current estimated market value from RentCast API based on comparable properties and market trends.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Monthly Rent
-                            <span class="info-icon" title="Actual monthly rental income collected (or expected) from the property. Click to edit.">
+                            <span class="info-icon" data-tooltip="Actual monthly rental income collected (or expected) from the property. Click to edit.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Rent Est.
-                            <span class="info-icon" title="Estimated monthly rent from RentCast API based on similar properties in the area.">
+                            <span class="info-icon" data-tooltip="Estimated monthly rent from RentCast API based on similar properties in the area.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Cash Flow
-                            <span class="info-icon" title="Monthly profit after all expenses. Formula: Monthly Rent - Mortgage - (Property Tax + Insurance + HOA + Maintenance + Management).">
+                            <span class="info-icon" data-tooltip="Monthly profit after all expenses. Formula: Monthly Rent - Mortgage - (Property Tax + Insurance + HOA + Maintenance + Management).">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Annual CF
-                            <span class="info-icon" title="Total yearly cash flow. Formula: Monthly Cash Flow × 12. Positive means profit, negative means loss.">
+                            <span class="info-icon" data-tooltip="Total yearly cash flow. Formula: Monthly Cash Flow × 12. Positive means profit, negative means loss.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Cash-on-Cash
-                            <span class="info-icon" title="Annual return on your down payment investment. Formula: (Annual Cash Flow ÷ Down Payment) × 100. Good: >8%, Great: >12%.">
+                            <span class="info-icon" data-tooltip="Annual return on your down payment investment. Formula: (Annual Cash Flow ÷ Down Payment) × 100. Good: >8%, Great: >12%.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Cap Rate
-                            <span class="info-icon" title="Return on investment if paid all cash. Formula: (Net Operating Income ÷ Purchase Price) × 100. Excludes mortgage. Good: >6%, Great: >10%.">
+                            <span class="info-icon" data-tooltip="Return on investment if paid all cash. Formula: (Net Operating Income ÷ Purchase Price) × 100. Excludes mortgage. Good: >6%, Great: >10%.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Down Payment
-                            <span class="info-icon" title="Upfront cash investment to purchase the property. Defaults to 20% of purchase price. Click to edit custom amount.">
+                            <span class="info-icon" data-tooltip="Upfront cash investment to purchase the property. Defaults to 20% of purchase price. Click to edit custom amount.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             DSCR
-                            <span class="info-icon" title="Debt Service Coverage Ratio - Measures ability to cover mortgage. Formula: Net Operating Income ÷ Annual Debt Service. Minimum: 1.0, Good: >1.25.">
+                            <span class="info-icon" data-tooltip="Debt Service Coverage Ratio - Measures ability to cover mortgage. Formula: Net Operating Income ÷ Annual Debt Service. Minimum: 1.0, Good: >1.25.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
