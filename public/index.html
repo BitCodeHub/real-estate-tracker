@@ -3930,40 +3930,64 @@
 
         // Update table
         function updateTable() {
+            console.log('🔄 updateTable called');
             const tbody = document.getElementById('propertyTableBody');
+            if (!tbody) {
+                console.error('❌ Table body element not found!');
+                return;
+            }
+
             tbody.innerHTML = '';
-            
+
             const filteredProperties = getFilteredProperties();
-            
+            console.log('📊 Filtered properties count:', filteredProperties.length);
+
             // Debug: Check order of properties in table
             if (filteredProperties.length > 0) {
                 console.log('📊 Table order - First 3 properties:');
                 filteredProperties.slice(0, 3).forEach((p, i) => {
                     console.log(`Row ${i+1}: ${p.address}, ${p.city} - beds: ${p.beds || p.bedrooms || 0}`);
                 });
+            } else {
+                console.warn('⚠️ No filtered properties to display');
+                console.log('Total properties in array:', properties.length);
             }
-            
+
             filteredProperties.forEach((property, index) => {
-                const row = createPropertyRow(property, properties.indexOf(property));
-                tbody.appendChild(row);
+                try {
+                    const row = createPropertyRow(property, properties.indexOf(property));
+                    if (row) {
+                        tbody.appendChild(row);
+                    } else {
+                        console.error('❌ createPropertyRow returned null for property:', property.address);
+                    }
+                } catch (error) {
+                    console.error('❌ Error creating row for property:', property.address, error);
+                }
             });
+
+            console.log('✅ updateTable completed. Rows in tbody:', tbody.children.length);
         }
 
         // Create property row
         function createPropertyRow(property, index) {
-            const row = document.createElement('tr');
-            row.onclick = () => showPropertyDetails(index);
-            
-            const statusClass = property.status === 'sold' ? 'status-sold' : 
-                               property.status === 'pending' ? 'status-pending' : 'status-available';
-            
-            const cashFlowClass = (property.monthlyCashFlow || 0) >= 0 ? 'positive' : 'negative';
-            const annualCashFlowClass = (property.annualCashFlow || 0) >= 0 ? 'positive' : 'negative';
-            
-            // Calculate additional metrics if not already calculated
-            if (!property.monthlyCashFlow) {
-                calculatePropertyMetrics(property);
-            }
+            console.log('🏠 Creating row for:', property.address);
+
+            try {
+                const row = document.createElement('tr');
+                row.onclick = () => showPropertyDetails(index);
+
+                const statusClass = property.status === 'sold' ? 'status-sold' :
+                                   property.status === 'pending' ? 'status-pending' : 'status-available';
+
+                // Calculate additional metrics if not already calculated
+                if (!property.monthlyCashFlow || isNaN(property.monthlyCashFlow)) {
+                    console.log('Calculating metrics for:', property.address);
+                    calculatePropertyMetrics(property);
+                }
+
+                const cashFlowClass = (property.monthlyCashFlow || 0) >= 0 ? 'positive' : 'negative';
+                const annualCashFlowClass = (property.annualCashFlow || 0) >= 0 ? 'positive' : 'negative';
             
             // Calculate DSCR (Debt Service Coverage Ratio)
             const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
@@ -4103,8 +4127,12 @@
                     </div>
                 </td>
             `;
-            
-            return row;
+
+                return row;
+            } catch (error) {
+                console.error('❌ Error in createPropertyRow for:', property.address, error);
+                return null;
+            }
         }
 
         // Show property details
