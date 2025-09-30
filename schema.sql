@@ -18,32 +18,35 @@ CREATE TABLE properties (
     property_tax DECIMAL(10, 2) DEFAULT 0,
     insurance DECIMAL(10, 2) DEFAULT 0,
     management_fees DECIMAL(10, 2) DEFAULT 0,
+    maintenance DECIMAL(10, 2) DEFAULT 0,
     repairs DECIMAL(10, 2) DEFAULT 0,
     vacancy DECIMAL(10, 2) DEFAULT 0,
+    vacancy_rate DECIMAL(5, 2) DEFAULT 7.00,
     capex DECIMAL(10, 2) DEFAULT 0,
     mortgage DECIMAL(10, 2) DEFAULT 0,
     
-    -- Calculated fields
+    -- Calculated fields (Note: cash_flow calculation updated to use vacancy_rate)
     total_expenses DECIMAL(10, 2) GENERATED ALWAYS AS (
-        COALESCE(hoa, 0) + 
-        COALESCE(property_tax, 0) + 
-        COALESCE(insurance, 0) + 
-        COALESCE(management_fees, 0) + 
-        COALESCE(repairs, 0) + 
-        COALESCE(vacancy, 0) + 
-        COALESCE(capex, 0) + 
+        COALESCE(hoa, 0) +
+        COALESCE(property_tax, 0) +
+        COALESCE(insurance, 0) +
+        COALESCE(management_fees, 0) +
+        COALESCE(maintenance, 0) +
+        COALESCE(repairs, 0) +
+        COALESCE(vacancy, 0) +
+        COALESCE(capex, 0) +
         COALESCE(mortgage, 0)
     ) STORED,
-    
+
     cash_flow DECIMAL(10, 2) GENERATED ALWAYS AS (
-        COALESCE(monthly_rent, 0) - (
-            COALESCE(hoa, 0) + 
-            COALESCE(property_tax, 0) + 
-            COALESCE(insurance, 0) + 
-            COALESCE(management_fees, 0) + 
-            COALESCE(repairs, 0) + 
-            COALESCE(vacancy, 0) + 
-            COALESCE(capex, 0) + 
+        (COALESCE(monthly_rent, 0) * (1 - COALESCE(vacancy_rate, 7.00) / 100.0)) - (
+            COALESCE(hoa, 0) +
+            COALESCE(property_tax, 0) +
+            COALESCE(insurance, 0) +
+            COALESCE(management_fees, 0) +
+            COALESCE(maintenance, 0) +
+            COALESCE(repairs, 0) +
+            COALESCE(capex, 0) +
             COALESCE(mortgage, 0)
         )
     ) STORED,

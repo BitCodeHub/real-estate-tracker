@@ -83,6 +83,34 @@ async function initializeDatabase() {
                 await pool.query('ALTER TABLE properties ADD COLUMN IF NOT EXISTS down_payment DECIMAL(12, 2)');
                 console.log('✅ down_payment column added successfully');
             }
+
+            // Check if maintenance column exists (for existing databases)
+            const maintenanceColumnCheck = await pool.query(`
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'properties'
+                AND column_name = 'maintenance'
+            `);
+
+            if (maintenanceColumnCheck.rows.length === 0) {
+                console.log('Adding missing maintenance column...');
+                await pool.query('ALTER TABLE properties ADD COLUMN IF NOT EXISTS maintenance DECIMAL(10, 2) DEFAULT 0');
+                console.log('✅ maintenance column added successfully');
+            }
+
+            // Check if vacancy_rate column exists (for existing databases)
+            const vacancyRateColumnCheck = await pool.query(`
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'properties'
+                AND column_name = 'vacancy_rate'
+            `);
+
+            if (vacancyRateColumnCheck.rows.length === 0) {
+                console.log('Adding missing vacancy_rate column...');
+                await pool.query('ALTER TABLE properties ADD COLUMN IF NOT EXISTS vacancy_rate DECIMAL(5, 2) DEFAULT 7.00');
+                console.log('✅ vacancy_rate column added successfully');
+            }
         }
     } catch (error) {
         console.error('Database initialization error:', error);
@@ -183,8 +211,8 @@ const db = {
             
             const {
                 address, city, state, zip, purchasePrice, downPayment, monthlyRent,
-                hoa, propertyTax, insurance, managementFees, repairs,
-                vacancy, capex, mortgage, cocReturn, rentToValue, capRate,
+                hoa, propertyTax, insurance, managementFees, maintenance, repairs,
+                vacancy, vacancyRate, capex, mortgage, cocReturn, rentToValue, capRate,
                 crimeScore, floodRisk, marketRisk, bedrooms, bathrooms,
                 squareFootage, yearBuilt, lotSize, propertyType, county,
                 rentEstimate, valueEstimate, status, notes, lastUpdated, dataSource,
@@ -235,8 +263,8 @@ const db = {
             // Count columns and values for debugging
             const columns = [
                 'address', 'city', 'state', 'zip', 'purchase_price', 'down_payment', 'monthly_rent',
-                'hoa', 'property_tax', 'insurance', 'management_fees', 'repairs',
-                'vacancy', 'capex', 'mortgage', 'coc_return', 'rent_to_value', 'cap_rate',
+                'hoa', 'property_tax', 'insurance', 'management_fees', 'maintenance', 'repairs',
+                'vacancy', 'vacancy_rate', 'capex', 'mortgage', 'coc_return', 'rent_to_value', 'cap_rate',
                 'crime_score', 'flood_risk', 'market_risk', 'bedrooms', 'bathrooms',
                 'square_footage', 'year_built', 'lot_size', 'property_type', 'county',
                 'rent_estimate', 'value_estimate', 'status', 'notes', 'last_updated',
@@ -245,8 +273,8 @@ const db = {
 
             const values = [
                 address, city, state, zip, purchasePrice || null, downPayment || null, monthlyRent || null,
-                hoa || 0, propertyTax || 0, insurance || 0, managementFees || 0,
-                repairs || 0, vacancy || 0, capex || 0, mortgage || 0,
+                hoa || 0, propertyTax || 0, insurance || 0, managementFees || 0, maintenance || 0,
+                repairs || 0, vacancy || 0, vacancyRate || 7.00, capex || 0, mortgage || 0,
                 cocReturn || null, rentToValue || null, capRate || null,
                 crimeScore || null, floodRisk || null, marketRisk || null,
                 bedrooms || null, bathrooms || null, squareFootage || null,
@@ -264,8 +292,8 @@ const db = {
             const query = `
                 INSERT INTO properties (
                     address, city, state, zip, purchase_price, down_payment, monthly_rent,
-                    hoa, property_tax, insurance, management_fees, repairs,
-                    vacancy, capex, mortgage, coc_return, rent_to_value, cap_rate,
+                    hoa, property_tax, insurance, management_fees, maintenance, repairs,
+                    vacancy, vacancy_rate, capex, mortgage, coc_return, rent_to_value, cap_rate,
                     crime_score, flood_risk, market_risk, bedrooms, bathrooms,
                     square_footage, year_built, lot_size, property_type, county,
                     rent_estimate, value_estimate, status, notes, last_updated, data_source,
@@ -336,6 +364,9 @@ const db = {
                 'rentEstimate': 'rent_estimate',     // Add this mapping
                 'monthlyRent': 'monthly_rent',
                 'downPayment': 'down_payment',       // Add downPayment mapping
+                'propertyTax': 'property_tax',
+                'managementFees': 'management_fees',
+                'vacancyRate': 'vacancy_rate',
                 'lastUpdated': 'last_updated',
                 'dataSource': 'data_source',
                 'lastRentCastUpdate': 'last_updated' // Map this too
