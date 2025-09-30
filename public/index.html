@@ -3988,22 +3988,22 @@
 
                 const cashFlowClass = (property.monthlyCashFlow || 0) >= 0 ? 'positive' : 'negative';
                 const annualCashFlowClass = (property.annualCashFlow || 0) >= 0 ? 'positive' : 'negative';
-            
-            // Calculate DSCR (Debt Service Coverage Ratio)
-            const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
-            const downPayment = property.downPayment || (purchasePrice * 0.2);
-            const loanAmount = purchasePrice - downPayment;
-            const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
-            const noi = (property.monthlyRent || property.rentEstimate || 0) * 12 - (calculateTotalExpenses(property) * 12);
-            const annualDebtService = monthlyMortgage * 12;
-            const dscr = annualDebtService > 0 ? noi / annualDebtService : 0;
-            
-            // Determine styling classes for financial metrics
-            const capRateClass = (property.capRate || 0) >= 6 ? 'positive' : 'warning';
-            const cashOnCashClass = (property.cashOnCashReturn || 0) >= 8 ? 'positive' : 'warning';
-            const dscrClass = dscr >= 1.25 ? 'positive' : dscr >= 1.0 ? 'warning' : 'negative';
-            
-            row.innerHTML = `
+
+                // Calculate DSCR (Debt Service Coverage Ratio)
+                const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
+                const downPayment = property.downPayment || (purchasePrice * 0.2);
+                const loanAmount = purchasePrice - downPayment;
+                const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
+                const noi = (property.monthlyRent || property.rentEstimate || 0) * 12 - (calculateTotalExpenses(property) * 12);
+                const annualDebtService = monthlyMortgage * 12;
+                const dscr = annualDebtService > 0 ? noi / annualDebtService : 0;
+
+                // Determine styling classes for financial metrics
+                const capRateClass = (property.capRate || 0) >= 6 ? 'positive' : 'warning';
+                const cashOnCashClass = (property.cashOnCashReturn || 0) >= 8 ? 'positive' : 'warning';
+                const dscrClass = dscr >= 1.25 ? 'positive' : dscr >= 1.0 ? 'warning' : 'negative';
+
+                row.innerHTML = `
                 <td style="min-width: 200px;">
                     ${property.address || ''}
                     ${property._isTemporary ? 
