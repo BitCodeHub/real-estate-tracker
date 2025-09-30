@@ -280,7 +280,7 @@
         
         table {
             width: 100%;
-            min-width: 1800px;
+            min-width: 2800px;
             border-collapse: collapse;
         }
         
@@ -2010,7 +2010,20 @@
             input.className = 'inline-edit-input';
             input.value = currentValue;
             input.min = '0';
-            input.step = field === 'monthlyRent' ? '50' : (field === 'downPayment' ? '1000' : '10000');
+
+            // Set appropriate step based on field type
+            if (field === 'vacancyRate') {
+                input.step = '0.1';
+                input.max = '100';
+            } else if (field === 'monthlyRent') {
+                input.step = '50';
+            } else if (field === 'downPayment' || field === 'purchasePrice') {
+                input.step = '1000';
+            } else if (['propertyTax', 'insurance', 'hoa', 'maintenance', 'managementFees', 'mortgage'].includes(field)) {
+                input.step = '10';
+            } else {
+                input.step = '100';
+            }
             
             // Get the element that was clicked
             const clickedElement = event.target;
@@ -2054,10 +2067,19 @@
                         }
                         
                         // Show success notification
-                        const fieldName = field === 'purchasePrice' ? 'Purchase price' :
-                                         field === 'monthlyRent' ? 'Monthly rent' :
-                                         field === 'downPayment' ? 'Down payment' : field;
-                        showNotification(`${fieldName} updated to ${formatCurrency(newValue)}`, 'success');
+                        const fieldName = field === 'purchasePrice' ? 'Purchase Price' :
+                                         field === 'monthlyRent' ? 'Monthly Rent' :
+                                         field === 'downPayment' ? 'Down Payment' :
+                                         field === 'propertyTax' ? 'Property Tax' :
+                                         field === 'insurance' ? 'Insurance' :
+                                         field === 'hoa' ? 'HOA' :
+                                         field === 'maintenance' ? 'Maintenance' :
+                                         field === 'managementFees' ? 'Management Fee' :
+                                         field === 'mortgage' ? 'Mortgage' :
+                                         field === 'vacancyRate' ? 'Vacancy Rate' : field;
+
+                        const displayValue = field === 'vacancyRate' ? `${newValue.toFixed(1)}%` : formatCurrency(newValue);
+                        showNotification(`${fieldName} updated to ${displayValue}`, 'success');
                     }
                 } else {
                     // Restore original value if invalid or unchanged
@@ -3567,8 +3589,8 @@
             // Define valid database fields (based on schema.sql)
             const validFields = [
                 'address', 'city', 'state', 'zip', 'purchase_price', 'down_payment', 'monthly_rent',
-                'hoa', 'property_tax', 'insurance', 'management_fees', 'repairs',
-                'vacancy', 'capex', 'mortgage', 'coc_return', 'rent_to_value', 'cap_rate',
+                'hoa', 'property_tax', 'insurance', 'management_fees', 'maintenance', 'repairs',
+                'vacancy', 'vacancy_rate', 'capex', 'mortgage', 'coc_return', 'rent_to_value', 'cap_rate',
                 'crime_score', 'flood_risk', 'market_risk', 'bedrooms', 'bathrooms',
                 'square_footage', 'year_built', 'lot_size', 'property_type', 'county',
                 'rent_estimate', 'value_estimate', 'status', 'notes', 'last_updated',
@@ -3586,7 +3608,11 @@
                 'monthlyRent': 'monthly_rent',
                 'propertyTax': 'property_tax',
                 'managementFees': 'management_fees',
+                'vacancyRate': 'vacancy_rate',
                 'cashFlow': null, // This is a calculated field, don't send it
+                'monthlyCashFlow': null, // This is a calculated field, don't send it
+                'annualCashFlow': null, // This is a calculated field, don't send it
+                'cashOnCashReturn': null, // This is a calculated field, don't send it
                 'cocReturn': 'coc_return',
                 'rentToValue': 'rent_to_value',
                 'capRate': 'cap_rate',
@@ -4006,6 +4032,55 @@
                 <td style="min-width: 120px; text-align: right;">
                     ${formatCurrency(property.rentEstimate || 0)}
                     ${property.realTimeData && property.rentEstimate ? '<span style="color: #10b981; font-size: 10px;">📊</span>' : ''}
+                </td>
+                <td style="min-width: 100px; text-align: right;">
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'mortgage', ${property.mortgage || 0})"
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(property.mortgage || 0)}
+                    </span>
+                </td>
+                <td style="min-width: 100px; text-align: right;">
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'propertyTax', ${property.propertyTax || 0})"
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(property.propertyTax || 0)}
+                    </span>
+                </td>
+                <td style="min-width: 100px; text-align: right;">
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'insurance', ${property.insurance || 0})"
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(property.insurance || 0)}
+                    </span>
+                </td>
+                <td style="min-width: 100px; text-align: right;">
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'hoa', ${property.hoa || 0})"
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(property.hoa || 0)}
+                    </span>
+                </td>
+                <td style="min-width: 100px; text-align: right;">
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'maintenance', ${property.maintenance || 0})"
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(property.maintenance || 0)}
+                    </span>
+                </td>
+                <td style="min-width: 100px; text-align: right;">
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'managementFees', ${property.managementFees || 0})"
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${formatCurrency(property.managementFees || 0)}
+                    </span>
+                </td>
+                <td style="min-width: 80px; text-align: right;">
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'vacancyRate', ${property.vacancyRate !== undefined ? property.vacancyRate : 7})"
+                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
+                          title="Click to edit">
+                        ${(property.vacancyRate !== undefined ? property.vacancyRate : 7).toFixed(1)}%
+                    </span>
                 </td>
                 <td class="${cashFlowClass}" style="min-width: 100px; text-align: right; font-weight: 500;">
                     ${formatCurrency(property.monthlyCashFlow || 0)}
@@ -5553,34 +5628,46 @@
 
         // Calculate property metrics
         // Financial calculation formulas:
-        // 1. Monthly Cash Flow = Monthly Rent - Mortgage Payment - Total Expenses
-        // 2. Annual Cash Flow = Monthly Cash Flow × 12
-        // 3. Cash-on-Cash Return = (Annual Cash Flow ÷ Down Payment) × 100
-        // 4. Net Operating Income (NOI) = Annual Rent - Annual Expenses (excludes mortgage)
-        // 5. Cap Rate = (NOI ÷ Purchase Price) × 100
-        // 6. DSCR = NOI ÷ Annual Debt Service (mortgage payments)
+        // 1. Effective Rent = Monthly Rent × (1 - Vacancy Rate)
+        // 2. Monthly Cash Flow = Effective Rent - Mortgage - Total Expenses
+        // 3. Annual Cash Flow = Monthly Cash Flow × 12
+        // 4. Cash-on-Cash Return = (Annual Cash Flow ÷ Down Payment) × 100
+        // 5. Net Operating Income (NOI) = (Annual Rent × (1 - Vacancy Rate)) - Annual Expenses (excludes mortgage)
+        // 6. Cap Rate = (NOI ÷ Purchase Price) × 100
+        // 7. DSCR = NOI ÷ Annual Debt Service (mortgage payments)
         //
         // Assumptions:
         // - Mortgage: 30-year fixed at 6.5% interest rate
         // - Down Payment: 20% of purchase price (or custom)
+        // - Vacancy Rate: 7% (or custom)
         function calculatePropertyMetrics(property) {
             const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
             const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
             const downPayment = property.downPayment || (purchasePrice * 0.2);
             const loanAmount = purchasePrice - downPayment;
+            const vacancyRate = property.vacancyRate !== undefined ? property.vacancyRate : 7.00;
 
-            const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
+            // Calculate or use stored mortgage
+            const monthlyMortgage = property.mortgage || calculateMortgagePayment(loanAmount, 0.065, 30);
+
+            // Store calculated mortgage back to property if not already set
+            if (!property.mortgage) {
+                property.mortgage = monthlyMortgage;
+            }
+
             const totalExpenses = calculateTotalExpenses(property);
+            const effectiveRent = monthlyRent * (1 - vacancyRate / 100);
 
-            property.monthlyCashFlow = monthlyRent - monthlyMortgage - totalExpenses;
+            property.monthlyCashFlow = effectiveRent - monthlyMortgage - totalExpenses;
             property.annualCashFlow = property.monthlyCashFlow * 12;
             property.cashOnCashReturn = downPayment > 0 ? (property.annualCashFlow / downPayment) * 100 : 0;
 
-            const noi = monthlyRent * 12 - totalExpenses * 12;
+            const noi = (monthlyRent * 12 * (1 - vacancyRate / 100)) - (totalExpenses * 12);
             property.capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
         }
 
         // Calculate total expenses
+        // Uses stored values if available, otherwise calculates defaults
         // Default assumptions (industry standard):
         // - Property Tax: 1.2% of purchase price annually (varies by location)
         // - Insurance: 0.4% of purchase price annually
@@ -5591,13 +5678,21 @@
             const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
             const monthlyRent = property.monthlyRent || property.rentEstimate || 0;
 
-            const propertyTax = (purchasePrice * 0.012) / 12;        // 1.2% annually
-            const insurance = (purchasePrice * 0.004) / 12;          // 0.4% annually
-            const hoa = property.hoaMonthly || 0;                    // User input
-            const maintenance = (purchasePrice * 0.01) / 12;         // 1% annually
-            const propertyManagement = monthlyRent * 0.08;           // 8% of rent
+            // Use stored values or calculate defaults
+            const propertyTax = property.propertyTax !== undefined ? property.propertyTax : (purchasePrice * 0.012) / 12;
+            const insurance = property.insurance !== undefined ? property.insurance : (purchasePrice * 0.004) / 12;
+            const hoa = property.hoa !== undefined ? property.hoa : 0;
+            const maintenance = property.maintenance !== undefined ? property.maintenance : (purchasePrice * 0.01) / 12;
+            const managementFees = property.managementFees !== undefined ? property.managementFees : (monthlyRent * 0.08);
 
-            return propertyTax + insurance + hoa + maintenance + propertyManagement;
+            // Store calculated values back to property if not already set
+            if (property.propertyTax === undefined) property.propertyTax = propertyTax;
+            if (property.insurance === undefined) property.insurance = insurance;
+            if (property.hoa === undefined) property.hoa = hoa;
+            if (property.maintenance === undefined) property.maintenance = maintenance;
+            if (property.managementFees === undefined) property.managementFees = managementFees;
+
+            return propertyTax + insurance + hoa + maintenance + managementFees;
         }
 
         // Calculate mortgage payment
