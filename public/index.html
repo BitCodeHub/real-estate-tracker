@@ -4030,11 +4030,11 @@
                 const annualCashFlowClass = (property.annualCashFlow || 0) >= 0 ? 'positive' : 'negative';
 
                 // Calculate DSCR (Debt Service Coverage Ratio)
-                const purchasePrice = property.purchasePrice || property.estimatedValue || 0;
-                const downPayment = property.downPayment || (purchasePrice * 0.2);
+                const purchasePrice = Number(property.purchasePrice || property.estimatedValue || 0);
+                const downPayment = Number(property.downPayment || (purchasePrice * 0.2));
                 const loanAmount = purchasePrice - downPayment;
-                const monthlyMortgage = calculateMortgagePayment(loanAmount, 0.065, 30);
-                const noi = (property.monthlyRent || property.rentEstimate || 0) * 12 - (calculateTotalExpenses(property) * 12);
+                const monthlyMortgage = Number(calculateMortgagePayment(loanAmount, 0.065, 30));
+                const noi = (Number(property.monthlyRent || property.rentEstimate || 0) * 12) - (Number(calculateTotalExpenses(property)) * 12);
                 const annualDebtService = monthlyMortgage * 12;
                 const dscr = annualDebtService > 0 ? noi / annualDebtService : 0;
 
@@ -4060,87 +4060,87 @@
                     ${property.sqft || property.squareFootage ? (property.sqft || property.squareFootage).toLocaleString() : 'N/A'}
                 </td>
                 <td style="min-width: 120px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'purchasePrice', ${property.purchasePrice || 0})" 
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'purchasePrice', ${Number(property.purchasePrice) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${formatCurrency(property.purchasePrice || 0)}
+                        ${formatCurrency(Number(property.purchasePrice) || 0)}
                     </span>
                 </td>
                 <td style="min-width: 120px; text-align: right;">
-                    ${formatCurrency(property.estimatedValue || property.currentValue || property.purchasePrice || 0)}
+                    ${formatCurrency(Number(property.estimatedValue || property.currentValue || property.purchasePrice) || 0)}
                     ${property.realTimeData && property.estimatedValue ? '<span style="color: #10b981; font-size: 10px;">📊</span>' : ''}
                 </td>
                 <td style="min-width: 120px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'monthlyRent', ${property.monthlyRent || 0})" 
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'monthlyRent', ${Number(property.monthlyRent) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${formatCurrency(property.monthlyRent || 0)}
+                        ${formatCurrency(Number(property.monthlyRent) || 0)}
                     </span>
                 </td>
                 <td style="min-width: 120px; text-align: right;">
-                    ${formatCurrency(property.rentEstimate || 0)}
+                    ${formatCurrency(Number(property.rentEstimate) || 0)}
                     ${property.realTimeData && property.rentEstimate ? '<span style="color: #10b981; font-size: 10px;">📊</span>' : ''}
                 </td>
                 <td style="min-width: 100px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'mortgage', ${property.mortgage || 0})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'mortgage', ${Number(property.mortgage) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${formatCurrency(property.mortgage || 0)}
+                        ${formatCurrency(Number(property.mortgage) || 0)}
                     </span>
                 </td>
                 <td style="min-width: 100px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'propertyTax', ${property.propertyTax || 0})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'propertyTax', ${Number(property.propertyTax) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${formatCurrency(property.propertyTax || 0)}
+                        ${formatCurrency(Number(property.propertyTax) || 0)}
                     </span>
                 </td>
                 <td style="min-width: 100px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'insurance', ${property.insurance || 0})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'insurance', ${Number(property.insurance) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${formatCurrency(property.insurance || 0)}
+                        ${formatCurrency(Number(property.insurance) || 0)}
                     </span>
                 </td>
                 <td style="min-width: 100px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'hoa', ${property.hoa || 0})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'hoa', ${Number(property.hoa) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${formatCurrency(property.hoa || 0)}
+                        ${formatCurrency(Number(property.hoa) || 0)}
                     </span>
                 </td>
                 <td style="min-width: 100px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'maintenance', ${property.maintenance || 0})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'maintenance', ${Number(property.maintenance) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${formatCurrency(property.maintenance || 0)}
+                        ${formatCurrency(Number(property.maintenance) || 0)}
                     </span>
                 </td>
                 <td style="min-width: 100px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'managementFees', ${property.managementFees || 0})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'managementFees', ${Number(property.managementFees) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${formatCurrency(property.managementFees || 0)}
+                        ${formatCurrency(Number(property.managementFees) || 0)}
                     </span>
                 </td>
                 <td style="min-width: 80px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'vacancyRate', ${property.vacancyRate !== undefined ? property.vacancyRate : 7})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'vacancyRate', ${property.vacancyRate !== undefined ? Number(property.vacancyRate) : 7})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
                           title="Click to edit">
-                        ${(property.vacancyRate !== undefined ? property.vacancyRate : 7).toFixed(1)}%
+                        ${Number(property.vacancyRate !== undefined ? property.vacancyRate : 7).toFixed(1)}%
                     </span>
                 </td>
                 <td class="${cashFlowClass}" style="min-width: 100px; text-align: right; font-weight: 500;">
-                    ${formatCurrency(property.monthlyCashFlow || 0)}
+                    ${formatCurrency(Number(property.monthlyCashFlow) || 0)}
                 </td>
                 <td class="${annualCashFlowClass}" style="min-width: 100px; text-align: right;">
-                    ${formatCurrency(property.annualCashFlow || 0)}
+                    ${formatCurrency(Number(property.annualCashFlow) || 0)}
                 </td>
                 <td class="${cashOnCashClass}" style="min-width: 90px; text-align: right; font-weight: 500;">
-                    ${(property.cashOnCashReturn || 0).toFixed(1)}%
+                    ${Number(property.cashOnCashReturn || 0).toFixed(1)}%
                 </td>
                 <td class="${capRateClass}" style="min-width: 80px; text-align: right; font-weight: 500;">
-                    ${(property.capRate || 0).toFixed(1)}%
+                    ${Number(property.capRate || 0).toFixed(1)}%
                 </td>
                 <td style="min-width: 120px; text-align: right;">
                     <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'downPayment', ${downPayment})"
@@ -4150,7 +4150,7 @@
                     </span>
                 </td>
                 <td class="${dscrClass}" style="min-width: 80px; text-align: right; font-weight: 500;">
-                    ${dscr > 0 ? dscr.toFixed(2) : 'N/A'}
+                    ${dscr > 0 ? Number(dscr).toFixed(2) : 'N/A'}
                 </td>
                 <td class="${statusClass}" style="min-width: 80px; text-align: center;">
                     ${property.status || 'Available'}
