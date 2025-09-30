@@ -3931,6 +3931,8 @@
         // Update table
         function updateTable() {
             console.log('🔄 updateTable called');
+            console.log('📦 Total properties in global array:', properties.length);
+
             const tbody = document.getElementById('propertyTableBody');
             if (!tbody) {
                 console.error('❌ Table body element not found!');
@@ -3938,40 +3940,69 @@
             }
 
             tbody.innerHTML = '';
+            console.log('🧹 Cleared tbody');
 
             const filteredProperties = getFilteredProperties();
             console.log('📊 Filtered properties count:', filteredProperties.length);
 
             // Debug: Check order of properties in table
             if (filteredProperties.length > 0) {
-                console.log('📊 Table order - First 3 properties:');
-                filteredProperties.slice(0, 3).forEach((p, i) => {
-                    console.log(`Row ${i+1}: ${p.address}, ${p.city} - beds: ${p.beds || p.bedrooms || 0}`);
+                console.log('📊 Table order - First property details:');
+                const firstProp = filteredProperties[0];
+                console.log('First property:', {
+                    address: firstProp.address,
+                    city: firstProp.city,
+                    beds: firstProp.beds,
+                    baths: firstProp.baths,
+                    purchasePrice: firstProp.purchasePrice,
+                    monthlyRent: firstProp.monthlyRent
                 });
             } else {
                 console.warn('⚠️ No filtered properties to display');
                 console.log('Total properties in array:', properties.length);
+                if (properties.length > 0) {
+                    console.log('Sample property from global array:', {
+                        address: properties[0].address,
+                        city: properties[0].city
+                    });
+                }
             }
+
+            let successCount = 0;
+            let failCount = 0;
 
             filteredProperties.forEach((property, index) => {
                 try {
-                    const row = createPropertyRow(property, properties.indexOf(property));
+                    const globalIndex = properties.indexOf(property);
+                    console.log(`Creating row ${index + 1}/${filteredProperties.length} for:`, property.address);
+                    const row = createPropertyRow(property, globalIndex);
                     if (row) {
                         tbody.appendChild(row);
+                        successCount++;
+                        console.log(`✅ Row ${index + 1} appended successfully`);
                     } else {
+                        failCount++;
                         console.error('❌ createPropertyRow returned null for property:', property.address);
                     }
                 } catch (error) {
+                    failCount++;
                     console.error('❌ Error creating row for property:', property.address, error);
+                    console.error('Stack trace:', error.stack);
                 }
             });
 
-            console.log('✅ updateTable completed. Rows in tbody:', tbody.children.length);
+            console.log(`✅ updateTable completed. Success: ${successCount}, Failed: ${failCount}, Rows in tbody: ${tbody.children.length}`);
         }
 
         // Create property row
         function createPropertyRow(property, index) {
-            console.log('🏠 Creating row for:', property.address);
+            console.log('🏠 Creating row for:', property.address, 'Index:', index);
+
+            // Add validation
+            if (!property) {
+                console.error('❌ Property is null or undefined at index:', index);
+                return null;
+            }
 
             try {
                 const row = document.createElement('tr');
@@ -3983,7 +4014,16 @@
                 // Calculate additional metrics if not already calculated
                 if (!property.monthlyCashFlow || isNaN(property.monthlyCashFlow)) {
                     console.log('Calculating metrics for:', property.address);
-                    calculatePropertyMetrics(property);
+                    try {
+                        calculatePropertyMetrics(property);
+                    } catch (calcError) {
+                        console.error('Error calculating metrics:', calcError);
+                        // Set defaults if calculation fails
+                        property.monthlyCashFlow = 0;
+                        property.annualCashFlow = 0;
+                        property.cashOnCashReturn = 0;
+                        property.capRate = 0;
+                    }
                 }
 
                 const cashFlowClass = (property.monthlyCashFlow || 0) >= 0 ? 'positive' : 'negative';
@@ -4117,17 +4157,18 @@
                 </td>
                 <td onclick="event.stopPropagation()" style="min-width: 80px;">
                     <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-                        <i class="fas fa-sync-alt icon-refresh ${property.rentcastCache ? '' : 'text-warning'}" 
-                           onclick="refreshProperty(${index})" 
-                           title="${property.rentcastCache ? 'Refresh RentCast Data (Last updated: ' + new Date(property.rentcastCache.timestamp).toLocaleDateString() + ')' : 'Fetch RentCast Data (No data cached yet)'}"></i>
-                        ${property.realTimeData ? 
-                            `<span style="color: #10b981; font-size: 12px;" title="RentCast data available (${property.lastRentCastUpdate ? new Date(property.lastRentCastUpdate).toLocaleDateString() : 'Unknown date'})">📊</span>` : 
-                            `<span style="color: #ef4444; font-size: 12px;" title="No RentCast data - click refresh">❌</span>`
+                        <i class="fas fa-sync-alt icon-refresh ${property.rentcastCache ? '' : 'text-warning'}"
+                           onclick="refreshProperty(${index})"
+                           title="Refresh RentCast Data"></i>
+                        ${property.realTimeData ?
+                            '<span style="color: #10b981; font-size: 12px;" title="RentCast data available">📊</span>' :
+                            '<span style="color: #ef4444; font-size: 12px;" title="No RentCast data - click refresh">❌</span>'
                         }
                     </div>
                 </td>
             `;
 
+                console.log('✅ Row created successfully for:', property.address);
                 return row;
             } catch (error) {
                 console.error('❌ Error in createPropertyRow for:', property.address, error);
