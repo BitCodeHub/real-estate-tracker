@@ -602,6 +602,21 @@
             visibility: visible;
         }
 
+        /* Special positioning for first column (rank) tooltip to avoid cutoff */
+        thead th:first-child .info-icon[data-tooltip]::before {
+            top: 50%;
+            left: calc(100% + 15px);
+            transform: translateY(-50%);
+            width: 280px;
+        }
+
+        thead th:first-child .info-icon[data-tooltip]::after {
+            top: 50%;
+            left: calc(100% + 9px);
+            transform: translateY(-50%) rotate(-90deg);
+            border-bottom-color: var(--accent-info);
+        }
+
         /* Ensure th with info icons have proper spacing */
         th {
             white-space: nowrap;
