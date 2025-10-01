@@ -2365,11 +2365,29 @@
                 `;
             }
 
-            // Open modal IMMEDIATELY (synchronous)
+            // Open modal IMMEDIATELY (synchronous) - set all visibility properties
             console.log('Opening modal NOW...');
+
+            // Find modal content
+            const modalContent = modal.querySelector('.modal-content');
+
+            // Remove ALL animations and transitions before showing
+            modal.style.animation = 'none';
+            modal.style.transition = 'none';
             modal.style.display = 'block';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+
+            if (modalContent) {
+                modalContent.style.animation = 'none';
+                modalContent.style.transition = 'none';
+                modalContent.style.opacity = '1';
+                modalContent.style.transform = 'none';
+                modalContent.style.visibility = 'visible';
+            }
+
             document.body.style.overflow = 'hidden';
-            console.log('✅ Modal opened - display:', modal.style.display);
+            console.log('✅ Modal opened - display:', modal.style.display, 'opacity:', modal.style.opacity, 'visibility:', modal.style.visibility);
 
             // Build comparison table synchronously
             console.log('Building comparison table...');
