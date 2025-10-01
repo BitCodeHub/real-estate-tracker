@@ -1602,7 +1602,7 @@
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 10000;
             left: 0;
             top: 0;
             width: 100%;
@@ -2347,22 +2347,42 @@
                 });
                 console.log('Selected properties:', selectedProps);
 
-                // Build comparison table
-                console.log('Building comparison table...');
-                window.buildComparisonTable(selectedProps);
-
-                // Open modal
-                console.log('Opening modal...');
+                // Get modal first
                 const modal = document.getElementById('comparisonModal');
                 if (!modal) {
                     console.error('❌ Comparison modal not found!');
                     showNotification('Error: Comparison modal not found', 'error');
                     return;
                 }
+
+                // Reset AI analysis loading state
+                const aiContent = document.getElementById('aiAnalysisContent');
+                if (aiContent) {
+                    aiContent.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px;"></i>
+                            <p>Analyzing properties and generating investment recommendations...</p>
+                        </div>
+                    `;
+                }
+
+                // Open modal FIRST (so rendering happens inside visible modal)
+                console.log('Opening modal...');
                 modal.style.display = 'block';
+                document.body.style.overflow = 'hidden'; // Prevent background scrolling
                 console.log('✅ Modal opened');
 
-                // Start AI analysis
+                // Small delay to ensure modal is fully rendered
+                await new Promise(resolve => setTimeout(resolve, 50));
+
+                // Build comparison table AFTER modal is visible
+                console.log('Building comparison table...');
+                window.buildComparisonTable(selectedProps);
+
+                // Scroll modal to top
+                modal.scrollTop = 0;
+
+                // Start AI analysis LAST
                 console.log('Starting AI analysis...');
                 window.performAIAnalysis(selectedProps);
             } catch (error) {
@@ -2982,6 +3002,8 @@
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.style.display = 'none';
+                // Restore body scrolling
+                document.body.style.overflow = '';
             }
         }
 
@@ -4059,6 +4081,8 @@
             window.onclick = function(event) {
                 if (event.target.classList.contains('modal')) {
                     event.target.style.display = 'none';
+                    // Restore body scrolling
+                    document.body.style.overflow = '';
                 }
             };
         }
@@ -8388,6 +8412,8 @@ Format your response in clear sections with bullet points where appropriate. Be 
                 const modal = safeGetElement(modalId);
                 if (modal) {
                     modal.style.display = 'none';
+                    // Restore body scrolling
+                    document.body.style.overflow = '';
                     console.log(`✅ Modal closed: ${modalId}`);
                 }
             } catch (error) {
