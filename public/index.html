@@ -387,8 +387,8 @@
             background: rgba(34, 197, 94, 0.03); /* Returns - green tint */
         }
 
-        /* Rank column styling */
-        tbody td:first-child {
+        /* Rank column styling (now 2nd column) */
+        tbody td:nth-child(2) {
             font-weight: 700;
             font-size: 16px;
             color: var(--accent-primary);
@@ -396,25 +396,49 @@
         }
 
         /* Top 3 ranks get special colors */
-        tbody tr:nth-child(1) td:first-child {
+        tbody tr:nth-child(1) td:nth-child(2) {
             color: #fbbf24; /* Gold */
             font-size: 18px;
         }
 
-        tbody tr:nth-child(2) td:first-child {
+        tbody tr:nth-child(2) td:nth-child(2) {
             color: #94a3b8; /* Silver */
             font-size: 17px;
         }
 
-        tbody tr:nth-child(3) td:first-child {
+        tbody tr:nth-child(3) td:nth-child(2) {
             color: #cd7f32; /* Bronze */
             font-size: 16px;
         }
-        
-        /* Sticky rank column */
+
+        /* Sticky checkbox column */
         thead th:first-child {
             position: sticky;
             left: 0;
+            background: #1a1a1a;
+            background-color: #1a1a1a;
+            z-index: 103;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 50px;
+            min-width: 50px;
+        }
+
+        tbody td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 102;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
+            width: 50px;
+            min-width: 50px;
+            background: #1a1a1a;
+            background-color: #1a1a1a;
+        }
+
+        /* Sticky rank column (now 2nd column) */
+        thead th:nth-child(2) {
+            position: sticky;
+            left: 50px;
             background: #1a1a1a;
             background-color: #1a1a1a;
             z-index: 102;
@@ -424,19 +448,19 @@
             min-width: 60px;
         }
 
-        tbody td:first-child {
+        tbody td:nth-child(2) {
             position: sticky;
-            left: 0;
+            left: 50px;
             z-index: 101;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
             width: 60px;
             min-width: 60px;
         }
 
-        /* Sticky address column (2nd column) */
-        thead th:nth-child(2) {
+        /* Sticky address column (now 3rd column) */
+        thead th:nth-child(3) {
             position: sticky;
-            left: 60px;
+            left: 110px;
             background: #1a1a1a;
             background-color: #1a1a1a;
             z-index: 100;
@@ -444,9 +468,9 @@
             min-width: 220px;
         }
 
-        tbody td:nth-child(2) {
+        tbody td:nth-child(3) {
             position: sticky;
-            left: 60px;
+            left: 110px;
             z-index: 99;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
             min-width: 220px;
@@ -1799,7 +1823,10 @@
                 <i class="fas fa-bars"></i>
             </button>
             <h1><i class="fas fa-chart-line"></i> Real Estate Investment Tracker</h1>
-            <div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="compareBtn" class="btn" style="display: none; background: var(--accent-info); color: white;" onclick="openComparisonModal()">
+                    <i class="fas fa-balance-scale"></i> Compare <span id="compareCount">0</span> Properties
+                </button>
                 <button class="btn btn-primary" onclick="openAddPropertyModal()">
                     <i class="fas fa-plus"></i> Add Property
                 </button>
@@ -1882,6 +1909,9 @@
             <table id="propertyTable">
                 <thead>
                     <tr>
+                        <th style="text-align: center; width: 50px; min-width: 50px;">
+                            <input type="checkbox" id="selectAllProperties" onclick="toggleSelectAll()" style="cursor: pointer;">
+                        </th>
                         <th style="text-align: center;">
                             #
                             <span class="info-icon" data-tooltip="Ranking by Monthly Cash Flow (highest to lowest). Top 3 get special colors: 🥇 Gold, 🥈 Silver, 🥉 Bronze.">
@@ -2157,8 +2187,47 @@
                     <div class="loading"></div>
                     <p>Analyzing property...</p>
                 </div>
-                
+
                 <div id="analysisResults" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Property Comparison Modal -->
+    <div id="comparisonModal" class="modal">
+        <div class="modal-content" style="max-width: 95%; width: 1400px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-balance-scale"></i> Property Comparison & AI Analysis</h2>
+                <span class="close" onclick="closeModal('comparisonModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- AI Analysis Section -->
+                <div id="aiAnalysisSection" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 12px; margin-bottom: 24px; color: white;">
+                    <h3 style="margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-robot"></i> AI Investment Analysis
+                    </h3>
+                    <div id="aiAnalysisContent">
+                        <div style="text-align: center; padding: 20px;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px;"></i>
+                            <p>Analyzing properties and generating investment recommendations...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Table -->
+                <div style="overflow-x: auto;">
+                    <table id="comparisonTable" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: var(--bg-secondary);">
+                                <th style="padding: 12px; text-align: left; border: 1px solid var(--border-color);">Metric</th>
+                                <!-- Property columns will be added here -->
+                            </tr>
+                        </thead>
+                        <tbody id="comparisonTableBody">
+                            <!-- Comparison rows will be added here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -2185,6 +2254,258 @@
         let properties = [];
         let selectedPropertyIndex = null;
         let samplePropertiesLoaded = false;
+        let selectedProperties = []; // Track selected properties for comparison
+
+        // Property selection handlers
+        function handlePropertySelection() {
+            const checkboxes = document.querySelectorAll('.property-select-checkbox:checked');
+            selectedProperties = Array.from(checkboxes).map(cb => parseInt(cb.dataset.propertyIndex));
+
+            const compareBtn = document.getElementById('compareBtn');
+            const compareCount = document.getElementById('compareCount');
+
+            if (selectedProperties.length > 0 && selectedProperties.length <= 5) {
+                compareBtn.style.display = 'block';
+                compareCount.textContent = selectedProperties.length;
+            } else if (selectedProperties.length > 5) {
+                // Uncheck the last selected checkbox
+                checkboxes[checkboxes.length - 1].checked = false;
+                selectedProperties.pop();
+                showNotification('Maximum 5 properties can be compared', 'warning');
+            } else {
+                compareBtn.style.display = 'none';
+            }
+
+            // Update select all checkbox
+            const selectAllCheckbox = document.getElementById('selectAllProperties');
+            const totalCheckboxes = document.querySelectorAll('.property-select-checkbox').length;
+            selectAllCheckbox.checked = checkboxes.length === totalCheckboxes && totalCheckboxes > 0;
+        }
+
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllProperties');
+            const checkboxes = document.querySelectorAll('.property-select-checkbox');
+
+            if (selectAllCheckbox.checked) {
+                // Select only first 5
+                checkboxes.forEach((cb, index) => {
+                    cb.checked = index < 5;
+                });
+                if (checkboxes.length > 5) {
+                    showNotification('Only first 5 properties selected (maximum limit)', 'info');
+                }
+            } else {
+                checkboxes.forEach(cb => cb.checked = false);
+            }
+
+            handlePropertySelection();
+        }
+
+        // Open comparison modal
+        async function openComparisonModal() {
+            if (selectedProperties.length < 2) {
+                showNotification('Please select at least 2 properties to compare', 'warning');
+                return;
+            }
+
+            // Get selected property objects
+            const selectedProps = selectedProperties.map(index => properties[index]);
+
+            // Build comparison table
+            buildComparisonTable(selectedProps);
+
+            // Open modal
+            document.getElementById('comparisonModal').style.display = 'block';
+
+            // Start AI analysis
+            performAIAnalysis(selectedProps);
+        }
+
+        // Build comparison table
+        function buildComparisonTable(props) {
+            const table = document.getElementById('comparisonTable');
+            const thead = table.querySelector('thead tr');
+            const tbody = document.getElementById('comparisonTableBody');
+
+            // Clear previous content
+            thead.innerHTML = '<th style="padding: 12px; text-align: left; border: 1px solid var(--border-color); position: sticky; left: 0; background: var(--bg-secondary); z-index: 1;">Metric</th>';
+            tbody.innerHTML = '';
+
+            // Add property column headers
+            props.forEach((prop, index) => {
+                const th = document.createElement('th');
+                th.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); min-width: 200px;';
+                th.innerHTML = `
+                    <div style="font-weight: 600;">${prop.address || 'Unknown'}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); font-weight: normal;">${prop.city || ''}, ${prop.state || ''}</div>
+                `;
+                thead.appendChild(th);
+            });
+
+            // Define metrics to compare
+            const metrics = [
+                { label: 'Purchase Price', key: 'purchasePrice', format: 'currency' },
+                { label: 'Estimated Value', key: 'estimatedValue', format: 'currency' },
+                { label: 'Monthly Rent', key: 'monthlyRent', format: 'currency' },
+                { label: 'Cash Flow', key: 'monthlyCashFlow', format: 'currency', highlight: true },
+                { label: 'Annual Cash Flow', key: 'annualCashFlow', format: 'currency' },
+                { label: 'Cash-on-Cash Return', key: 'cashOnCashReturn', format: 'percentage' },
+                { label: 'Cap Rate', key: 'capRate', format: 'percentage' },
+                { label: 'Down Payment', key: 'downPayment', format: 'currency' },
+                { label: 'Mortgage', key: 'mortgage', format: 'currency' },
+                { label: 'Property Tax', key: 'propertyTax', format: 'currency' },
+                { label: 'Insurance', key: 'insurance', format: 'currency' },
+                { label: 'HOA', key: 'hoa', format: 'currency' },
+                { label: 'Maintenance', key: 'maintenance', format: 'currency' },
+                { label: 'Management Fee', key: 'managementFees', format: 'currency' },
+                { label: 'Vacancy Rate', key: 'vacancyRate', format: 'percentage' },
+                { label: 'Beds/Baths', key: 'beds', format: 'bedsBaths' },
+                { label: 'Square Feet', key: 'sqft', format: 'number' },
+                { label: 'Property Type', key: 'propertyType', format: 'text' }
+            ];
+
+            // Create rows for each metric
+            metrics.forEach(metric => {
+                const tr = document.createElement('tr');
+                tr.style.cssText = metric.highlight ? 'background: rgba(59, 130, 246, 0.1);' : '';
+
+                // Metric label
+                const labelTd = document.createElement('td');
+                labelTd.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); font-weight: 500; position: sticky; left: 0; background: var(--bg-card); z-index: 1;';
+                labelTd.textContent = metric.label;
+                tr.appendChild(labelTd);
+
+                // Property values
+                props.forEach(prop => {
+                    const td = document.createElement('td');
+                    td.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); text-align: right;';
+
+                    let value = prop[metric.key];
+                    let displayValue = '';
+
+                    if (metric.format === 'currency') {
+                        displayValue = formatCurrency(Number(value) || 0);
+                    } else if (metric.format === 'percentage') {
+                        displayValue = (Number(value) || 0).toFixed(1) + '%';
+                    } else if (metric.format === 'number') {
+                        displayValue = (Number(value) || 0).toLocaleString();
+                    } else if (metric.format === 'bedsBaths') {
+                        displayValue = `${prop.beds || 0}/${prop.baths || 0}`;
+                    } else {
+                        displayValue = value || 'N/A';
+                    }
+
+                    td.textContent = displayValue;
+
+                    // Highlight best values
+                    if (metric.highlight && metric.format === 'currency') {
+                        const values = props.map(p => Number(p[metric.key]) || 0);
+                        const maxValue = Math.max(...values);
+                        if (Number(value) === maxValue && maxValue > 0) {
+                            td.style.cssText += ' background: rgba(34, 197, 94, 0.2); font-weight: 600; color: #10b981;';
+                        }
+                    }
+
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Perform AI analysis
+        async function performAIAnalysis(props) {
+            const aiContent = document.getElementById('aiAnalysisContent');
+
+            try {
+                // Prepare property data for AI
+                const propertyData = props.map((prop, index) => ({
+                    id: index + 1,
+                    address: prop.address,
+                    city: prop.city,
+                    state: prop.state,
+                    purchasePrice: Number(prop.purchasePrice) || 0,
+                    estimatedValue: Number(prop.estimatedValue) || 0,
+                    monthlyRent: Number(prop.monthlyRent) || 0,
+                    monthlyCashFlow: Number(prop.monthlyCashFlow) || 0,
+                    annualCashFlow: Number(prop.annualCashFlow) || 0,
+                    cashOnCashReturn: Number(prop.cashOnCashReturn) || 0,
+                    capRate: Number(prop.capRate) || 0,
+                    downPayment: Number(prop.downPayment) || 0,
+                    mortgage: Number(prop.mortgage) || 0,
+                    propertyTax: Number(prop.propertyTax) || 0,
+                    insurance: Number(prop.insurance) || 0,
+                    hoa: Number(prop.hoa) || 0,
+                    maintenance: Number(prop.maintenance) || 0,
+                    managementFees: Number(prop.managementFees) || 0,
+                    vacancyRate: Number(prop.vacancyRate) || 7,
+                    beds: prop.beds,
+                    baths: prop.baths,
+                    sqft: prop.sqft,
+                    propertyType: prop.propertyType
+                }));
+
+                // Call AI analysis API
+                const response = await fetch('/api/ai/compare-properties', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ properties: propertyData })
+                });
+
+                if (!response.ok) {
+                    throw new Error('AI analysis failed');
+                }
+
+                const data = await response.json();
+
+                // Display AI analysis
+                aiContent.innerHTML = `
+                    <div style="line-height: 1.8;">
+                        <h4 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-trophy"></i> Recommended Property
+                        </h4>
+                        <div style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">
+                            ${data.recommendedProperty}
+                        </div>
+
+                        <h4 style="margin: 20px 0 12px 0; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-lightbulb"></i> Investment Analysis
+                        </h4>
+                        <div style="white-space: pre-wrap;">${data.analysis}</div>
+
+                        <h4 style="margin: 20px 0 12px 0; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-chart-line"></i> 5-Year Profit Projection
+                        </h4>
+                        <div>${data.profitProjection}</div>
+
+                        <h4 style="margin: 20px 0 12px 0; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-exclamation-triangle"></i> Risk Assessment
+                        </h4>
+                        <div>${data.riskAssessment}</div>
+
+                        <div style="margin-top: 20px; padding: 16px; background: rgba(255,255,255,0.1); border-radius: 8px; border-left: 4px solid #fbbf24;">
+                            <strong style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-user-tie"></i> Professional Realtor's Advice:
+                            </strong>
+                            <p style="margin: 8px 0 0 0;">${data.realtorAdvice}</p>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('AI analysis error:', error);
+                aiContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 12px; color: #fbbf24;"></i>
+                        <p>AI analysis is currently unavailable. Please try again later.</p>
+                        <p style="font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 8px;">
+                            The comparison table below shows all property metrics for manual evaluation.
+                        </p>
+                    </div>
+                `;
+            }
+        }
 
         // Edit field inline
         function editField(index, field, currentValue, isInModal = false) {
@@ -4285,6 +4606,9 @@
                 const dscrClass = dscr >= 1.25 ? 'positive' : dscr >= 1.0 ? 'warning' : 'negative';
 
                 row.innerHTML = `
+                <td onclick="event.stopPropagation();" style="text-align: center;">
+                    <input type="checkbox" class="property-select-checkbox" data-property-index="${index}" onchange="handlePropertySelection()" style="cursor: pointer;">
+                </td>
                 <td onclick="event.stopPropagation();" style="text-align: center;">
                     ${rank !== null ? rank : '-'}
                 </td>

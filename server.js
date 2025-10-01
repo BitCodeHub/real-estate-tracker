@@ -904,6 +904,140 @@ app.post('/api/ai-analysis', async (req, res) => {
     }
 });
 
+// AI Property Comparison endpoint
+app.post('/api/ai/compare-properties', async (req, res) => {
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCgpECc-whrISaCwlwxXiZV_YppN4dTQT4';
+    const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+
+    console.log('AI Property Comparison request received');
+
+    try {
+        const { properties } = req.body;
+
+        if (!properties || !Array.isArray(properties) || properties.length === 0) {
+            return res.status(400).json({ error: 'Properties array is required' });
+        }
+
+        // Build comprehensive analysis prompt
+        const prompt = `You are an experienced real estate investor and professional realtor with 20+ years of experience. Analyze these ${properties.length} investment properties and provide a comprehensive comparison to help a client make the best 5-year investment decision.
+
+PROPERTIES TO ANALYZE:
+${properties.map((prop, i) => `
+Property ${i + 1}: ${prop.address}, ${prop.city}, ${prop.state}
+- Purchase Price: $${prop.purchasePrice?.toLocaleString() || 'N/A'}
+- Monthly Cash Flow: $${prop.monthlyCashFlow?.toLocaleString() || 'N/A'}
+- Cash-on-Cash Return: ${prop.cashOnCashReturn || 'N/A'}%
+- Cap Rate: ${prop.capRate || 'N/A'}%
+- Monthly Rent: $${prop.monthlyRent?.toLocaleString() || 'N/A'}
+- Down Payment: $${prop.downPayment?.toLocaleString() || 'N/A'}
+- Property Tax: $${prop.propertyTax?.toLocaleString() || 'N/A'}/month
+- Insurance: $${prop.insurance?.toLocaleString() || 'N/A'}/month
+- HOA: $${prop.hoa?.toLocaleString() || 'N/A'}/month
+- Maintenance: $${prop.maintenance?.toLocaleString() || 'N/A'}/month
+- Management Fees: $${prop.managementFees?.toLocaleString() || 'N/A'}/month
+- Vacancy Rate: ${prop.vacancyRate || 'N/A'}%
+- Bedrooms: ${prop.beds || 'N/A'}
+- Bathrooms: ${prop.baths || 'N/A'}
+- Square Footage: ${prop.sqft?.toLocaleString() || 'N/A'}
+- Year Built: ${prop.yearBuilt || 'N/A'}
+`).join('\n')}
+
+ANALYSIS REQUIREMENTS:
+1. Recommend ONE property as the best investment for 5-year profit
+2. Provide detailed analysis comparing all properties
+3. Project realistic 5-year profit scenarios based on current market trends
+4. Assess risks for each property
+5. Give professional realtor advice
+
+RESPONSE FORMAT (JSON):
+{
+  "recommendedProperty": "Full address of the recommended property",
+  "analysis": "2-3 paragraph detailed comparison analyzing cash flow, returns, expenses, location factors, and overall investment quality of each property. Explain why your recommended property stands out.",
+  "profitProjection": "Detailed 5-year profit projection for the recommended property. Include realistic appreciation estimates (typically 3-5% annually for residential), cash flow accumulation, principal paydown, and total estimated profit. Show calculations.",
+  "riskAssessment": "1-2 paragraph risk analysis covering market risks, vacancy risks, maintenance concerns, and economic factors for each property. Identify which properties are higher vs lower risk.",
+  "realtorAdvice": "Professional advice as a realtor: actionable next steps, what to look for during inspection, negotiation tips for the recommended property, and any red flags to watch out for."
+}
+
+Important: Consider current real estate market conditions, typical appreciation rates, and investment fundamentals. Be realistic and professional in your analysis.`;
+
+        console.log('Calling Gemini API for property comparison...');
+
+        const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }],
+            generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 3048,
+            }
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        console.log('Gemini API response status:', response.status);
+
+        // Validate response
+        if (!response.data.candidates || !response.data.candidates[0] || !response.data.candidates[0].content) {
+            console.error('Invalid Gemini response structure:', response.data);
+            return res.status(500).json({ error: 'Invalid AI response structure' });
+        }
+
+        const aiText = response.data.candidates[0].content.parts[0].text;
+        console.log('AI Analysis received, parsing JSON...');
+
+        // Try to parse JSON from the response
+        let analysisData;
+        try {
+            // Remove markdown code blocks if present
+            const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                analysisData = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('No JSON found in response');
+            }
+        } catch (parseError) {
+            console.error('Failed to parse AI response as JSON:', parseError);
+            // Fallback: return the text in a structured format
+            analysisData = {
+                recommendedProperty: properties[0]?.address || 'Unknown',
+                analysis: aiText,
+                profitProjection: 'See analysis above for details.',
+                riskAssessment: 'Please review the full analysis for risk factors.',
+                realtorAdvice: 'Consult with a local real estate professional for specific guidance.'
+            };
+        }
+
+        console.log('Property comparison analysis successful');
+        res.json({
+            success: true,
+            ...analysisData
+        });
+
+    } catch (error) {
+        console.error('AI Property Comparison error:', error.message);
+
+        if (error.response) {
+            console.error('Gemini API error response:', error.response.data);
+            return res.status(error.response.status).json({
+                error: 'AI service error',
+                details: error.response.data,
+                status: error.response.status
+            });
+        }
+
+        res.status(500).json({
+            error: 'Failed to generate property comparison analysis',
+            message: error.message
+        });
+    }
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`Real Estate Tracker server running on port ${PORT}`);
