@@ -370,7 +370,7 @@
             position: sticky;
             left: 0;
             background: var(--bg-secondary);
-            z-index: 11;
+            z-index: 12;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
             text-align: center;
             width: 60px;
@@ -380,10 +380,29 @@
         tbody td:first-child {
             position: sticky;
             left: 0;
-            z-index: 5;
+            z-index: 6;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
             width: 60px;
             min-width: 60px;
+        }
+
+        /* Sticky address column (2nd column) */
+        thead th:nth-child(2) {
+            position: sticky;
+            left: 60px;
+            background: var(--bg-secondary);
+            z-index: 11;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            min-width: 220px;
+        }
+
+        tbody td:nth-child(2) {
+            position: sticky;
+            left: 60px;
+            z-index: 5;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+            min-width: 220px;
+            font-weight: 500;
         }
         
         /* Rental listings table styling */
@@ -406,16 +425,22 @@
             background: rgba(59, 130, 246, 0.08) !important;
             cursor: pointer;
             transition: all 0.2s ease;
-            transform: translateX(2px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
-        /* Maintain column group colors on hover */
+        /* Maintain column group colors on hover - Rank column */
         tbody tr:hover td:nth-child(1) {
-            background: rgba(59, 130, 246, 0.08);
+            background: rgba(59, 130, 246, 0.12);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
         }
 
-        tbody tr:hover td:nth-child(2),
+        /* Maintain column group colors on hover - Address column (sticky) */
+        tbody tr:hover td:nth-child(2) {
+            background: rgba(59, 130, 246, 0.12);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Property info columns */
         tbody tr:hover td:nth-child(3),
         tbody tr:hover td:nth-child(4),
         tbody tr:hover td:nth-child(5),
@@ -423,6 +448,7 @@
             background: rgba(59, 130, 246, 0.1);
         }
 
+        /* Expense columns */
         tbody tr:hover td:nth-child(11),
         tbody tr:hover td:nth-child(12),
         tbody tr:hover td:nth-child(13),
@@ -432,6 +458,7 @@
             background: rgba(239, 68, 68, 0.08);
         }
 
+        /* Return columns */
         tbody tr:hover td:nth-child(18),
         tbody tr:hover td:nth-child(19),
         tbody tr:hover td:nth-child(20),
@@ -4147,7 +4174,7 @@
                 <td onclick="event.stopPropagation();" style="text-align: center;">
                     ${rank !== null ? rank : '-'}
                 </td>
-                <td style="min-width: 200px;">
+                <td>
                     ${property.address || ''}
                     ${property._isTemporary ?
                         '<span style="color: #f59e0b; font-size: 12px; margin-left: 8px;" title="Property saved locally only - Database not connected">⚠️</span>' :
