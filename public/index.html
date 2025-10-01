@@ -2329,64 +2329,66 @@
         }
 
         // Open comparison modal
-        window.openComparisonModal = async function() {
-            try {
-                console.log('🔵 openComparisonModal called');
-                console.log('selectedProperties:', selectedProperties);
-                console.log('properties array length:', properties.length);
+        window.openComparisonModal = function() {
+            console.log('🔵 openComparisonModal called');
+            console.log('selectedProperties:', selectedProperties);
+            console.log('properties array length:', properties.length);
 
-                if (!selectedProperties || selectedProperties.length < 2) {
-                    showNotification('Please select at least 2 properties to compare', 'warning');
-                    return;
-                }
-
-                // Get selected property objects
-                const selectedProps = selectedProperties.map(index => {
-                    console.log('Getting property at index:', index);
-                    return properties[index];
-                });
-                console.log('Selected properties:', selectedProps);
-
-                // Get modal first
-                const modal = document.getElementById('comparisonModal');
-                if (!modal) {
-                    console.error('❌ Comparison modal not found!');
-                    showNotification('Error: Comparison modal not found', 'error');
-                    return;
-                }
-
-                // Reset AI analysis loading state
-                const aiContent = document.getElementById('aiAnalysisContent');
-                if (aiContent) {
-                    aiContent.innerHTML = `
-                        <div style="text-align: center; padding: 20px;">
-                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px; color: #3b82f6;"></i>
-                            <p style="color: var(--text-primary);">Analyzing properties and generating investment recommendations...</p>
-                        </div>
-                    `;
-                }
-
-                // Open modal FIRST (so rendering happens inside visible modal)
-                console.log('Opening modal...');
-                modal.style.display = 'block';
-                document.body.style.overflow = 'hidden'; // Prevent background scrolling
-                console.log('✅ Modal opened');
-
-                // Build comparison table immediately (no delay needed)
-                console.log('Building comparison table...');
-                console.log('Properties to compare:', selectedProps);
-                window.buildComparisonTable(selectedProps);
-
-                // Scroll modal to top
-                modal.scrollTop = 0;
-
-                // Start AI analysis LAST
-                console.log('Starting AI analysis...');
-                window.performAIAnalysis(selectedProps);
-            } catch (error) {
-                console.error('❌ Error in openComparisonModal:', error);
-                showNotification('Error opening comparison modal: ' + error.message, 'error');
+            if (!selectedProperties || selectedProperties.length < 2) {
+                showNotification('Please select at least 2 properties to compare', 'warning');
+                return;
             }
+
+            // Get selected property objects
+            const selectedProps = selectedProperties.map(index => {
+                console.log('Getting property at index:', index, 'Property:', properties[index]);
+                return properties[index];
+            });
+            console.log('Selected properties for comparison:', selectedProps);
+
+            // Get modal first
+            const modal = document.getElementById('comparisonModal');
+            if (!modal) {
+                console.error('❌ Comparison modal not found!');
+                showNotification('Error: Comparison modal not found', 'error');
+                return;
+            }
+
+            // Reset AI analysis loading state
+            const aiContent = document.getElementById('aiAnalysisContent');
+            if (aiContent) {
+                aiContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px; color: #3b82f6;"></i>
+                        <p style="color: var(--text-primary);">Analyzing properties and generating investment recommendations...</p>
+                    </div>
+                `;
+            }
+
+            // Open modal IMMEDIATELY (synchronous)
+            console.log('Opening modal NOW...');
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            console.log('✅ Modal opened - display:', modal.style.display);
+
+            // Build comparison table synchronously
+            console.log('Building comparison table...');
+            try {
+                window.buildComparisonTable(selectedProps);
+            } catch (error) {
+                console.error('❌ Error building comparison table:', error);
+            }
+
+            // Scroll modal to top
+            modal.scrollTop = 0;
+
+            // Start AI analysis asynchronously (don't block)
+            console.log('Starting AI analysis in background...');
+            setTimeout(() => {
+                window.performAIAnalysis(selectedProps).catch(error => {
+                    console.error('❌ AI analysis error:', error);
+                });
+            }, 100);
         }
 
         // Build comparison table
@@ -2459,12 +2461,17 @@
                 tr.appendChild(labelTd);
 
                 // Property values
-                props.forEach(prop => {
+                props.forEach((prop, propIndex) => {
                     const td = document.createElement('td');
                     td.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); text-align: right;';
 
                     let value = prop[metric.key];
                     let displayValue = '';
+
+                    // Debug logging for missing values
+                    if (value === undefined || value === null) {
+                        console.log(`⚠️ Missing ${metric.key} for property ${propIndex + 1} (${prop.address})`);
+                    }
 
                     if (metric.format === 'currency') {
                         displayValue = formatCurrency(Number(value) || 0);
@@ -2507,32 +2514,43 @@
             const aiContent = document.getElementById('aiAnalysisContent');
 
             try {
+                console.log('🤖 Starting AI analysis for properties:', props);
+
                 // Prepare property data for AI
-                const propertyData = props.map((prop, index) => ({
-                    id: index + 1,
-                    address: prop.address,
-                    city: prop.city,
-                    state: prop.state,
-                    purchasePrice: Number(prop.purchasePrice) || 0,
-                    estimatedValue: Number(prop.estimatedValue) || 0,
-                    monthlyRent: Number(prop.monthlyRent) || 0,
-                    monthlyCashFlow: Number(prop.monthlyCashFlow) || 0,
-                    annualCashFlow: Number(prop.annualCashFlow) || 0,
-                    cashOnCashReturn: Number(prop.cashOnCashReturn) || 0,
-                    capRate: Number(prop.capRate) || 0,
-                    downPayment: Number(prop.downPayment) || 0,
-                    mortgage: Number(prop.mortgage) || 0,
-                    propertyTax: Number(prop.propertyTax) || 0,
-                    insurance: Number(prop.insurance) || 0,
-                    hoa: Number(prop.hoa) || 0,
-                    maintenance: Number(prop.maintenance) || 0,
-                    managementFees: Number(prop.managementFees) || 0,
-                    vacancyRate: Number(prop.vacancyRate) || 7,
-                    beds: prop.beds,
-                    baths: prop.baths,
-                    sqft: prop.sqft,
-                    propertyType: prop.propertyType
-                }));
+                const propertyData = props.map((prop, index) => {
+                    console.log(`Property ${index + 1} data:`, prop);
+                    return {
+                        id: index + 1,
+                        address: prop.address,
+                        city: prop.city,
+                        state: prop.state,
+                        purchasePrice: Number(prop.purchasePrice) || 0,
+                        estimatedValue: Number(prop.estimatedValue) || 0,
+                        monthlyRent: Number(prop.monthlyRent) || 0,
+                        monthlyCashFlow: Number(prop.monthlyCashFlow) || 0,
+                        annualCashFlow: Number(prop.annualCashFlow) || 0,
+                        cashOnCashReturn: Number(prop.cashOnCashReturn) || 0,
+                        capRate: Number(prop.capRate) || 0,
+                        downPayment: Number(prop.downPayment) || 0,
+                        mortgage: Number(prop.mortgage) || 0,
+                        propertyTax: Number(prop.propertyTax) || 0,
+                        insurance: Number(prop.insurance) || 0,
+                        hoa: Number(prop.hoa) || 0,
+                        maintenance: Number(prop.maintenance) || 0,
+                        managementFees: Number(prop.managementFees) || 0,
+                        vacancyRate: Number(prop.vacancyRate) || 7,
+                        beds: prop.beds,
+                        baths: prop.baths,
+                        sqft: prop.sqft,
+                        propertyType: prop.propertyType
+                    };
+                });
+
+                console.log('📤 Sending AI analysis request with data:', propertyData);
+
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
                 // Call AI analysis API
                 const response = await fetch('/api/ai/compare-properties', {
@@ -2540,14 +2558,22 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ properties: propertyData })
+                    body: JSON.stringify({ properties: propertyData }),
+                    signal: controller.signal
                 });
 
+                clearTimeout(timeoutId);
+
+                console.log('📥 AI analysis response status:', response.status);
+
                 if (!response.ok) {
-                    throw new Error('AI analysis failed');
+                    const errorText = await response.text();
+                    console.error('❌ AI analysis failed:', response.status, errorText);
+                    throw new Error(`AI analysis failed: ${response.status} - ${errorText}`);
                 }
 
                 const data = await response.json();
+                console.log('✅ AI analysis data received:', data);
 
                 // Display AI analysis with professional styling
                 aiContent.innerHTML = `
@@ -2596,11 +2622,17 @@
                     </div>
                 `;
             } catch (error) {
-                console.error('AI analysis error:', error);
+                console.error('❌ AI analysis error:', error);
+                const errorMessage = error.name === 'AbortError'
+                    ? 'Request timed out after 30 seconds'
+                    : error.message || 'Unknown error';
                 aiContent.innerHTML = `
                     <div style="text-align: center; padding: 20px;">
                         <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 12px; color: #f59e0b;"></i>
-                        <p style="color: var(--text-primary);">AI analysis is currently unavailable. Please try again later.</p>
+                        <p style="color: var(--text-primary);">AI analysis is currently unavailable.</p>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">
+                            Error: ${errorMessage}
+                        </p>
                         <p style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">
                             The comparison table below shows all property metrics for manual evaluation.
                         </p>
