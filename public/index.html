@@ -2684,30 +2684,32 @@
             document.getElementById('importPreview').style.display = 'none';
 
             try {
-                let addresses = [];
-                
+                let importedProperties = [];
+
                 if (file.name.endsWith('.csv')) {
-                    addresses = await parseCSVFile(file);
+                    importedProperties = await parseCSVFile(file);
                 } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                    addresses = await parseExcelFile(file);
+                    importedProperties = await parseExcelFile(file);
                 } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-                    addresses = await parseWordFile(file);
+                    const addresses = await parseWordFile(file);
+                    // Convert addresses to property objects for Word files
+                    importedProperties = addresses.map(addr => ({ address: addr }));
                 } else {
                     throw new Error('Unsupported file format. Please use CSV, Excel, or Word files.');
                 }
 
-                if (addresses.length === 0) {
-                    throw new Error('No valid addresses found in the file.');
+                if (importedProperties.length === 0) {
+                    throw new Error('No valid properties found in the file.');
                 }
 
                 // Store for bulk import
-                pendingBulkImportProperties = addresses;
-                
+                pendingBulkImportProperties = importedProperties;
+
                 // Show preview
-                showImportPreview(addresses);
-                
-                // If we found incomplete addresses, show a warning
-                if (addresses.length === 0 && (file.name.endsWith('.xlsx') || file.name.endsWith('.docx'))) {
+                showImportPreview(importedProperties);
+
+                // If we found incomplete properties, show a warning
+                if (importedProperties.length === 0 && (file.name.endsWith('.xlsx') || file.name.endsWith('.docx'))) {
                     const fileType = file.name.endsWith('.xlsx') ? 'Excel' : 'Word';
                     const warningDiv = document.createElement('div');
                     warningDiv.style.cssText = 'background: var(--accent-warning); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;';
@@ -2736,6 +2738,122 @@
         }
 
         // Parse CSV file
+        // Smart column mapping function
+        function mapColumnName(columnName) {
+            const normalized = columnName.toLowerCase().trim().replace(/[_\s-]+/g, '');
+
+            const mappings = {
+                // Address fields
+                'address': 'address',
+                'streetaddress': 'address',
+                'street': 'address',
+                'propertyaddress': 'address',
+
+                // Location fields
+                'city': 'city',
+                'town': 'city',
+                'state': 'state',
+                'zip': 'zip',
+                'zipcode': 'zip',
+                'postalcode': 'zip',
+
+                // Property details
+                'type': 'propertyType',
+                'propertytype': 'propertyType',
+                'beds': 'beds',
+                'bed': 'beds',
+                'bedrooms': 'beds',
+                'bedroom': 'beds',
+                'baths': 'baths',
+                'bath': 'baths',
+                'bathrooms': 'baths',
+                'bathroom': 'baths',
+                'sqft': 'sqft',
+                'squarefeet': 'sqft',
+                'squarefootage': 'sqft',
+                'size': 'sqft',
+
+                // Financial - Purchase
+                'purchaseprice': 'purchasePrice',
+                'price': 'purchasePrice',
+                'cost': 'purchasePrice',
+                'saleprice': 'purchasePrice',
+
+                // Financial - Value
+                'estvalue': 'estimatedValue',
+                'estimatedvalue': 'estimatedValue',
+                'value': 'estimatedValue',
+                'marketvalue': 'estimatedValue',
+                'currentvalue': 'estimatedValue',
+
+                // Financial - Rent
+                'monthlyrent': 'monthlyRent',
+                'rent': 'monthlyRent',
+                'rentalincome': 'monthlyRent',
+                'rentestimate': 'rentEstimate',
+                'rentest': 'rentEstimate',
+                'estimatedrent': 'rentEstimate',
+
+                // Financial - Expenses
+                'mortgage': 'mortgage',
+                'monthlymortgage': 'mortgage',
+                'loan': 'mortgage',
+                'loanpayment': 'mortgage',
+
+                'propertytax': 'propertyTax',
+                'tax': 'propertyTax',
+                'taxes': 'propertyTax',
+                'monthlytax': 'propertyTax',
+
+                'insurance': 'insurance',
+                'homeinsurance': 'insurance',
+                'propertyinsurance': 'insurance',
+
+                'hoa': 'hoa',
+                'hoafees': 'hoa',
+                'hoafee': 'hoa',
+                'condofee': 'hoa',
+
+                'maintenance': 'maintenance',
+                'repair': 'maintenance',
+                'repairs': 'maintenance',
+                'maintenancecost': 'maintenance',
+
+                'managementfee': 'managementFees',
+                'managementfees': 'managementFees',
+                'pmfee': 'managementFees',
+                'propertymanagement': 'managementFees',
+
+                'vacancyrate': 'vacancyRate',
+                'vacancy': 'vacancyRate',
+
+                // Financial - Returns
+                'cashflow': 'monthlyCashFlow',
+                'monthlycashflow': 'monthlyCashFlow',
+                'netincome': 'monthlyCashFlow',
+
+                'annualcf': 'annualCashFlow',
+                'annualcashflow': 'annualCashFlow',
+                'yearlyincome': 'annualCashFlow',
+
+                'cashoncash': 'cashOnCashReturn',
+                'cashoncashreturn': 'cashOnCashReturn',
+                'coc': 'cashOnCashReturn',
+                'cocreturn': 'cashOnCashReturn',
+
+                'caprate': 'capRate',
+                'cap': 'capRate',
+                'capitalizationrate': 'capRate',
+
+                'downpayment': 'downPayment',
+                'down': 'downPayment',
+                'deposit': 'downPayment',
+                'initialinvestment': 'downPayment'
+            };
+
+            return mappings[normalized] || null;
+        }
+
         async function parseCSVFile(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -2743,17 +2861,21 @@
                     try {
                         const text = e.target.result;
                         const lines = text.split('\n').filter(line => line.trim());
-                        const addresses = [];
-                        
+
+                        if (lines.length === 0) {
+                            resolve([]);
+                            return;
+                        }
+
                         // Helper function to parse CSV line (handles quotes and commas)
                         const parseCSVLine = (line) => {
                             const result = [];
                             let current = '';
                             let inQuotes = false;
-                            
+
                             for (let i = 0; i < line.length; i++) {
                                 const char = line[i];
-                                
+
                                 if (char === '"') {
                                     inQuotes = !inQuotes;
                                 } else if (char === ',' && !inQuotes) {
@@ -2763,68 +2885,66 @@
                                     current += char;
                                 }
                             }
-                            
+
                             if (current) {
                                 result.push(current.trim());
                             }
-                            
+
                             return result;
                         };
-                        
-                        // Helper function to check if a string looks like a city/state/zip
-                        const isCityStateZip = (str) => {
-                            if (!str) return false;
-                            return /[A-Za-z\s]+,?\s+[A-Z]{2}\s+\d{5}(-\d{4})?/.test(str);
-                        };
-                        
-                        // Helper function to check if a string looks like just a street address
-                        const isStreetOnly = (str) => {
-                            if (!str) return false;
-                            return /^\d+\s+[A-Za-z\s]+$/.test(str) && !/[A-Z]{2}\s+\d{5}/.test(str);
-                        };
-                        
-                        // Skip header if it exists
-                        const startIndex = lines[0].toLowerCase().includes('address') ? 1 : 0;
-                        
-                        for (let i = startIndex; i < lines.length; i++) {
+
+
+                        // Parse header row
+                        const headerFields = parseCSVLine(lines[0]);
+                        const columnMap = {};
+                        headerFields.forEach((header, index) => {
+                            const mappedName = mapColumnName(header);
+                            if (mappedName) {
+                                columnMap[index] = mappedName;
+                            }
+                        });
+
+                        console.log('📊 CSV Column Mapping:', columnMap);
+
+                        // Parse data rows
+                        const properties = [];
+                        for (let i = 1; i < lines.length; i++) {
                             const line = lines[i].trim();
                             if (!line) continue;
-                            
-                            // Parse CSV line into fields
+
                             const fields = parseCSVLine(line);
-                            
-                            // Process fields to find addresses
-                            for (let j = 0; j < fields.length; j++) {
-                                const field = fields[j];
-                                if (!field) continue;
-                                
-                                // Check if this looks like a street address only
-                                if (isStreetOnly(field)) {
-                                    // Look for city/state/zip in the next field
-                                    const nextField = fields[j + 1];
-                                    if (nextField && isCityStateZip(nextField)) {
-                                        // Combine street + city/state/zip
-                                        addresses.push(`${field}, ${nextField}`);
-                                        j++; // Skip the next field since we used it
-                                        continue;
+                            const property = {};
+
+                            // Map each field to property object
+                            fields.forEach((value, index) => {
+                                const fieldName = columnMap[index];
+                                if (fieldName && value) {
+                                    // Clean and parse numeric values
+                                    let cleanValue = value.replace(/[$,%]/g, '').trim();
+
+                                    // Check if it's a numeric field
+                                    const numericFields = ['purchasePrice', 'estimatedValue', 'monthlyRent', 'rentEstimate',
+                                        'mortgage', 'propertyTax', 'insurance', 'hoa', 'maintenance', 'managementFees',
+                                        'vacancyRate', 'monthlyCashFlow', 'annualCashFlow', 'cashOnCashReturn',
+                                        'capRate', 'downPayment', 'beds', 'baths', 'sqft'];
+
+                                    if (numericFields.includes(fieldName)) {
+                                        const numValue = parseFloat(cleanValue);
+                                        property[fieldName] = isNaN(numValue) ? null : numValue;
+                                    } else {
+                                        property[fieldName] = cleanValue;
                                     }
                                 }
-                                
-                                // Check if this is a complete address
-                                if (field.match(/\d+\s+[A-Za-z]/) || isCityStateZip(field)) {
-                                    // Only add if it's not just a city/state/zip without street
-                                    if (!isCityStateZip(field) || field.match(/^\d+/)) {
-                                        addresses.push(field);
-                                    }
-                                }
+                            });
+
+                            // Only add if we have at least an address
+                            if (property.address) {
+                                properties.push(property);
                             }
                         }
-                        
-                        // Remove duplicates
-                        const uniqueAddresses = [...new Set(addresses)];
-                        
-                        console.log('Parsed addresses from CSV:', uniqueAddresses);
-                        resolve(uniqueAddresses);
+
+                        console.log(`✅ Parsed ${properties.length} properties from CSV with full data`);
+                        resolve(properties);
                     } catch (error) {
                         reject(error);
                     }
@@ -2842,176 +2962,74 @@
                     try {
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        
+
                         // Get first sheet
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
-                        
+
                         // Convert to JSON - get all data
                         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-                        
-                        console.log('Excel raw data:', jsonData); // Debug log
-                        
-                        const addresses = [];
-                        const processedRows = new Set(); // Track which rows we've processed
-                        
-                        // Helper function to check if a string contains city/state/zip components
-                        const hasCityStateZip = (str) => {
-                            if (!str) return false;
-                            // More flexible patterns - check for various formats
-                            const patterns = [
-                                /[A-Za-z\s]+,\s*[A-Za-z]{2}\s+\d{5}/i,  // "Las Vegas, NV 89101"
-                                /[A-Za-z\s]+\s+[A-Za-z]{2}\s+\d{5}/i,   // "Las Vegas NV 89101"
-                                /^[A-Za-z]{2}\s+\d{5}(-\d{4})?$/i,      // "NV 89101" or "NV 89101-1234"
-                                /\d{5}(-\d{4})?$/                        // Just zip at end
-                            ];
-                            
-                            for (const pattern of patterns) {
-                                if (pattern.test(str)) {
-                                    console.log(`    Pattern matched for "${str}": ${pattern}`);
-                                    return true;
+
+                        if (jsonData.length === 0) {
+                            resolve([]);
+                            return;
+                        }
+
+
+                        console.log('📊 Excel raw data:', jsonData);
+
+                        // Parse header row (first row)
+                        const headerRow = jsonData[0];
+                        const columnMap = {};
+                        headerRow.forEach((header, index) => {
+                            if (header) {
+                                const mappedName = mapColumnName(header.toString());
+                                if (mappedName) {
+                                    columnMap[index] = mappedName;
                                 }
                             }
-                            return false;
-                        };
-                        
-                        // Helper function to check if a string looks like just a street address
-                        const isStreetAddress = (str) => {
-                            if (!str) return false;
-                            // Has numbers at start followed by text
-                            return /^\d+\s+[A-Za-z]/.test(str);
-                        };
-                        
-                        // Process each row looking for address patterns
-                        for (let i = 0; i < jsonData.length; i++) {
-                            if (processedRows.has(i)) continue;
-                            
+                        });
+
+                        console.log('📊 Excel Column Mapping:', columnMap);
+
+                        // Parse data rows
+                        const properties = [];
+                        for (let i = 1; i < jsonData.length; i++) {
                             const row = jsonData[i];
                             if (!row || row.length === 0) continue;
-                            
-                            // Debug log
-                            console.log(`Row ${i}:`, row);
-                            
-                            // Skip header rows
-                            if (i === 0) {
-                                const hasHeader = row.some(cell => 
-                                    cell && cell.toString().toLowerCase().match(/address|street|city|state|zip/)
-                                );
-                                if (hasHeader) {
-                                    console.log('Skipping header row');
-                                    continue;
-                                }
-                            }
-                            
-                            // Strategy 1: Look for street address + city/state/zip in adjacent cells
-                            for (let j = 0; j < row.length; j++) {
-                                const cellValue = row[j] ? row[j].toString().trim() : '';
-                                if (!cellValue) continue;
-                                
-                                if (isStreetAddress(cellValue)) {
-                                    // Found a street address, now look for city/state/zip
-                                    let cityStateZip = '';
-                                    
-                                    // Check next cells in the same row
-                                    for (let k = j + 1; k < row.length && k <= j + 3; k++) {
-                                        const nextCell = row[k] ? row[k].toString().trim() : '';
-                                        if (!nextCell) continue;
-                                        
-                                        console.log(`  Checking cell ${k}: "${nextCell}"`);
-                                        
-                                        // Check if this cell has city/state/zip
-                                        if (hasCityStateZip(nextCell)) {
-                                            cityStateZip = nextCell;
-                                            console.log('  -> Found city/state/zip!');
-                                            break;
-                                        }
-                                        
-                                        // Also check if it's just a city name, and combine with next cells
-                                        if (/^[A-Za-z\s]+$/.test(nextCell) && !nextCell.match(/\d/) && k + 1 < row.length) {
-                                            // Might be just city name, check next cell for state/zip
-                                            const possibleStateZip = row[k + 1] ? row[k + 1].toString().trim() : '';
-                                            console.log(`    Checking if "${nextCell}" is city and "${possibleStateZip}" is state/zip`);
-                                            
-                                            if (possibleStateZip && /[A-Z]{2}\s*\d{5}/.test(possibleStateZip)) {
-                                                cityStateZip = `${nextCell}, ${possibleStateZip}`;
-                                                console.log('  -> Found city + state/zip in separate cells!');
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    
-                                    // If not found in same row, check the next row (some formats have city/state/zip below)
-                                    if (!cityStateZip && i + 1 < jsonData.length) {
-                                        const nextRow = jsonData[i + 1];
-                                        if (nextRow) {
-                                            console.log(`  Checking next row (${i + 1}):`, nextRow);
-                                            
-                                            // First check the same column index in the next row
-                                            const sameCellBelow = nextRow[j] ? nextRow[j].toString().trim() : '';
-                                            if (sameCellBelow && hasCityStateZip(sameCellBelow)) {
-                                                cityStateZip = sameCellBelow;
-                                                processedRows.add(i + 1); // Mark next row as processed
-                                                console.log(`  -> Found city/state/zip in same column below: "${cityStateZip}"`);
-                                            } else {
-                                                // Check all cells in next row
-                                                for (let k = 0; k < nextRow.length; k++) {
-                                                    const nextRowCell = nextRow[k] ? nextRow[k].toString().trim() : '';
-                                                    if (nextRowCell && hasCityStateZip(nextRowCell)) {
-                                                        cityStateZip = nextRowCell;
-                                                        processedRows.add(i + 1); // Mark next row as processed
-                                                        console.log(`  -> Found city/state/zip in next row: "${cityStateZip}"`);
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                    if (cityStateZip) {
-                                        const fullAddress = `${cellValue}, ${cityStateZip}`;
-                                        addresses.push(fullAddress);
-                                        console.log('Found complete address:', fullAddress);
-                                        break; // Move to next row
+
+                            const property = {};
+
+                            // Map each cell to property object
+                            row.forEach((value, index) => {
+                                const fieldName = columnMap[index];
+                                if (fieldName && value !== null && value !== undefined && value !== '') {
+                                    // Clean and parse values
+                                    let cleanValue = value.toString().replace(/[$,%]/g, '').trim();
+
+                                    // Check if it's a numeric field
+                                    const numericFields = ['purchasePrice', 'estimatedValue', 'monthlyRent', 'rentEstimate',
+                                        'mortgage', 'propertyTax', 'insurance', 'hoa', 'maintenance', 'managementFees',
+                                        'vacancyRate', 'monthlyCashFlow', 'annualCashFlow', 'cashOnCashReturn',
+                                        'capRate', 'downPayment', 'beds', 'baths', 'sqft'];
+
+                                    if (numericFields.includes(fieldName)) {
+                                        const numValue = parseFloat(cleanValue);
+                                        property[fieldName] = isNaN(numValue) ? null : numValue;
                                     } else {
-                                        // Don't add incomplete addresses - log warning instead
-                                        console.warn(`Incomplete address found (missing city/state/zip): "${cellValue}"`);
-                                        console.log('Looking in next few cells/rows for city/state/zip...');
-                                        
-                                        // One more attempt: check if any cell in this row or next has just a city name
-                                        let foundCity = false;
-                                        for (let k = 0; k < row.length; k++) {
-                                            const cell = row[k] ? row[k].toString().trim() : '';
-                                            // Check for common city names
-                                            if (cell && /^(Las Vegas|Henderson|North Las Vegas|Los Angeles|Phoenix)$/i.test(cell)) {
-                                                // Found a city, now find state/zip
-                                                for (let m = 0; m < row.length; m++) {
-                                                    const stateZipCell = row[m] ? row[m].toString().trim() : '';
-                                                    if (stateZipCell && /^[A-Z]{2}\s+\d{5}/.test(stateZipCell)) {
-                                                        const fullAddress = `${cellValue}, ${cell}, ${stateZipCell}`;
-                                                        addresses.push(fullAddress);
-                                                        console.log('Found complete address with separate city:', fullAddress);
-                                                        foundCity = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (foundCity) break;
-                                            }
-                                        }
-                                        
-                                        if (!foundCity) {
-                                            console.error(`Skipping incomplete address: "${cellValue}" - no city/state/zip found`);
-                                        }
-                                        break;
+                                        property[fieldName] = cleanValue;
                                     }
                                 }
+                            });
+
+                            // Only add if we have at least an address
+                            if (property.address) {
+                                properties.push(property);
                             }
                         }
-                        
-                        // Remove duplicates
-                        const uniqueAddresses = [...new Set(addresses)];
-                        
-                        console.log('Final parsed addresses:', uniqueAddresses);
-                        resolve(uniqueAddresses);
+
+                        console.log(`✅ Parsed ${properties.length} properties from Excel with full data`);
+                        resolve(properties);
                     } catch (error) {
                         console.error('Excel parsing error:', error);
                         reject(error);
@@ -3118,25 +3136,39 @@
         }
 
         // Show import preview
-        function showImportPreview(addresses) {
+        function showImportPreview(properties) {
             const previewList = document.getElementById('importPreviewList');
             previewList.innerHTML = '';
-            
-            addresses.forEach((address, index) => {
+
+            properties.forEach((property, index) => {
                 const item = document.createElement('div');
-                item.style.cssText = 'padding: 5px 0; border-bottom: 1px solid var(--border-color);';
+                item.style.cssText = 'padding: 8px; border-bottom: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02);';
+
+                // Build preview text with available fields
+                let previewText = `<strong>${property.address || 'Unknown Address'}</strong>`;
+                const details = [];
+
+                if (property.city) details.push(property.city);
+                if (property.purchasePrice) details.push(`Price: $${Number(property.purchasePrice).toLocaleString()}`);
+                if (property.monthlyRent) details.push(`Rent: $${Number(property.monthlyRent).toLocaleString()}`);
+                if (property.beds) details.push(`${property.beds} beds`);
+
+                if (details.length > 0) {
+                    previewText += `<br><small style="color: var(--text-muted);">${details.join(' • ')}</small>`;
+                }
+
                 item.innerHTML = `
-                    <small style="color: var(--text-muted);">${index + 1}.</small> 
-                    <span style="color: var(--text-primary);">${address}</span>
+                    <small style="color: var(--accent-primary); font-weight: bold;">${index + 1}.</small>
+                    <div style="margin-left: 20px;">${previewText}</div>
                 `;
                 previewList.appendChild(item);
             });
-            
+
             document.getElementById('importPreview').style.display = 'block';
-            
+
             // Update preview header
             const header = document.querySelector('#importPreview h4');
-            header.textContent = `Properties to Import (${addresses.length} found):`;
+            header.textContent = `Properties to Import (${properties.length} found):`;
         }
 
         // Confirm bulk import
@@ -3157,67 +3189,76 @@
             const failedProperties = []; // Track detailed failure info
             const propertiesToCreate = [];
 
-            // First, parse all addresses and create property objects
+            // Process all property objects
             for (let i = 0; i < pendingBulkImportProperties.length; i++) {
-                const address = pendingBulkImportProperties[i];
-                
+                const importedProperty = pendingBulkImportProperties[i];
+
                 try {
                     // Update progress
-                    document.querySelector('#fileUploadStatus p').textContent = 
-                        `Parsing property ${i + 1} of ${pendingBulkImportProperties.length}...`;
-                    
-                    // Parse address
-                    const parsedAddress = parseAddressComponents(address);
-                    
-                    if (!parsedAddress || !parsedAddress.streetAddress || !parsedAddress.city || !parsedAddress.state || !parsedAddress.zip) {
-                        const missing = [];
-                        if (!parsedAddress) {
-                            throw new Error('Could not parse address');
+                    document.querySelector('#fileUploadStatus p').textContent =
+                        `Processing property ${i + 1} of ${pendingBulkImportProperties.length}...`;
+
+                    // If address isn't already parsed, parse it
+                    if (!importedProperty.city || !importedProperty.state) {
+                        const parsedAddress = parseAddressComponents(importedProperty.address);
+                        if (parsedAddress) {
+                            if (!importedProperty.city) importedProperty.city = parsedAddress.city;
+                            if (!importedProperty.state) importedProperty.state = parsedAddress.state;
+                            if (!importedProperty.zip) importedProperty.zip = parsedAddress.zip;
+                            if (!importedProperty.address) importedProperty.address = parsedAddress.streetAddress;
                         }
-                        if (!parsedAddress.streetAddress) missing.push('street');
-                        if (!parsedAddress.city) missing.push('city');
-                        if (!parsedAddress.state) missing.push('state');
-                        if (!parsedAddress.zip) missing.push('ZIP');
-                        throw new Error(`Missing: ${missing.join(', ')}`);
                     }
-                    
-                    // Create property object
+
+                    // Validate required fields
+                    if (!importedProperty.address) {
+                        throw new Error('Missing address');
+                    }
+
+                    // Create complete property object with imported data
                     const property = {
-                        address: parsedAddress.streetAddress,
-                        city: parsedAddress.city,
-                        state: parsedAddress.state,
-                        zip: parsedAddress.zip,
-                        propertyType: 'single-family', // Default
-                        purchasePrice: null,
-                        monthlyRent: null,
-                        beds: null,
-                        baths: null,
-                        sqft: null,
-                        // Don't include dateAdded - let database handle created_at
+                        address: importedProperty.address,
+                        city: importedProperty.city || null,
+                        state: importedProperty.state || null,
+                        zip: importedProperty.zip || null,
+                        propertyType: importedProperty.propertyType || 'Single Family',
+                        purchasePrice: importedProperty.purchasePrice || null,
+                        monthlyRent: importedProperty.monthlyRent || null,
+                        beds: importedProperty.beds || null,
+                        baths: importedProperty.baths || null,
+                        sqft: importedProperty.sqft || null,
+                        mortgage: importedProperty.mortgage || null,
+                        propertyTax: importedProperty.propertyTax || null,
+                        insurance: importedProperty.insurance || null,
+                        hoa: importedProperty.hoa || null,
+                        maintenance: importedProperty.maintenance || null,
+                        managementFees: importedProperty.managementFees || null,
+                        vacancyRate: importedProperty.vacancyRate || 7,
+                        downPayment: importedProperty.downPayment || null,
+                        estimatedValue: importedProperty.estimatedValue || null,
+                        rentEstimate: importedProperty.rentEstimate || null,
                         status: 'available',
-                        // Mark as not having RentCast data yet
                         rentcastCache: null,
-                        needsRentCastData: true,
-                        realTimeData: false
+                        needsRentCastData: !importedProperty.estimatedValue, // Only fetch if not provided
+                        realTimeData: !!importedProperty.estimatedValue
                     };
-                    
+
                     // Skip RentCast API calls during bulk import to minimize API usage
-                    console.log(`Property ${i + 1}: Skipping RentCast API call for bulk import`);
-                    
-                    // Calculate metrics
+                    console.log(`Property ${i + 1}: ${property.address} - imported with data`);
+
+                    // Calculate metrics based on imported or default values
                     calculatePropertyMetrics(property);
-                    
+
                     // Add to list to create
                     propertiesToCreate.push(property);
-                    
+
                 } catch (error) {
-                    console.error(`Error parsing property "${address}":`, error);
+                    console.error(`Error processing property "${importedProperty.address}":`, error);
                     failCount++;
-                    failedAddresses.push(address);
+                    failedAddresses.push(importedProperty.address || 'Unknown');
                     failedProperties.push({
-                        address: address,
-                        error: `Address parsing error: ${error.message}`,
-                        stage: 'parsing'
+                        address: importedProperty.address || 'Unknown',
+                        error: `Processing error: ${error.message}`,
+                        stage: 'processing'
                     });
                 }
             }
