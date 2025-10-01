@@ -316,8 +316,29 @@
             background: var(--bg-card);
         }
 
+        /* Solid backgrounds for sticky columns - Rank (odd rows) */
+        tbody tr:nth-child(odd) td:nth-child(1) {
+            background: #252525;
+        }
+
+        /* Solid backgrounds for sticky columns - Rank (even rows) */
+        tbody tr:nth-child(even) td:nth-child(1) {
+            background: #242424;
+        }
+
+        /* Solid backgrounds for sticky columns - Address (odd rows) */
+        tbody tr:nth-child(odd) td:nth-child(2) {
+            background: linear-gradient(90deg, #252525 0%, rgba(59, 130, 246, 0.05) 100%);
+            background-color: #252525;
+        }
+
+        /* Solid backgrounds for sticky columns - Address (even rows) */
+        tbody tr:nth-child(even) td:nth-child(2) {
+            background: linear-gradient(90deg, #242424 0%, rgba(59, 130, 246, 0.06) 100%);
+            background-color: #242424;
+        }
+
         /* Column grouping with subtle backgrounds - adjusted for rank column */
-        tbody td:nth-child(2),
         tbody td:nth-child(3),
         tbody td:nth-child(4),
         tbody td:nth-child(5),
@@ -369,9 +390,10 @@
         thead th:first-child {
             position: sticky;
             left: 0;
-            background: var(--bg-secondary);
+            background: #1a1a1a;
+            background-color: #1a1a1a;
             z-index: 12;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
             text-align: center;
             width: 60px;
             min-width: 60px;
@@ -381,7 +403,7 @@
             position: sticky;
             left: 0;
             z-index: 6;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
             width: 60px;
             min-width: 60px;
         }
@@ -390,9 +412,10 @@
         thead th:nth-child(2) {
             position: sticky;
             left: 60px;
-            background: var(--bg-secondary);
+            background: #1a1a1a;
+            background-color: #1a1a1a;
             z-index: 11;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
             min-width: 220px;
         }
 
@@ -400,7 +423,7 @@
             position: sticky;
             left: 60px;
             z-index: 5;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
             min-width: 220px;
             font-weight: 500;
         }
@@ -430,13 +453,14 @@
 
         /* Maintain column group colors on hover - Rank column */
         tbody tr:hover td:nth-child(1) {
-            background: rgba(59, 130, 246, 0.12);
+            background: #2a3a4a !important;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
         }
 
         /* Maintain column group colors on hover - Address column (sticky) */
         tbody tr:hover td:nth-child(2) {
-            background: rgba(59, 130, 246, 0.12);
+            background: linear-gradient(90deg, #2a3a4a 0%, rgba(59, 130, 246, 0.15) 100%) !important;
+            background-color: #2a3a4a !important;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
         }
 
