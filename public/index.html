@@ -316,32 +316,44 @@
             background: var(--bg-card);
         }
 
-        /* Solid backgrounds for sticky columns - Rank (odd rows) */
+        /* Solid backgrounds for sticky columns - Checkbox (odd rows) */
         tbody tr:nth-child(odd) td:nth-child(1) {
             background: #252525 !important;
             background-color: #252525 !important;
         }
 
-        /* Solid backgrounds for sticky columns - Rank (even rows) */
+        /* Solid backgrounds for sticky columns - Checkbox (even rows) */
         tbody tr:nth-child(even) td:nth-child(1) {
             background: #242424 !important;
             background-color: #242424 !important;
         }
 
-        /* Solid backgrounds for sticky columns - Address (odd rows) */
+        /* Solid backgrounds for sticky columns - Rank (odd rows) */
         tbody tr:nth-child(odd) td:nth-child(2) {
             background: #252525 !important;
             background-color: #252525 !important;
         }
 
-        /* Solid backgrounds for sticky columns - Address (even rows) */
+        /* Solid backgrounds for sticky columns - Rank (even rows) */
         tbody tr:nth-child(even) td:nth-child(2) {
             background: #242424 !important;
             background-color: #242424 !important;
         }
 
-        /* Add visual separation border to sticky columns */
-        tbody td:nth-child(2)::after {
+        /* Solid backgrounds for sticky columns - Address (odd rows) */
+        tbody tr:nth-child(odd) td:nth-child(3) {
+            background: #252525 !important;
+            background-color: #252525 !important;
+        }
+
+        /* Solid backgrounds for sticky columns - Address (even rows) */
+        tbody tr:nth-child(even) td:nth-child(3) {
+            background: #242424 !important;
+            background-color: #242424 !important;
+        }
+
+        /* Add visual separation border to sticky columns - Address column */
+        tbody td:nth-child(3)::after {
             content: '';
             position: absolute;
             right: 0;
@@ -352,7 +364,7 @@
             z-index: 1;
         }
 
-        thead th:nth-child(2)::after {
+        thead th:nth-child(3)::after {
             content: '';
             position: absolute;
             right: 0;
@@ -363,27 +375,27 @@
             z-index: 1;
         }
 
-        /* Column grouping with subtle backgrounds - adjusted for rank column */
-        tbody td:nth-child(3),
+        /* Column grouping with subtle backgrounds - adjusted for checkbox + rank + address columns */
         tbody td:nth-child(4),
         tbody td:nth-child(5),
-        tbody td:nth-child(6) {
+        tbody td:nth-child(6),
+        tbody td:nth-child(7) {
             background: rgba(59, 130, 246, 0.03); /* Property info - blue tint */
         }
 
-        tbody td:nth-child(11),
         tbody td:nth-child(12),
         tbody td:nth-child(13),
         tbody td:nth-child(14),
         tbody td:nth-child(15),
-        tbody td:nth-child(16) {
+        tbody td:nth-child(16),
+        tbody td:nth-child(17) {
             background: rgba(239, 68, 68, 0.03); /* Expenses - red tint */
         }
 
-        tbody td:nth-child(18),
         tbody td:nth-child(19),
         tbody td:nth-child(20),
-        tbody td:nth-child(21) {
+        tbody td:nth-child(21),
+        tbody td:nth-child(22) {
             background: rgba(34, 197, 94, 0.03); /* Returns - green tint */
         }
 
@@ -478,11 +490,11 @@
         }
 
         /* Ensure non-sticky columns are below sticky ones */
-        tbody td:not(:first-child):not(:nth-child(2)) {
+        tbody td:not(:first-child):not(:nth-child(2)):not(:nth-child(3)) {
             z-index: 1;
         }
 
-        thead th:not(:first-child):not(:nth-child(2)) {
+        thead th:not(:first-child):not(:nth-child(2)):not(:nth-child(3)) {
             z-index: 2;
         }
         
@@ -509,42 +521,48 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
-        /* Maintain column group colors on hover - Rank column */
+        /* Maintain column group colors on hover - Checkbox column */
         tbody tr:hover td:nth-child(1) {
             background: #2a3a4a !important;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
         }
 
-        /* Maintain column group colors on hover - Address column (sticky) */
+        /* Maintain column group colors on hover - Rank column */
         tbody tr:hover td:nth-child(2) {
+            background: #2a3a4a !important;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Maintain column group colors on hover - Address column (sticky) */
+        tbody tr:hover td:nth-child(3) {
             background: linear-gradient(90deg, #2a3a4a 0%, rgba(59, 130, 246, 0.15) 100%) !important;
             background-color: #2a3a4a !important;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
         }
 
         /* Property info columns */
-        tbody tr:hover td:nth-child(3),
         tbody tr:hover td:nth-child(4),
         tbody tr:hover td:nth-child(5),
-        tbody tr:hover td:nth-child(6) {
+        tbody tr:hover td:nth-child(6),
+        tbody tr:hover td:nth-child(7) {
             background: rgba(59, 130, 246, 0.1);
         }
 
         /* Expense columns */
-        tbody tr:hover td:nth-child(11),
         tbody tr:hover td:nth-child(12),
         tbody tr:hover td:nth-child(13),
         tbody tr:hover td:nth-child(14),
         tbody tr:hover td:nth-child(15),
-        tbody tr:hover td:nth-child(16) {
+        tbody tr:hover td:nth-child(16),
+        tbody tr:hover td:nth-child(17) {
             background: rgba(239, 68, 68, 0.08);
         }
 
         /* Return columns */
-        tbody tr:hover td:nth-child(18),
         tbody tr:hover td:nth-child(19),
         tbody tr:hover td:nth-child(20),
-        tbody tr:hover td:nth-child(21) {
+        tbody tr:hover td:nth-child(21),
+        tbody tr:hover td:nth-child(22) {
             background: rgba(34, 197, 94, 0.08);
         }
         
@@ -2257,7 +2275,7 @@
         let selectedProperties = []; // Track selected properties for comparison
 
         // Property selection handlers
-        function handlePropertySelection() {
+        window.handlePropertySelection = function() {
             const checkboxes = document.querySelectorAll('.property-select-checkbox:checked');
             selectedProperties = Array.from(checkboxes).map(cb => parseInt(cb.dataset.propertyIndex));
 
@@ -2282,7 +2300,7 @@
             selectAllCheckbox.checked = checkboxes.length === totalCheckboxes && totalCheckboxes > 0;
         }
 
-        function toggleSelectAll() {
+        window.toggleSelectAll = function() {
             const selectAllCheckbox = document.getElementById('selectAllProperties');
             const checkboxes = document.querySelectorAll('.property-select-checkbox');
 
@@ -2302,7 +2320,7 @@
         }
 
         // Open comparison modal
-        async function openComparisonModal() {
+        window.openComparisonModal = async function() {
             if (selectedProperties.length < 2) {
                 showNotification('Please select at least 2 properties to compare', 'warning');
                 return;
