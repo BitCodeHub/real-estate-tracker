@@ -297,7 +297,7 @@
             border-bottom: 2px solid var(--border-color);
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 2;
         }
 
         td {
@@ -318,24 +318,49 @@
 
         /* Solid backgrounds for sticky columns - Rank (odd rows) */
         tbody tr:nth-child(odd) td:nth-child(1) {
-            background: #252525;
+            background: #252525 !important;
+            background-color: #252525 !important;
         }
 
         /* Solid backgrounds for sticky columns - Rank (even rows) */
         tbody tr:nth-child(even) td:nth-child(1) {
-            background: #242424;
+            background: #242424 !important;
+            background-color: #242424 !important;
         }
 
         /* Solid backgrounds for sticky columns - Address (odd rows) */
         tbody tr:nth-child(odd) td:nth-child(2) {
-            background: linear-gradient(90deg, #252525 0%, rgba(59, 130, 246, 0.05) 100%);
-            background-color: #252525;
+            background: #252525 !important;
+            background-color: #252525 !important;
         }
 
         /* Solid backgrounds for sticky columns - Address (even rows) */
         tbody tr:nth-child(even) td:nth-child(2) {
-            background: linear-gradient(90deg, #242424 0%, rgba(59, 130, 246, 0.06) 100%);
-            background-color: #242424;
+            background: #242424 !important;
+            background-color: #242424 !important;
+        }
+
+        /* Add visual separation border to sticky columns */
+        tbody td:nth-child(2)::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+
+        thead th:nth-child(2)::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.15);
+            z-index: 1;
         }
 
         /* Column grouping with subtle backgrounds - adjusted for rank column */
@@ -392,8 +417,8 @@
             left: 0;
             background: #1a1a1a;
             background-color: #1a1a1a;
-            z-index: 12;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+            z-index: 102;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
             text-align: center;
             width: 60px;
             min-width: 60px;
@@ -402,8 +427,8 @@
         tbody td:first-child {
             position: sticky;
             left: 0;
-            z-index: 6;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            z-index: 101;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
             width: 60px;
             min-width: 60px;
         }
@@ -414,18 +439,27 @@
             left: 60px;
             background: #1a1a1a;
             background-color: #1a1a1a;
-            z-index: 11;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
             min-width: 220px;
         }
 
         tbody td:nth-child(2) {
             position: sticky;
             left: 60px;
-            z-index: 5;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            z-index: 99;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
             min-width: 220px;
             font-weight: 500;
+        }
+
+        /* Ensure non-sticky columns are below sticky ones */
+        tbody td:not(:first-child):not(:nth-child(2)) {
+            z-index: 1;
+        }
+
+        thead th:not(:first-child):not(:nth-child(2)) {
+            z-index: 2;
         }
         
         /* Rental listings table styling */
