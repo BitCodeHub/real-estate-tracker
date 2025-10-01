@@ -320,36 +320,42 @@
         tbody tr:nth-child(odd) td:nth-child(1) {
             background: #252525 !important;
             background-color: #252525 !important;
+            z-index: 1002 !important;
         }
 
         /* Solid backgrounds for sticky columns - Checkbox (even rows) */
         tbody tr:nth-child(even) td:nth-child(1) {
             background: #242424 !important;
             background-color: #242424 !important;
+            z-index: 1002 !important;
         }
 
         /* Solid backgrounds for sticky columns - Rank (odd rows) */
         tbody tr:nth-child(odd) td:nth-child(2) {
             background: #252525 !important;
             background-color: #252525 !important;
+            z-index: 1001 !important;
         }
 
         /* Solid backgrounds for sticky columns - Rank (even rows) */
         tbody tr:nth-child(even) td:nth-child(2) {
             background: #242424 !important;
             background-color: #242424 !important;
+            z-index: 1001 !important;
         }
 
         /* Solid backgrounds for sticky columns - Address (odd rows) */
         tbody tr:nth-child(odd) td:nth-child(3) {
             background: #252525 !important;
             background-color: #252525 !important;
+            z-index: 999 !important;
         }
 
         /* Solid backgrounds for sticky columns - Address (even rows) */
         tbody tr:nth-child(even) td:nth-child(3) {
             background: #242424 !important;
             background-color: #242424 !important;
+            z-index: 999 !important;
         }
 
         /* Add visual separation border to sticky columns - Address column */
@@ -427,9 +433,9 @@
         thead th:first-child {
             position: sticky;
             left: 0;
-            background: #1a1a1a;
-            background-color: #1a1a1a;
-            z-index: 103;
+            background: #1a1a1a !important;
+            background-color: #1a1a1a !important;
+            z-index: 1003;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
             text-align: center;
             width: 50px;
@@ -439,21 +445,21 @@
         tbody td:first-child {
             position: sticky;
             left: 0;
-            z-index: 102;
+            z-index: 1002;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
             width: 50px;
             min-width: 50px;
-            background: #1a1a1a;
-            background-color: #1a1a1a;
+            background: #1a1a1a !important;
+            background-color: #1a1a1a !important;
         }
 
         /* Sticky rank column (now 2nd column) */
         thead th:nth-child(2) {
             position: sticky;
             left: 50px;
-            background: #1a1a1a;
-            background-color: #1a1a1a;
-            z-index: 102;
+            background: #1a1a1a !important;
+            background-color: #1a1a1a !important;
+            z-index: 1002;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
             text-align: center;
             width: 60px;
@@ -463,7 +469,7 @@
         tbody td:nth-child(2) {
             position: sticky;
             left: 50px;
-            z-index: 101;
+            z-index: 1001;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
             width: 60px;
             min-width: 60px;
@@ -473,9 +479,9 @@
         thead th:nth-child(3) {
             position: sticky;
             left: 110px;
-            background: #1a1a1a;
-            background-color: #1a1a1a;
-            z-index: 100;
+            background: #1a1a1a !important;
+            background-color: #1a1a1a !important;
+            z-index: 1000;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
             min-width: 220px;
         }
@@ -483,7 +489,7 @@
         tbody td:nth-child(3) {
             position: sticky;
             left: 110px;
-            z-index: 99;
+            z-index: 999;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
             min-width: 220px;
             font-weight: 500;
@@ -525,12 +531,14 @@
         tbody tr:hover td:nth-child(1) {
             background: #2a3a4a !important;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
+            z-index: 1002 !important;
         }
 
         /* Maintain column group colors on hover - Rank column */
         tbody tr:hover td:nth-child(2) {
             background: #2a3a4a !important;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
+            z-index: 1001 !important;
         }
 
         /* Maintain column group colors on hover - Address column (sticky) */
@@ -538,6 +546,7 @@
             background: linear-gradient(90deg, #2a3a4a 0%, rgba(59, 130, 246, 0.15) 100%) !important;
             background-color: #2a3a4a !important;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
+            z-index: 999 !important;
         }
 
         /* Property info columns */
@@ -2321,36 +2330,73 @@
 
         // Open comparison modal
         window.openComparisonModal = async function() {
-            if (selectedProperties.length < 2) {
-                showNotification('Please select at least 2 properties to compare', 'warning');
-                return;
+            try {
+                console.log('🔵 openComparisonModal called');
+                console.log('selectedProperties:', selectedProperties);
+                console.log('properties array length:', properties.length);
+
+                if (!selectedProperties || selectedProperties.length < 2) {
+                    showNotification('Please select at least 2 properties to compare', 'warning');
+                    return;
+                }
+
+                // Get selected property objects
+                const selectedProps = selectedProperties.map(index => {
+                    console.log('Getting property at index:', index);
+                    return properties[index];
+                });
+                console.log('Selected properties:', selectedProps);
+
+                // Build comparison table
+                console.log('Building comparison table...');
+                window.buildComparisonTable(selectedProps);
+
+                // Open modal
+                console.log('Opening modal...');
+                const modal = document.getElementById('comparisonModal');
+                if (!modal) {
+                    console.error('❌ Comparison modal not found!');
+                    showNotification('Error: Comparison modal not found', 'error');
+                    return;
+                }
+                modal.style.display = 'block';
+                console.log('✅ Modal opened');
+
+                // Start AI analysis
+                console.log('Starting AI analysis...');
+                window.performAIAnalysis(selectedProps);
+            } catch (error) {
+                console.error('❌ Error in openComparisonModal:', error);
+                showNotification('Error opening comparison modal: ' + error.message, 'error');
             }
-
-            // Get selected property objects
-            const selectedProps = selectedProperties.map(index => properties[index]);
-
-            // Build comparison table
-            buildComparisonTable(selectedProps);
-
-            // Open modal
-            document.getElementById('comparisonModal').style.display = 'block';
-
-            // Start AI analysis
-            performAIAnalysis(selectedProps);
         }
 
         // Build comparison table
-        function buildComparisonTable(props) {
-            const table = document.getElementById('comparisonTable');
-            const thead = table.querySelector('thead tr');
-            const tbody = document.getElementById('comparisonTableBody');
+        window.buildComparisonTable = function(props) {
+            try {
+                console.log('🔵 buildComparisonTable called with', props.length, 'properties');
 
-            // Clear previous content
-            thead.innerHTML = '<th style="padding: 12px; text-align: left; border: 1px solid var(--border-color); position: sticky; left: 0; background: var(--bg-secondary); z-index: 1;">Metric</th>';
-            tbody.innerHTML = '';
+                const table = document.getElementById('comparisonTable');
+                if (!table) {
+                    console.error('❌ Comparison table not found!');
+                    return;
+                }
 
-            // Add property column headers
-            props.forEach((prop, index) => {
+                const thead = table.querySelector('thead tr');
+                const tbody = document.getElementById('comparisonTableBody');
+
+                if (!thead || !tbody) {
+                    console.error('❌ Table head or body not found!');
+                    return;
+                }
+
+                // Clear previous content
+                thead.innerHTML = '<th style="padding: 12px; text-align: left; border: 1px solid var(--border-color); position: sticky; left: 0; background: var(--bg-secondary); z-index: 1;">Metric</th>';
+                tbody.innerHTML = '';
+                console.log('✅ Table cleared');
+
+                // Add property column headers
+                props.forEach((prop, index) => {
                 const th = document.createElement('th');
                 th.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); min-width: 200px;';
                 th.innerHTML = `
@@ -2429,10 +2475,16 @@
 
                 tbody.appendChild(tr);
             });
+
+            console.log('✅ Comparison table built successfully');
+            } catch (error) {
+                console.error('❌ Error in buildComparisonTable:', error);
+                throw error;
+            }
         }
 
         // Perform AI analysis
-        async function performAIAnalysis(props) {
+        window.performAIAnalysis = async function(props) {
             const aiContent = document.getElementById('aiAnalysisContent');
 
             try {
