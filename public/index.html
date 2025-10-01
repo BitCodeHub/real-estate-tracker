@@ -2229,14 +2229,14 @@
             </div>
             <div class="modal-body">
                 <!-- AI Analysis Section -->
-                <div id="aiAnalysisSection" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 12px; margin-bottom: 24px; color: white;">
-                    <h3 style="margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                <div id="aiAnalysisSection" style="background: var(--bg-secondary); border: 2px solid #3b82f6; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; color: #3b82f6; font-size: 20px; font-weight: 600;">
                         <i class="fas fa-robot"></i> AI Investment Analysis
                     </h3>
                     <div id="aiAnalysisContent">
                         <div style="text-align: center; padding: 20px;">
-                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px;"></i>
-                            <p>Analyzing properties and generating investment recommendations...</p>
+                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px; color: #3b82f6;"></i>
+                            <p style="color: var(--text-primary);">Analyzing properties and generating investment recommendations...</p>
                         </div>
                     </div>
                 </div>
@@ -2360,8 +2360,8 @@
                 if (aiContent) {
                     aiContent.innerHTML = `
                         <div style="text-align: center; padding: 20px;">
-                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px;"></i>
-                            <p>Analyzing properties and generating investment recommendations...</p>
+                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px; color: #3b82f6;"></i>
+                            <p style="color: var(--text-primary);">Analyzing properties and generating investment recommendations...</p>
                         </div>
                     `;
                 }
@@ -2372,11 +2372,9 @@
                 document.body.style.overflow = 'hidden'; // Prevent background scrolling
                 console.log('✅ Modal opened');
 
-                // Small delay to ensure modal is fully rendered
-                await new Promise(resolve => setTimeout(resolve, 50));
-
-                // Build comparison table AFTER modal is visible
+                // Build comparison table immediately (no delay needed)
                 console.log('Building comparison table...');
+                console.log('Properties to compare:', selectedProps);
                 window.buildComparisonTable(selectedProps);
 
                 // Scroll modal to top
@@ -2417,14 +2415,15 @@
 
                 // Add property column headers
                 props.forEach((prop, index) => {
-                const th = document.createElement('th');
-                th.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); min-width: 200px;';
-                th.innerHTML = `
-                    <div style="font-weight: 600;">${prop.address || 'Unknown'}</div>
-                    <div style="font-size: 12px; color: var(--text-muted); font-weight: normal;">${prop.city || ''}, ${prop.state || ''}</div>
-                `;
-                thead.appendChild(th);
-            });
+                    console.log(`Adding header for property ${index + 1}:`, prop.address, prop);
+                    const th = document.createElement('th');
+                    th.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); min-width: 200px;';
+                    th.innerHTML = `
+                        <div style="font-weight: 600;">${prop.address || 'Unknown'}</div>
+                        <div style="font-size: 12px; color: var(--text-muted); font-weight: normal;">${prop.city || ''}, ${prop.state || ''}</div>
+                    `;
+                    thead.appendChild(th);
+                });
 
             // Define metrics to compare
             const metrics = [
@@ -2550,36 +2549,49 @@
 
                 const data = await response.json();
 
-                // Display AI analysis
+                // Display AI analysis with professional styling
                 aiContent.innerHTML = `
-                    <div style="line-height: 1.8;">
-                        <h4 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-trophy"></i> Recommended Property
-                        </h4>
-                        <div style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">
-                            ${data.recommendedProperty}
+                    <div style="line-height: 1.8; color: var(--text-primary);">
+                        <!-- Recommended Property Card -->
+                        <div style="background: var(--bg-card); border-left: 4px solid #10b981; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px; color: #10b981; font-size: 16px; font-weight: 600;">
+                                <i class="fas fa-trophy"></i> Recommended Property
+                            </h4>
+                            <div style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
+                                ${data.recommendedProperty}
+                            </div>
                         </div>
 
-                        <h4 style="margin: 20px 0 12px 0; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-lightbulb"></i> Investment Analysis
-                        </h4>
-                        <div style="white-space: pre-wrap;">${data.analysis}</div>
+                        <!-- Investment Analysis Card -->
+                        <div style="background: var(--bg-card); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; color: #3b82f6; font-size: 16px; font-weight: 600;">
+                                <i class="fas fa-lightbulb"></i> Investment Analysis
+                            </h4>
+                            <div style="white-space: pre-wrap; color: var(--text-primary); line-height: 1.6;">${data.analysis}</div>
+                        </div>
 
-                        <h4 style="margin: 20px 0 12px 0; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-chart-line"></i> 5-Year Profit Projection
-                        </h4>
-                        <div>${data.profitProjection}</div>
+                        <!-- Profit Projection Card -->
+                        <div style="background: var(--bg-card); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; color: #10b981; font-size: 16px; font-weight: 600;">
+                                <i class="fas fa-chart-line"></i> 5-Year Profit Projection
+                            </h4>
+                            <div style="color: var(--text-primary); line-height: 1.6;">${data.profitProjection}</div>
+                        </div>
 
-                        <h4 style="margin: 20px 0 12px 0; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-exclamation-triangle"></i> Risk Assessment
-                        </h4>
-                        <div>${data.riskAssessment}</div>
+                        <!-- Risk Assessment Card -->
+                        <div style="background: var(--bg-card); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; color: #f59e0b; font-size: 16px; font-weight: 600;">
+                                <i class="fas fa-exclamation-triangle"></i> Risk Assessment
+                            </h4>
+                            <div style="color: var(--text-primary); line-height: 1.6;">${data.riskAssessment}</div>
+                        </div>
 
-                        <div style="margin-top: 20px; padding: 16px; background: rgba(255,255,255,0.1); border-radius: 8px; border-left: 4px solid #fbbf24;">
-                            <strong style="display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-user-tie"></i> Professional Realtor's Advice:
-                            </strong>
-                            <p style="margin: 8px 0 0 0;">${data.realtorAdvice}</p>
+                        <!-- Realtor's Advice Card -->
+                        <div style="background: var(--bg-card); border-left: 4px solid #3b82f6; padding: 16px; border-radius: 8px;">
+                            <h4 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; color: #3b82f6; font-size: 16px; font-weight: 600;">
+                                <i class="fas fa-user-tie"></i> Professional Realtor's Advice
+                            </h4>
+                            <div style="color: var(--text-primary); line-height: 1.6;">${data.realtorAdvice}</div>
                         </div>
                     </div>
                 `;
@@ -2587,9 +2599,9 @@
                 console.error('AI analysis error:', error);
                 aiContent.innerHTML = `
                     <div style="text-align: center; padding: 20px;">
-                        <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 12px; color: #fbbf24;"></i>
-                        <p>AI analysis is currently unavailable. Please try again later.</p>
-                        <p style="font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 8px;">
+                        <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 12px; color: #f59e0b;"></i>
+                        <p style="color: var(--text-primary);">AI analysis is currently unavailable. Please try again later.</p>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">
                             The comparison table below shows all property metrics for manual evaluation.
                         </p>
                     </div>
@@ -4046,12 +4058,19 @@
             const compareBtn = document.getElementById('compareBtn');
             if (compareBtn) {
                 console.log('✅ Setting up compare button event listener');
-                compareBtn.addEventListener('click', function(e) {
+                // Remove any existing listeners first
+                compareBtn.replaceWith(compareBtn.cloneNode(true));
+                const newCompareBtn = document.getElementById('compareBtn');
+                newCompareBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     console.log('🔵 Compare button clicked!');
-                    window.openComparisonModal();
-                });
+                    if (window.openComparisonModal) {
+                        window.openComparisonModal();
+                    } else {
+                        console.error('❌ openComparisonModal function not found!');
+                    }
+                }, { capture: true });
             } else {
                 console.error('❌ Compare button not found during setup');
             }
