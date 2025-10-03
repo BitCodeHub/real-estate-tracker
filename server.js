@@ -584,7 +584,7 @@ app.get('/api/properties/:id', async (req, res) => {
         if (!property) {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
-        
+
         // Map database fields and merge rentcast_data JSONB fields
         const mappedProp = {
             ...property,
@@ -598,7 +598,14 @@ app.get('/api/properties/:id', async (req, res) => {
             monthlyRent: property.monthly_rent || property.monthlyRent || 0,
             rentEstimate: property.rent_estimate || property.rentEstimate || 0,
             estimatedValue: property.value_estimate || property.estimatedValue || 0,
-            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0
+            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0,
+            mortgage: property.mortgage,
+            propertyTax: property.property_tax,
+            insurance: property.insurance,
+            hoa: property.hoa,
+            maintenance: property.maintenance,
+            managementFees: property.management_fees,
+            vacancyRate: property.vacancy_rate
         };
         
         if (property.rentcast_data && typeof property.rentcast_data === 'object') {
@@ -705,7 +712,14 @@ app.post('/api/properties', async (req, res) => {
             monthlyRent: property.monthly_rent || property.monthlyRent || 0,
             rentEstimate: property.rent_estimate || property.rentEstimate || 0,
             estimatedValue: property.value_estimate || property.estimatedValue || 0,
-            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0
+            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0,
+            mortgage: property.mortgage,
+            propertyTax: property.property_tax,
+            insurance: property.insurance,
+            hoa: property.hoa,
+            maintenance: property.maintenance,
+            managementFees: property.management_fees,
+            vacancyRate: property.vacancy_rate
         };
         
         if (property.rentcast_data && typeof property.rentcast_data === 'object') {
@@ -796,7 +810,14 @@ app.put('/api/properties/:id', async (req, res) => {
             monthlyRent: property.monthly_rent || property.monthlyRent || 0,
             rentEstimate: property.rent_estimate || property.rentEstimate || 0,
             estimatedValue: property.value_estimate || property.estimatedValue || 0,
-            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0
+            currentValue: property.value_estimate || property.current_value || property.currentValue || property.purchase_price || 0,
+            mortgage: property.mortgage,
+            propertyTax: property.property_tax,
+            insurance: property.insurance,
+            hoa: property.hoa,
+            maintenance: property.maintenance,
+            managementFees: property.management_fees,
+            vacancyRate: property.vacancy_rate
         };
         
         if (property.rentcast_data && typeof property.rentcast_data === 'object') {
