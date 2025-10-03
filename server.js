@@ -1052,21 +1052,25 @@ app.get('/api/schools', async (req, res) => {
 
         console.log('🏫 Fetching schools for:', city, state);
 
-        // Use official SchoolDigger API v2.1 for ranking data
-        const response = await axios.get('https://api.schooldigger.com/v2.1/schools', {
+        // Use official SchoolDigger API
+        // Construct URL with required parameters
+        const stateCode = state.toUpperCase();
+        const url = `https://api.schooldigger.com/v2.0/schools/${stateCode}`;
+
+        console.log('📍 API URL:', url);
+        console.log('📍 Parameters:', { appid: '96af4c20', city: city });
+
+        const response = await axios.get(url, {
             params: {
                 appid: '96af4c20',
                 appkey: '78fbdeb8a5cba9caa9dba246631ada08',
                 city: city,
-                st: state.toUpperCase(),
-                level: 'elementary,middle,high',
-                // Request ranking data
-                sortBy: 'rank_statewide',
                 perPage: 15
             }
         });
 
         console.log('✅ Schools API response:', response.status);
+        console.log('📊 Total schools found:', response.data?.schoolList?.length || response.data?.length || 0);
         console.log('📊 Sample school data:', response.data?.schoolList?.[0] || response.data?.[0]);
         res.json(response.data);
 
