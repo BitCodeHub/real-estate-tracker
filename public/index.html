@@ -2480,6 +2480,7 @@
                 // Add property column headers
                 props.forEach((prop, index) => {
                     console.log(`Adding header for property ${index + 1}:`, prop.address, prop);
+                    console.log(`Property ${index + 1} full data:`, JSON.stringify(prop, null, 2));
                     const th = document.createElement('th');
                     th.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); min-width: 200px;';
                     th.innerHTML = `
@@ -2530,6 +2531,8 @@
                     let value = prop[metric.key];
                     let displayValue = '';
 
+                    console.log(`📊 Property ${propIndex + 1} (${prop.address}) - ${metric.key}: ${value}`);
+
                     // Debug logging for missing values
                     if (value === undefined || value === null) {
                         console.log(`⚠️ Missing ${metric.key} for property ${propIndex + 1} (${prop.address})`);
@@ -2558,6 +2561,7 @@
                         }
                     }
 
+                    console.log(`✅ Appending cell for property ${propIndex + 1} - ${metric.key}: "${displayValue}"`);
                     tr.appendChild(td);
                 });
 
@@ -2565,6 +2569,7 @@
             });
 
             console.log('✅ Comparison table built successfully');
+            console.log(`📋 Table summary: ${metrics.length} metrics × ${props.length} properties = ${metrics.length * props.length} cells created`);
             } catch (error) {
                 console.error('❌ Error in buildComparisonTable:', error);
                 throw error;
