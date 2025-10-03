@@ -6219,9 +6219,19 @@
 
                 // Display schools (limit to first 10)
                 const schools = schoolList.slice(0, 10);
+                console.log('📊 First school fields:', schools[0] ? Object.keys(schools[0]).sort() : 'No schools');
+                console.log('📊 First school data:', schools[0]);
                 let schoolsHTML = '<div style="display: grid; gap: 15px;">';
 
-                schools.forEach(school => {
+                schools.forEach((school, idx) => {
+                    if (idx === 0) console.log('🔍 Checking school ranking fields:', {
+                        rank: school.rank,
+                        rankStars: school.rankStars,
+                        rankOf: school.rankOf,
+                        numRanked: school.numRanked,
+                        rankStatewide: school.rankStatewide,
+                        schoolYearlyDetails: school.schoolYearlyDetails
+                    });
                     // SchoolDigger API uses different field names
                     const schoolName = school.schoolName || school.name || 'Unknown School';
                     const city = school.city || (school.address ? school.address.city : '');

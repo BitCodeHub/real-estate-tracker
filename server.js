@@ -1073,7 +1073,14 @@ app.get('/api/schools', async (req, res) => {
 
         console.log('✅ Schools API response:', response.status);
         console.log('📊 Total schools found:', response.data?.schoolList?.length || response.data?.length || 0);
-        console.log('📊 Sample school data:', response.data?.schoolList?.[0] || response.data?.[0]);
+
+        const sampleSchool = response.data?.schoolList?.[0] || response.data?.[0];
+        console.log('📊 Sample school data:', JSON.stringify(sampleSchool, null, 2));
+
+        if (sampleSchool) {
+            console.log('📋 Available fields:', Object.keys(sampleSchool).sort());
+        }
+
         res.json(response.data);
 
     } catch (error) {
