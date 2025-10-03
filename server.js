@@ -1058,7 +1058,7 @@ app.get('/api/schools', async (req, res) => {
                 q: searchQuery
             },
             headers: {
-                'x-rapidapi-key': '177c02e9d2msh8b577fa708d0154p11b581jsn2f13420b2d92',
+                'x-rapidapi-key': '78fbdeb8a5cba9caa9dba246631ada08',
                 'x-rapidapi-host': 'schooldigger-k-12-school-data-api.p.rapidapi.com'
             }
         });

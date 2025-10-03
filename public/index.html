@@ -6265,13 +6265,39 @@
                 if (schoolsLoading) schoolsLoading.style.display = 'none';
                 if (schoolsContent) {
                     schoolsContent.style.display = 'block';
-                    schoolsContent.innerHTML = `
-                        <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
-                            <i class="fas fa-exclamation-triangle" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px; color: #ef4444;"></i>
-                            <p>Unable to load school data at this time.</p>
-                            <p style="font-size: 14px; color: var(--text-muted);">${error.message}</p>
-                        </div>
-                    `;
+
+                    // Check if it's a subscription error
+                    const isSubscriptionError = error.message.includes('not subscribed') || error.message.includes('403');
+
+                    if (isSubscriptionError) {
+                        schoolsContent.innerHTML = `
+                            <div style="text-align: center; padding: 30px; color: var(--text-secondary); background: var(--bg-secondary); border-radius: 8px; border: 1px dashed var(--border-color);">
+                                <i class="fas fa-info-circle" style="font-size: 48px; opacity: 0.3; margin-bottom: 15px; color: #3b82f6;"></i>
+                                <h4 style="margin: 0 0 10px 0; color: var(--text-primary);">School Data Not Available</h4>
+                                <p style="margin: 0 0 15px 0;">The SchoolDigger API requires a subscription on RapidAPI.</p>
+                                <div style="background: var(--bg-card); padding: 15px; border-radius: 6px; margin: 15px auto; max-width: 500px; text-align: left;">
+                                    <p style="margin: 0 0 10px 0; font-weight: 600; color: var(--text-primary);">To enable school data:</p>
+                                    <ol style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
+                                        <li>Visit <a href="https://rapidapi.com/schooldigger-api-schooldigger-api-default/api/schooldigger-k-12-school-data-api" target="_blank" style="color: var(--accent-primary);">RapidAPI SchoolDigger</a></li>
+                                        <li>Subscribe to a plan (free tier available)</li>
+                                        <li>Use the same API key already configured in your app</li>
+                                        <li>Restart your server</li>
+                                    </ol>
+                                </div>
+                                <p style="margin: 15px 0 0 0; font-size: 13px; color: var(--text-muted);">
+                                    <i class="fas fa-lightbulb"></i> Tip: The free plan includes 100 requests per month
+                                </p>
+                            </div>
+                        `;
+                    } else {
+                        schoolsContent.innerHTML = `
+                            <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                                <i class="fas fa-exclamation-triangle" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px; color: #ef4444;"></i>
+                                <p>Unable to load school data at this time.</p>
+                                <p style="font-size: 14px; color: var(--text-muted);">${error.message}</p>
+                            </div>
+                        `;
+                    }
                 }
             }
         }
