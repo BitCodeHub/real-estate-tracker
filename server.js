@@ -1053,19 +1053,21 @@ app.get('/api/schools', async (req, res) => {
         console.log('🏫 Fetching schools for:', city, state);
 
         // Use official SchoolDigger API
-        // Construct URL with required parameters
-        const stateCode = state.toUpperCase();
-        const url = `https://api.schooldigger.com/v2.0/schools/${stateCode}`;
+        // Try v1.2 which has simpler authentication
+        const stateCode = state.toLowerCase(); // Try lowercase
+        const url = `https://api.schooldigger.com/v1.2/schools`;
 
         console.log('📍 API URL:', url);
-        console.log('📍 Parameters:', { appid: '96af4c20', city: city });
+        console.log('📍 State:', stateCode, 'City:', city);
 
         const response = await axios.get(url, {
             params: {
-                appid: '96af4c20',
-                appkey: '78fbdeb8a5cba9caa9dba246631ada08',
+                st: stateCode,
                 city: city,
-                perPage: 15
+                appID: '96af4c20',
+                appKey: '78fbdeb8a5cba9caa9dba246631ada08',
+                perPage: 15,
+                page: 1
             }
         });
 
@@ -1077,12 +1079,17 @@ app.get('/api/schools', async (req, res) => {
     } catch (error) {
         console.error('❌ Error fetching schools:', error.message);
         if (error.response) {
-            console.error('API error response:', error.response.status, error.response.data);
+            console.error('API error status:', error.response.status);
+            console.error('API error data:', JSON.stringify(error.response.data, null, 2));
+            console.error('API error headers:', error.response.headers);
+            console.error('Request URL:', error.config?.url);
+            console.error('Request params:', error.config?.params);
             return res.status(error.response.status).json({
                 success: false,
                 error: 'SchoolDigger API error',
-                message: error.response.data?.message || error.message,
-                status: error.response.status
+                message: error.response.data?.message || error.response.data?.error || error.message,
+                status: error.response.status,
+                details: error.response.data
             });
         }
         res.status(500).json({
