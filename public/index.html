@@ -4300,12 +4300,11 @@
                         localStorage.setItem('properties', JSON.stringify(properties));
                         
                         console.log(`✅ Loaded ${properties.length} properties from server and synced to localStorage`);
-                        
-                        // Calculate metrics for all properties after loading
+
+                        // ALWAYS calculate metrics for all properties after loading
+                        // This ensures management fees, maintenance, cash flow, etc. are recalculated
                         properties.forEach(prop => {
-                            if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
-                                calculatePropertyMetrics(prop);
-                            }
+                            calculatePropertyMetrics(prop);
                         });
                         
                         // Debug: Check first 2 properties
@@ -4328,11 +4327,9 @@
                         if (saved) {
                             properties = JSON.parse(saved);
                             console.log(`📱 Loaded ${properties.length} properties from localStorage (database offline)`);
-                            // Calculate metrics for properties loaded from localStorage
+                            // ALWAYS calculate metrics for properties loaded from localStorage
                             properties.forEach(prop => {
-                                if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
-                                    calculatePropertyMetrics(prop);
-                                }
+                                calculatePropertyMetrics(prop);
                             });
                         } else {
                             properties = [];
@@ -4359,13 +4356,11 @@
                             return { ...p, id: cleanId };
                         });
                         
-                        // Calculate metrics for properties loaded from localStorage
+                        // ALWAYS calculate metrics for properties loaded from localStorage
                         properties.forEach(prop => {
-                            if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
-                                calculatePropertyMetrics(prop);
-                            }
+                            calculatePropertyMetrics(prop);
                         });
-                        
+
                         // Save cleaned properties back to localStorage
                         localStorage.setItem('properties', JSON.stringify(properties));
                     } else {
@@ -4393,13 +4388,11 @@
                         return { ...p, id: cleanId };
                     });
                     
-                    // Calculate metrics for properties loaded from localStorage
+                    // ALWAYS calculate metrics for properties loaded from localStorage
                     properties.forEach(prop => {
-                        if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined) {
-                            calculatePropertyMetrics(prop);
-                        }
+                        calculatePropertyMetrics(prop);
                     });
-                    
+
                     // Save cleaned properties back to localStorage
                     localStorage.setItem('properties', JSON.stringify(properties));
                 } else {
@@ -7920,8 +7913,9 @@
             let filtered = [...properties];
             
             // Ensure all properties have metrics calculated before filtering
+            // Only recalculate if metrics are missing (performance optimization)
             filtered.forEach(prop => {
-                if (prop.monthlyRent !== undefined && prop.purchasePrice !== undefined && !prop.monthlyCashFlow) {
+                if (!prop.monthlyCashFlow && prop.monthlyCashFlow !== 0) {
                     calculatePropertyMetrics(prop);
                 }
             });
