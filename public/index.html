@@ -1851,7 +1851,7 @@
             </button>
             <h1><i class="fas fa-chart-line"></i> Real Estate Investment Tracker</h1>
             <div style="display: flex; gap: 12px; align-items: center;">
-                <button id="compareBtn" class="btn btn-primary" onclick="openComparisonModal()" disabled style="background: var(--accent-info); opacity: 0.5; cursor: not-allowed;" title="Select at least 2 properties to compare">
+                <button id="compareBtn" class="btn btn-primary" onclick="console.log('🟢🟢🟢 COMPARE BUTTON CLICKED!'); openComparisonModal(); event.stopPropagation(); return false;" style="background: var(--accent-info); opacity: 0.5; cursor: not-allowed;" title="Select at least 2 properties to compare">
                     <i class="fas fa-balance-scale"></i> Compare <span id="compareCount">0</span> Properties
                 </button>
                 <button class="btn btn-primary" onclick="openAddPropertyModal()">
@@ -2303,20 +2303,17 @@
                 compareCount.textContent = selectedProperties.length;
             }
 
-            // Enable/disable and style the compare button based on selection
+            // Style the compare button based on selection (visual feedback only)
             if (compareBtn) {
                 if (selectedProperties.length >= 2) {
-                    compareBtn.disabled = false;
                     compareBtn.style.opacity = '1';
                     compareBtn.style.cursor = 'pointer';
                     compareBtn.title = `Compare ${selectedProperties.length} properties`;
                 } else if (selectedProperties.length === 1) {
-                    compareBtn.disabled = true;
                     compareBtn.style.opacity = '0.5';
                     compareBtn.style.cursor = 'not-allowed';
                     compareBtn.title = 'Select at least 2 properties to compare';
                 } else {
-                    compareBtn.disabled = true;
                     compareBtn.style.opacity = '0.5';
                     compareBtn.style.cursor = 'not-allowed';
                     compareBtn.title = 'Select at least 2 properties to compare';
@@ -2407,7 +2404,34 @@
             }
 
             document.body.style.overflow = 'hidden';
+
+            // Force a repaint
+            void modal.offsetHeight;
+
+            // Get computed styles for debugging
+            const computedStyle = window.getComputedStyle(modal);
+            const rect = modal.getBoundingClientRect();
+
             console.log('✅ Modal opened - display:', modal.style.display, 'opacity:', modal.style.opacity, 'visibility:', modal.style.visibility);
+            console.log('📊 Computed styles:', {
+                display: computedStyle.display,
+                opacity: computedStyle.opacity,
+                visibility: computedStyle.visibility,
+                zIndex: computedStyle.zIndex,
+                position: computedStyle.position
+            });
+            console.log('📐 Bounding rect:', {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+                bottom: rect.bottom,
+                right: rect.right
+            });
+            console.log('🖥️ Viewport:', {
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
 
             // Build comparison table synchronously
             console.log('Building comparison table...');
