@@ -1851,7 +1851,7 @@
             </button>
             <h1><i class="fas fa-chart-line"></i> Real Estate Investment Tracker</h1>
             <div style="display: flex; gap: 12px; align-items: center;">
-                <button id="compareBtn" class="btn" style="background: var(--accent-info); color: white;">
+                <button id="compareBtn" type="button" class="btn" style="background: var(--accent-info); color: white;">
                     <i class="fas fa-balance-scale"></i> Compare <span id="compareCount">0</span> Properties
                 </button>
                 <button class="btn btn-primary" onclick="openAddPropertyModal()">
@@ -4103,15 +4103,27 @@
         function setupEventListeners() {
             document.getElementById('addPropertyForm').addEventListener('submit', handleAddProperty);
 
-            // Setup compare button event listener (as backup to onclick)
+            // Setup compare button event listener
             const compareBtn = document.getElementById('compareBtn');
             if (compareBtn) {
-                compareBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
+                console.log('✅ Setting up compare button event listener');
+                console.log('compareBtn element:', compareBtn);
+                console.log('window.openComparisonModal exists:', typeof window.openComparisonModal);
+
+                compareBtn.addEventListener('click', function(event) {
+                    console.log('🔵🔵🔵 Compare button CLICKED!');
+                    console.log('Event:', event);
+                    console.log('selectedProperties:', selectedProperties);
+
                     if (typeof window.openComparisonModal === 'function') {
+                        console.log('✅ Calling window.openComparisonModal()');
                         window.openComparisonModal();
+                    } else {
+                        console.error('❌ window.openComparisonModal is not a function!');
                     }
-                });
+                }, true); // Use capture phase
+            } else {
+                console.error('❌ Compare button not found!');
             }
 
             // Setup select all checkbox event listener
