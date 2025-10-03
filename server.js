@@ -1050,16 +1050,16 @@ app.get('/api/schools', async (req, res) => {
             });
         }
 
-        const searchQuery = `${city} ${state}`;
-        console.log('🏫 Fetching schools for:', searchQuery);
+        console.log('🏫 Fetching schools for:', city, state);
 
-        const response = await axios.get('https://schooldigger-k-12-school-data-api.p.rapidapi.com/v2.0/autocomplete/schools', {
+        // Use official SchoolDigger API
+        const response = await axios.get('https://api.schooldigger.com/v2.0/schools', {
             params: {
-                q: searchQuery
-            },
-            headers: {
-                'x-rapidapi-key': '78fbdeb8a5cba9caa9dba246631ada08',
-                'x-rapidapi-host': 'schooldigger-k-12-school-data-api.p.rapidapi.com'
+                appid: '96af4c20',
+                appkey: '78fbdeb8a5cba9caa9dba246631ada08',
+                city: city,
+                st: state.toUpperCase(),
+                level: 'elementary,middle,high'
             }
         });
 

@@ -6204,7 +6204,10 @@
                 schoolsLoading.style.display = 'none';
                 schoolsContent.style.display = 'block';
 
-                if (!data || !data.schoolList || data.schoolList.length === 0) {
+                // SchoolDigger API returns schools directly in an array
+                const schoolList = Array.isArray(data) ? data : (data.schoolList || []);
+
+                if (!schoolList || schoolList.length === 0) {
                     schoolsContent.innerHTML = `
                         <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
                             <i class="fas fa-school" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i>
@@ -6215,13 +6218,26 @@
                 }
 
                 // Display schools (limit to first 10)
-                const schools = data.schoolList.slice(0, 10);
+                const schools = schoolList.slice(0, 10);
                 let schoolsHTML = '<div style="display: grid; gap: 15px;">';
 
                 schools.forEach(school => {
-                    const rating = school.rating || 'N/A';
-                    const rankText = school.rankHistory && school.rankHistory.length > 0
-                        ? `Ranked #${school.rankHistory[0].rank} in ${school.rankHistory[0].rankOf}`
+                    // SchoolDigger API uses different field names
+                    const schoolName = school.schoolName || school.name || 'Unknown School';
+                    const city = school.city || (school.address ? school.address.city : '');
+                    const state = school.state || (school.address ? school.address.state : '');
+                    const level = school.levelCode || school.level || '';
+
+                    // Rating calculation (SchoolDigger uses rank, convert to 1-10 scale)
+                    let rating = 'N/A';
+                    if (school.rank && school.rankOf) {
+                        // Convert rank to rating (top 10% = 10, top 20% = 9, etc.)
+                        const percentile = (school.rank / school.rankOf) * 100;
+                        rating = Math.max(1, Math.min(10, Math.round(11 - (percentile / 10))));
+                    }
+
+                    const rankText = school.rank && school.rankOf
+                        ? `Ranked #${school.rank} of ${school.rankOf} in ${state}`
                         : '';
 
                     schoolsHTML += `
@@ -6230,11 +6246,10 @@
                                 <div style="flex: 1;">
                                     <h4 style="margin: 0 0 5px 0; color: var(--text-primary);">
                                         <i class="fas fa-school" style="color: var(--accent-info);"></i>
-                                        ${school.schoolName || 'Unknown School'}
+                                        ${schoolName}
                                     </h4>
                                     <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
-                                        ${school.address ? school.address.city + ', ' + school.address.state : searchQuery}
-                                        ${school.levelCode ? ` • ${school.levelCode}` : ''}
+                                        ${city}, ${state}${level ? ` • ${level}` : ''}
                                     </p>
                                 </div>
                                 ${rating !== 'N/A' ? `
