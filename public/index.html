@@ -4435,6 +4435,7 @@
                 'monthlyCashFlow': null, // This is a calculated field, don't send it
                 'annualCashFlow': null, // This is a calculated field, don't send it
                 'cashOnCashReturn': null, // This is a calculated field, don't send it
+                'maintenance': null, // Auto-calculated as 1% of purchase price annually, don't send it
                 'cocReturn': 'coc_return',
                 'rentToValue': 'rent_to_value',
                 'capRate': 'cap_rate',
@@ -4947,9 +4948,8 @@
                     </span>
                 </td>
                 <td style="min-width: 100px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'maintenance', ${Number(property.maintenance) || 0})"
-                          style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
-                          title="Click to edit">
+                    <span style="padding: 2px 4px; color: var(--text-muted); font-style: italic;"
+                          title="Auto-calculated: 1% of purchase price annually (${formatCurrency(Number(property.purchasePrice || 0) * 0.01)} per year)">
                         ${formatCurrency(Number(property.maintenance) || 0)}
                     </span>
                 </td>
@@ -6836,8 +6836,11 @@
                 Number(property.insurance) : (purchasePrice * 0.004) / 12;
             const hoa = property.hoa !== undefined && !isNaN(property.hoa) ?
                 Number(property.hoa) : 0;
-            const maintenance = property.maintenance !== undefined && !isNaN(property.maintenance) ?
-                Number(property.maintenance) : (purchasePrice * 0.01) / 12;
+
+            // ALWAYS calculate maintenance as 1% of purchase price annually (monthly = annual / 12)
+            // This is auto-calculated and will update whenever purchase price changes
+            const maintenance = purchasePrice > 0 ? (purchasePrice * 0.01) / 12 : 0;
+
             const managementFees = property.managementFees !== undefined && !isNaN(property.managementFees) ?
                 Number(property.managementFees) : (monthlyRent * 0.08);
 
@@ -6845,7 +6848,10 @@
             if (property.propertyTax === undefined || isNaN(property.propertyTax)) property.propertyTax = propertyTax || 0;
             if (property.insurance === undefined || isNaN(property.insurance)) property.insurance = insurance || 0;
             if (property.hoa === undefined || isNaN(property.hoa)) property.hoa = hoa || 0;
-            if (property.maintenance === undefined || isNaN(property.maintenance)) property.maintenance = maintenance || 0;
+
+            // ALWAYS store the auto-calculated maintenance value
+            property.maintenance = maintenance || 0;
+
             if (property.managementFees === undefined || isNaN(property.managementFees)) property.managementFees = managementFees || 0;
 
             const total = propertyTax + insurance + hoa + maintenance + managementFees;
