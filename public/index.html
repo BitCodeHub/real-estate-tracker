@@ -2458,6 +2458,20 @@
             try {
                 console.log('🔵 buildComparisonTable called with', props.length, 'properties');
 
+                // CRITICAL: Ensure all properties have their metrics calculated before comparison
+                props.forEach((prop, index) => {
+                    console.log(`Calculating metrics for property ${index + 1}:`, prop.address);
+                    console.log(`Before calculation - purchasePrice: ${prop.purchasePrice}, estimatedValue: ${prop.estimatedValue}, monthlyRent: ${prop.monthlyRent}`);
+
+                    // Ensure calculatePropertyMetrics exists and is callable
+                    if (typeof calculatePropertyMetrics === 'function') {
+                        calculatePropertyMetrics(prop);
+                        console.log(`After calculation - purchasePrice: ${prop.purchasePrice}, monthlyCashFlow: ${prop.monthlyCashFlow}, capRate: ${prop.capRate}`);
+                    } else {
+                        console.error('❌ calculatePropertyMetrics function not found!');
+                    }
+                });
+
                 const table = document.getElementById('comparisonTable');
                 if (!table) {
                     console.error('❌ Comparison table not found!');
@@ -2480,7 +2494,13 @@
                 // Add property column headers
                 props.forEach((prop, index) => {
                     console.log(`Adding header for property ${index + 1}:`, prop.address, prop);
-                    console.log(`Property ${index + 1} full data:`, JSON.stringify(prop, null, 2));
+                    console.log(`Property ${index + 1} key metrics:`, {
+                        purchasePrice: prop.purchasePrice,
+                        estimatedValue: prop.estimatedValue,
+                        monthlyRent: prop.monthlyRent,
+                        monthlyCashFlow: prop.monthlyCashFlow,
+                        cashOnCashReturn: prop.cashOnCashReturn
+                    });
                     const th = document.createElement('th');
                     th.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); min-width: 200px;';
                     th.innerHTML = `
@@ -2528,7 +2548,17 @@
                     const td = document.createElement('td');
                     td.style.cssText = 'padding: 12px; border: 1px solid var(--border-color); text-align: right;';
 
+                    // Get value with intelligent fallbacks
                     let value = prop[metric.key];
+
+                    // Special fallbacks for key metrics
+                    if (metric.key === 'purchasePrice' && (!value || value === 0)) {
+                        value = prop.estimatedValue;  // Use estimated value if no purchase price
+                    }
+                    if (metric.key === 'monthlyRent' && (!value || value === 0)) {
+                        value = prop.rentEstimate;  // Use rent estimate if no monthly rent
+                    }
+
                     let displayValue = '';
 
                     console.log(`📊 Property ${propIndex + 1} (${prop.address}) - ${metric.key}: ${value}`);
@@ -2536,6 +2566,7 @@
                     // Debug logging for missing values
                     if (value === undefined || value === null) {
                         console.log(`⚠️ Missing ${metric.key} for property ${propIndex + 1} (${prop.address})`);
+                        console.log(`   Available fallbacks - estimatedValue: ${prop.estimatedValue}, rentEstimate: ${prop.rentEstimate}`);
                     }
 
                     if (metric.format === 'currency') {
@@ -2693,18 +2724,24 @@
                 const errorMessage = error.name === 'AbortError'
                     ? 'Request timed out after 30 seconds'
                     : error.message || 'Unknown error';
-                aiContent.innerHTML = `
-                    <div style="text-align: center; padding: 20px;">
-                        <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 12px; color: #f59e0b;"></i>
-                        <p style="color: var(--text-primary);">AI analysis is currently unavailable.</p>
-                        <p style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">
-                            Error: ${errorMessage}
-                        </p>
-                        <p style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">
-                            The comparison table below shows all property metrics for manual evaluation.
-                        </p>
-                    </div>
-                `;
+
+                // Ensure aiContent exists before trying to update it
+                if (aiContent) {
+                    aiContent.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 12px; color: #f59e0b;"></i>
+                            <p style="color: var(--text-primary);">AI analysis is currently unavailable.</p>
+                            <p style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">
+                                Error: ${errorMessage}
+                            </p>
+                            <p style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">
+                                The comparison table below shows all property metrics for manual evaluation.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    console.error('❌ aiAnalysisContent element not found - cannot display error message');
+                }
             }
         }
 

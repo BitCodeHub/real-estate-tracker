@@ -977,7 +977,8 @@ Important: Consider current real estate market conditions, typical appreciation 
         }, {
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            timeout: 25000 // 25 second timeout (client has 30 second timeout)
         });
 
         console.log('Gemini API response status:', response.status);
