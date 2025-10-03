@@ -6224,27 +6224,38 @@
                 let schoolsHTML = '<div style="display: grid; gap: 15px;">';
 
                 schools.forEach((school, idx) => {
-                    if (idx === 0) console.log('🔍 Checking school ranking fields:', {
-                        rank: school.rank,
-                        rankStars: school.rankStars,
-                        rankOf: school.rankOf,
-                        numRanked: school.numRanked,
-                        rankStatewide: school.rankStatewide,
-                        schoolYearlyDetails: school.schoolYearlyDetails
-                    });
                     // SchoolDigger API uses different field names
                     const schoolName = school.schoolName || school.name || 'Unknown School';
                     const city = school.city || (school.address ? school.address.city : '');
                     const state = school.state || (school.address ? school.address.state : '');
-                    const level = school.levelCode || school.level || '';
+                    const level = school.schoolLevel || school.levelCode || school.level || '';
                     const address = school.address || {};
                     const street = address.street || school.street || '';
                     const zip = address.zip || school.zip || '';
+                    const isPrivate = school.isPrivate || level.toLowerCase() === 'private';
 
-                    // Get ranking data
-                    const rank = school.rank || school.rankStars;
-                    const rankOf = school.rankOf || school.numRanked;
-                    const rankLevel = school.rankLevel || school.schoolLevel || level;
+                    // Get ranking data from rankHistory array
+                    let rank = null;
+                    let rankOf = null;
+                    let rankStars = null;
+                    let rankYear = null;
+
+                    if (school.rankHistory && Array.isArray(school.rankHistory) && school.rankHistory.length > 0) {
+                        // Get the most recent ranking (first item in array)
+                        const mostRecentRank = school.rankHistory[0];
+                        rank = mostRecentRank.rank;
+                        rankOf = mostRecentRank.rankOf;
+                        rankStars = mostRecentRank.rankStars;
+                        rankYear = mostRecentRank.year;
+
+                        if (idx === 0) {
+                            console.log('✅ Found ranking data:', mostRecentRank);
+                        }
+                    } else if (idx === 0) {
+                        console.log('⚠️ No ranking data available (might be private school or no recent rankings)');
+                    }
+
+                    const rankLevel = level;
 
                     // Calculate percentile and rating
                     let rating = 'N/A';
@@ -6303,7 +6314,7 @@
                                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px;">
                                         <div style="flex: 1;">
                                             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 3px;">
-                                                <i class="fas fa-trophy" style="color: #fbbf24;"></i> State Ranking
+                                                <i class="fas fa-trophy" style="color: #fbbf24;"></i> State Ranking${rankYear ? ` (${rankYear})` : ''}
                                             </div>
                                             <div style="font-weight: 600; color: var(--text-primary); font-size: 15px;">
                                                 #${rank} of ${rankOf.toLocaleString()}
@@ -6320,9 +6331,15 @@
                                     </div>
                                     ${rankLevel ? `
                                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-light);">
-                                            <i class="fas fa-info-circle"></i> Ranking among ${state} ${rankLevel} schools
+                                            <i class="fas fa-info-circle"></i> Ranking among ${state} ${rankLevel} schools${rankStars ? ` • ${rankStars} stars` : ''}
                                         </div>
                                     ` : ''}
+                                </div>
+                            ` : isPrivate ? `
+                                <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 6px; padding: 10px; margin-top: 10px; text-align: center;">
+                                    <div style="font-size: 12px; color: var(--text-muted);">
+                                        <i class="fas fa-info-circle"></i> Private schools are not included in state rankings
+                                    </div>
                                 </div>
                             ` : ''}
                         </div>
