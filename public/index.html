@@ -4956,7 +4956,7 @@
                 <td style="min-width: 100px; text-align: right;">
                     <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'managementFees', ${Number(property.managementFees) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
-                          title="Click to edit">
+                          title="Auto-calculated: 8% of monthly rent (${formatCurrency(Number(property.monthlyRent || 0) * 0.08)}). Click to edit and override.">
                         ${formatCurrency(Number(property.managementFees) || 0)}
                     </span>
                 </td>
@@ -6841,8 +6841,10 @@
             // This is auto-calculated and will update whenever purchase price changes
             const maintenance = purchasePrice > 0 ? (purchasePrice * 0.01) / 12 : 0;
 
-            const managementFees = property.managementFees !== undefined && !isNaN(property.managementFees) ?
-                Number(property.managementFees) : (monthlyRent * 0.08);
+            // Calculate management fees as 8% of monthly rent (default), but respect user edits
+            // If user has set a custom value, use that; otherwise calculate 8% of monthly rent
+            const managementFees = property.managementFees !== undefined && !isNaN(property.managementFees) && property.managementFees !== 0 ?
+                Number(property.managementFees) : (monthlyRent > 0 ? (monthlyRent * 0.08) : 0);
 
             // Store calculated values back to property if not already set (ensure no NaN)
             if (property.propertyTax === undefined || isNaN(property.propertyTax)) property.propertyTax = propertyTax || 0;
@@ -6852,7 +6854,10 @@
             // ALWAYS store the auto-calculated maintenance value
             property.maintenance = maintenance || 0;
 
-            if (property.managementFees === undefined || isNaN(property.managementFees)) property.managementFees = managementFees || 0;
+            // Store management fees if not already set (user can override by editing)
+            if (property.managementFees === undefined || isNaN(property.managementFees) || property.managementFees === 0) {
+                property.managementFees = managementFees || 0;
+            }
 
             const total = propertyTax + insurance + hoa + maintenance + managementFees;
             return isNaN(total) ? 0 : total;
