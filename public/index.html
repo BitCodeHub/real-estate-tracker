@@ -6189,16 +6189,13 @@
 
                 console.log('📍 Searching schools in:', searchQuery);
 
-                const response = await fetch(`https://schooldigger-k-12-school-data-api.p.rapidapi.com/v2.0/autocomplete/schools?q=${encodeURIComponent(searchQuery)}`, {
-                    method: 'GET',
-                    headers: {
-                        'x-rapidapi-key': '177c02e9d2msh8b577fa708d0154p11b581jsn2f13420b2d92',
-                        'x-rapidapi-host': 'schooldigger-k-12-school-data-api.p.rapidapi.com'
-                    }
-                });
+                // Call backend endpoint to fetch schools (to avoid CORS and expose API keys)
+                const response = await fetch(`/api/schools?city=${encodeURIComponent(property.city || '')}&state=${encodeURIComponent(property.state || '')}`);
 
                 if (!response.ok) {
-                    throw new Error(`API returned ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('API error response:', errorText);
+                    throw new Error(`API returned ${response.status}: ${errorText}`);
                 }
 
                 const data = await response.json();

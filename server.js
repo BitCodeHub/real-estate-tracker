@@ -1038,6 +1038,53 @@ Important: Consider current real estate market conditions, typical appreciation 
     }
 });
 
+// SchoolDigger API endpoint
+app.get('/api/schools', async (req, res) => {
+    try {
+        const { city, state } = req.query;
+
+        if (!city || !state) {
+            return res.status(400).json({
+                success: false,
+                error: 'City and state parameters are required'
+            });
+        }
+
+        const searchQuery = `${city} ${state}`;
+        console.log('🏫 Fetching schools for:', searchQuery);
+
+        const response = await axios.get('https://schooldigger-k-12-school-data-api.p.rapidapi.com/v2.0/autocomplete/schools', {
+            params: {
+                q: searchQuery
+            },
+            headers: {
+                'x-rapidapi-key': '177c02e9d2msh8b577fa708d0154p11b581jsn2f13420b2d92',
+                'x-rapidapi-host': 'schooldigger-k-12-school-data-api.p.rapidapi.com'
+            }
+        });
+
+        console.log('✅ Schools API response:', response.status);
+        res.json(response.data);
+
+    } catch (error) {
+        console.error('❌ Error fetching schools:', error.message);
+        if (error.response) {
+            console.error('API error response:', error.response.status, error.response.data);
+            return res.status(error.response.status).json({
+                success: false,
+                error: 'SchoolDigger API error',
+                message: error.response.data?.message || error.message,
+                status: error.response.status
+            });
+        }
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch schools',
+            message: error.message
+        });
+    }
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`Real Estate Tracker server running on port ${PORT}`);
