@@ -1851,7 +1851,7 @@
             </button>
             <h1><i class="fas fa-chart-line"></i> Real Estate Investment Tracker</h1>
             <div style="display: flex; gap: 12px; align-items: center;">
-                <button id="compareBtn" type="button" class="btn" style="background: var(--accent-info); color: white;">
+                <button id="compareBtn" class="btn btn-primary" onclick="openComparisonModal()" disabled style="background: var(--accent-info); opacity: 0.5; cursor: not-allowed;" title="Select at least 2 properties to compare">
                     <i class="fas fa-balance-scale"></i> Compare <span id="compareCount">0</span> Properties
                 </button>
                 <button class="btn btn-primary" onclick="openAddPropertyModal()">
@@ -2288,6 +2288,7 @@
             const checkboxes = document.querySelectorAll('.property-select-checkbox:checked');
             selectedProperties = Array.from(checkboxes).map(cb => parseInt(cb.dataset.propertyIndex));
 
+            const compareBtn = document.getElementById('compareBtn');
             const compareCount = document.getElementById('compareCount');
 
             if (selectedProperties.length > 5) {
@@ -2297,9 +2298,29 @@
                 showNotification('Maximum 5 properties can be compared', 'warning');
             }
 
-            // Always update the count
+            // Update the count
             if (compareCount) {
                 compareCount.textContent = selectedProperties.length;
+            }
+
+            // Enable/disable and style the compare button based on selection
+            if (compareBtn) {
+                if (selectedProperties.length >= 2) {
+                    compareBtn.disabled = false;
+                    compareBtn.style.opacity = '1';
+                    compareBtn.style.cursor = 'pointer';
+                    compareBtn.title = `Compare ${selectedProperties.length} properties`;
+                } else if (selectedProperties.length === 1) {
+                    compareBtn.disabled = true;
+                    compareBtn.style.opacity = '0.5';
+                    compareBtn.style.cursor = 'not-allowed';
+                    compareBtn.title = 'Select at least 2 properties to compare';
+                } else {
+                    compareBtn.disabled = true;
+                    compareBtn.style.opacity = '0.5';
+                    compareBtn.style.cursor = 'not-allowed';
+                    compareBtn.title = 'Select at least 2 properties to compare';
+                }
             }
 
             // Update select all checkbox
@@ -4102,29 +4123,6 @@
         // Setup event listeners
         function setupEventListeners() {
             document.getElementById('addPropertyForm').addEventListener('submit', handleAddProperty);
-
-            // Setup compare button event listener
-            const compareBtn = document.getElementById('compareBtn');
-            if (compareBtn) {
-                console.log('✅ Setting up compare button event listener');
-                console.log('compareBtn element:', compareBtn);
-                console.log('window.openComparisonModal exists:', typeof window.openComparisonModal);
-
-                compareBtn.addEventListener('click', function(event) {
-                    console.log('🔵🔵🔵 Compare button CLICKED!');
-                    console.log('Event:', event);
-                    console.log('selectedProperties:', selectedProperties);
-
-                    if (typeof window.openComparisonModal === 'function') {
-                        console.log('✅ Calling window.openComparisonModal()');
-                        window.openComparisonModal();
-                    } else {
-                        console.error('❌ window.openComparisonModal is not a function!');
-                    }
-                }, true); // Use capture phase
-            } else {
-                console.error('❌ Compare button not found!');
-            }
 
             // Setup select all checkbox event listener
             const selectAllCheckbox = document.getElementById('selectAllProperties');
