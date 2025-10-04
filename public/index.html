@@ -3913,34 +3913,104 @@
                         
                         console.log(`${hasWarning ? '⚠️' : '✅'} Property created: ${property.address} with ID ${createdProperty.id}${hasWarning ? ' (TEMPORARY)' : ''}`);
                     } else if (response.status === 409) {
-                        // Property already exists
+                        // Property already exists - UPDATE it with new data from Excel
                         existingCount++;
                         existingProperties.push(property.address);
-                        console.log(`⚠️ Property already exists: ${property.address}`);
-                        
-                        // Check if property exists in database and load it
-                        if (data.propertyId) {
+                        console.log(`🔄 Property already exists, updating with Excel data: ${property.address}`);
+
+                        // Get the existing property ID from the error response or find it locally
+                        let existingPropertyId = data.propertyId;
+
+                        if (!existingPropertyId) {
+                            // Try to find existing property in local array by address
+                            const localExisting = properties.find(p =>
+                                p.address.toLowerCase().trim() === property.address.toLowerCase().trim()
+                            );
+                            if (localExisting) {
+                                existingPropertyId = localExisting.id;
+                            }
+                        }
+
+                        if (existingPropertyId) {
                             try {
-                                const existingPropResponse = await fetch(`/api/properties/${data.propertyId}`);
+                                // Fetch current property data from database
+                                const existingPropResponse = await fetch(`/api/properties/${existingPropertyId}`);
+
                                 if (existingPropResponse.ok) {
                                     const existingPropData = await existingPropResponse.json();
+
                                     if (existingPropData.success && existingPropData.data) {
-                                        // Add to local array if not already there
-                                        const alreadyInArray = properties.find(p => p.id === data.propertyId);
-                                        if (!alreadyInArray) {
-                                            properties.push(existingPropData.data);
-                                            console.log(`📥 Loaded existing property from database: ${property.address}`);
+                                        const existingProperty = existingPropData.data;
+
+                                        // Merge imported data with existing property
+                                        // Only update fields that have values in the Excel file
+                                        const updatedProperty = { ...existingProperty };
+
+                                        // Update only non-null/non-undefined fields from import
+                                        if (property.purchasePrice !== null && property.purchasePrice !== undefined) updatedProperty.purchasePrice = property.purchasePrice;
+                                        if (property.monthlyRent !== null && property.monthlyRent !== undefined) updatedProperty.monthlyRent = property.monthlyRent;
+                                        if (property.estimatedValue !== null && property.estimatedValue !== undefined) updatedProperty.estimatedValue = property.estimatedValue;
+                                        if (property.rentEstimate !== null && property.rentEstimate !== undefined) updatedProperty.rentEstimate = property.rentEstimate;
+                                        if (property.mortgage !== null && property.mortgage !== undefined) updatedProperty.mortgage = property.mortgage;
+                                        if (property.propertyTax !== null && property.propertyTax !== undefined) updatedProperty.propertyTax = property.propertyTax;
+                                        if (property.insurance !== null && property.insurance !== undefined) updatedProperty.insurance = property.insurance;
+                                        if (property.hoa !== null && property.hoa !== undefined) updatedProperty.hoa = property.hoa;
+                                        if (property.managementFees !== null && property.managementFees !== undefined) updatedProperty.managementFees = property.managementFees;
+                                        if (property.vacancyRate !== null && property.vacancyRate !== undefined) updatedProperty.vacancyRate = property.vacancyRate;
+                                        if (property.downPayment !== null && property.downPayment !== undefined) updatedProperty.downPayment = property.downPayment;
+                                        if (property.beds !== null && property.beds !== undefined) updatedProperty.beds = property.beds;
+                                        if (property.baths !== null && property.baths !== undefined) updatedProperty.baths = property.baths;
+                                        if (property.sqft !== null && property.sqft !== undefined) updatedProperty.sqft = property.sqft;
+                                        if (property.city) updatedProperty.city = property.city;
+                                        if (property.state) updatedProperty.state = property.state;
+                                        if (property.zip) updatedProperty.zip = property.zip;
+                                        if (property.propertyType) updatedProperty.propertyType = property.propertyType;
+
+                                        console.log(`📝 Updating property ${existingPropertyId} with Excel data:`, {
+                                            address: updatedProperty.address,
+                                            updatedFields: Object.keys(property).filter(k => property[k] !== null && property[k] !== undefined)
+                                        });
+
+                                        // Recalculate metrics with updated data
+                                        calculatePropertyMetrics(updatedProperty);
+
+                                        // Send update to database
+                                        const sanitizedUpdate = sanitizePropertyForDatabase(updatedProperty);
+                                        const updateResponse = await fetch(`/api/properties/${existingPropertyId}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(sanitizedUpdate)
+                                        });
+
+                                        const updateData = await updateResponse.json();
+
+                                        if (updateResponse.ok && updateData.success) {
+                                            // Update local array
+                                            const localIndex = properties.findIndex(p => p.id === existingPropertyId);
+                                            if (localIndex !== -1) {
+                                                properties[localIndex] = { ...properties[localIndex], ...updateData.data };
+                                            } else {
+                                                properties.push(updateData.data);
+                                            }
+
+                                            successCount++;
+                                            console.log(`✅ Property updated successfully: ${property.address}`);
+                                        } else {
+                                            console.error(`❌ Failed to update property: ${property.address}`, updateData.error);
+                                            failCount++;
+                                            failedAddresses.push(property.address);
                                         }
                                     }
                                 }
                             } catch (error) {
-                                console.error('Failed to load existing property:', error);
+                                console.error(`❌ Error updating existing property ${property.address}:`, error);
+                                failCount++;
+                                failedAddresses.push(property.address);
                             }
-                        }
-                        
-                        // If it was reactivated, still count as success
-                        if (data.message === 'Property reactivated successfully') {
-                            successCount++;
+                        } else {
+                            console.error(`❌ Could not find existing property ID for: ${property.address}`);
+                            failCount++;
+                            failedAddresses.push(property.address);
                         }
                     } else {
                         // Other error - log detailed information
@@ -4016,10 +4086,16 @@
             // Show results
             let message = '';
             if (successCount > 0) {
-                message = `Successfully imported ${successCount} properties`;
-            }
-            if (existingCount > 0) {
-                message += (message ? '. ' : '') + `${existingCount} properties already exist`;
+                const newCount = successCount - existingCount;
+                if (newCount > 0 && existingCount > 0) {
+                    message = `Successfully imported ${newCount} new properties and updated ${existingCount} existing properties`;
+                } else if (newCount > 0) {
+                    message = `Successfully imported ${newCount} properties`;
+                } else if (existingCount > 0) {
+                    message = `Successfully updated ${existingCount} existing properties`;
+                }
+            } else if (existingCount > 0) {
+                message = `Updated ${existingCount} existing properties`;
             }
             if (failCount > 0) {
                 message += (message ? '. ' : '') + `Failed to import ${failCount} properties`;
