@@ -2012,7 +2012,7 @@
                         </th>
                         <th>
                             Vacancy Rate
-                            <span class="info-icon" data-tooltip="Expected vacancy percentage. Default: 7% (base), Stress: 9-10%, Low-risk: 5-6%. Reduces effective rental income.">
+                            <span class="info-icon" data-tooltip="Expected vacancy percentage. Auto-calculated: 9% for properties with rental income. Editable. Reduces effective rental income.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
@@ -2636,7 +2636,7 @@
                         hoa: Number(prop.hoa) || 0,
                         maintenance: Number(prop.maintenance) || 0,
                         managementFees: Number(prop.managementFees) || 0,
-                        vacancyRate: Number(prop.vacancyRate) || 7,
+                        vacancyRate: Number(prop.vacancyRate) || 9,
                         beds: prop.beds,
                         baths: prop.baths,
                         sqft: prop.sqft,
@@ -2802,12 +2802,15 @@
                         // Update the property
                         propertyToUpdate[field] = newValue;
 
-                        // If editing management fees or property tax, mark as custom (user-edited)
+                        // If editing management fees, property tax, or vacancy rate, mark as custom (user-edited)
                         if (field === 'managementFees') {
                             propertyToUpdate._managementFeesCustom = true;
                         }
                         if (field === 'propertyTax') {
                             propertyToUpdate._propertyTaxCustom = true;
+                        }
+                        if (field === 'vacancyRate') {
+                            propertyToUpdate._vacancyRateCustom = true;
                         }
 
                         // Recalculate metrics
@@ -3821,7 +3824,7 @@
                         hoa: importedProperty.hoa || null,
                         maintenance: importedProperty.maintenance || null,
                         managementFees: importedProperty.managementFees || null,
-                        vacancyRate: importedProperty.vacancyRate || 7,
+                        vacancyRate: importedProperty.vacancyRate || 9,
                         downPayment: importedProperty.downPayment || null,
                         estimatedValue: importedProperty.estimatedValue || null,
                         rentEstimate: importedProperty.rentEstimate || null,
@@ -4368,7 +4371,7 @@
                                 insurance: p.insurance || 0,
                                 hoa: p.hoa || 0,
                                 maintenance: p.maintenance || 0,
-                                vacancyRate: p.vacancyRate || p.vacancy_rate || 7,
+                                vacancyRate: p.vacancyRate || p.vacancy_rate || 9,
                                 cashFlow: p.cashFlow || p.cash_flow,
                                 monthlyCashFlow: p.cashFlow || p.cash_flow,
                                 cocReturn: p.cocReturn || p.coc_return,
@@ -4548,6 +4551,7 @@
                 '_isTemporary': null,
                 '_managementFeesCustom': null, // UI flag to track if user manually edited management fees
                 '_propertyTaxCustom': null, // UI flag to track if user manually edited property tax
+                '_vacancyRateCustom': null, // UI flag to track if user manually edited vacancy rate
                 'created_at': null, // Don't send this, let database handle it
                 'updated_at': null  // Don't send this, let database handle it
             };
@@ -5049,10 +5053,10 @@
                     </span>
                 </td>
                 <td style="min-width: 80px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'vacancyRate', ${property.vacancyRate !== undefined ? Number(property.vacancyRate) : 7})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'vacancyRate', ${property.vacancyRate !== undefined ? Number(property.vacancyRate) : 9})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
-                          title="Click to edit">
-                        ${Number(property.vacancyRate !== undefined ? property.vacancyRate : 7).toFixed(1)}%
+                          title="Auto-calculated: 9% vacancy rate for properties with rental income. Click to edit and override.">
+                        ${Number(property.vacancyRate !== undefined ? property.vacancyRate : 9).toFixed(1)}%
                     </span>
                 </td>
                 <td class="${cashFlowClass}" style="min-width: 100px; text-align: right; font-weight: 500;">
@@ -6867,14 +6871,23 @@
         // Assumptions:
         // - Mortgage: 30-year fixed at 6.5% interest rate
         // - Down Payment: 20% of purchase price (or custom)
-        // - Vacancy Rate: 7% (or custom)
+        // - Vacancy Rate: 9% when rental income exists (or custom)
         function calculatePropertyMetrics(property) {
             const purchasePrice = Number(property.purchasePrice || property.estimatedValue || 0) || 0;
             const monthlyRent = Number(property.monthlyRent || property.rentEstimate || 0) || 0;
             const downPayment = Number(property.downPayment || (purchasePrice * 0.2)) || 0;
             const loanAmount = Math.max(0, purchasePrice - downPayment);
-            const vacancyRate = property.vacancyRate !== undefined && !isNaN(property.vacancyRate) ?
-                Number(property.vacancyRate) : 7.00;
+
+            // Vacancy Rate: ALWAYS calculate as 9% of rental income UNLESS user has manually edited it
+            // Uses _vacancyRateCustom flag to track if user has set a custom value
+            let vacancyRate;
+            if (property._vacancyRateCustom && property.vacancyRate !== undefined && !isNaN(property.vacancyRate)) {
+                // User has manually set a custom value, use it
+                vacancyRate = Number(property.vacancyRate);
+            } else {
+                // Auto-calculate as 9% when there's rental income
+                vacancyRate = monthlyRent > 0 ? 9.00 : 0;
+            }
 
             // Calculate or use stored mortgage
             const monthlyMortgage = property.mortgage !== undefined && !isNaN(property.mortgage) ?
@@ -6884,9 +6897,9 @@
             if (property.mortgage === undefined || isNaN(property.mortgage)) {
                 property.mortgage = monthlyMortgage || 0;
             }
-            if (property.vacancyRate === undefined || isNaN(property.vacancyRate)) {
-                property.vacancyRate = 7.00;
-            }
+
+            // ALWAYS update vacancy rate (will be auto-calculated unless user has custom value)
+            property.vacancyRate = vacancyRate;
 
             const totalExpenses = calculateTotalExpenses(property);
             const effectiveRent = monthlyRent * (1 - vacancyRate / 100);
