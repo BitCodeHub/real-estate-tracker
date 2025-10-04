@@ -3320,6 +3320,11 @@
 
         // Parse CSV file
         // Smart column mapping function
+        // Supported Excel/CSV columns include:
+        // - Purchase Price, Est. Value, Monthly Rent, Rent Est.
+        // - Mortgage, Property Tax, Insurance, HOA
+        // - Management Fee, Vacancy Rate, Maintenance
+        // - Address, City, State, ZIP, Beds, Baths, Sqft, Year Built, Property Type
         function mapColumnName(columnName) {
             const normalized = columnName.toLowerCase().trim().replace(/[_\s-]+/g, '');
 
@@ -4429,6 +4434,10 @@
                 'propertyTax': 'property_tax',
                 'managementFees': 'management_fees',
                 'vacancyRate': 'vacancy_rate',
+                // Expense fields (already in database format, explicit for clarity)
+                'mortgage': 'mortgage',
+                'insurance': 'insurance',
+                'hoa': 'hoa',
                 'cashFlow': null, // This is a calculated field, don't send it
                 'monthlyCashFlow': null, // This is a calculated field, don't send it
                 'annualCashFlow': null, // This is a calculated field, don't send it
