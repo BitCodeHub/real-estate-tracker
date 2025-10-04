@@ -453,7 +453,7 @@ app.get('/api/properties', async (req, res) => {
                 hoa: prop.hoa,
                 maintenance: prop.maintenance,
                 managementFees: prop.management_fees,
-                vacancyRate: prop.vacancy_rate,
+                vacancy: prop.vacancy,
                 cashFlow: prop.cash_flow,
                 cocReturn: prop.coc_return,
                 capRate: prop.cap_rate,

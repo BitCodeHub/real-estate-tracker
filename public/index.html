@@ -2011,14 +2011,14 @@
                             </span>
                         </th>
                         <th>
-                            Vacancy Rate
-                            <span class="info-icon" data-tooltip="Expected vacancy percentage. Auto-calculated: 9% for properties with rental income. Editable. Reduces effective rental income.">
+                            Vacancy
+                            <span class="info-icon" data-tooltip="Monthly vacancy cost. Auto-calculated: 9% of monthly rent. Editable. Accounts for expected rental income loss.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
                         <th>
                             Cash Flow
-                            <span class="info-icon" data-tooltip="Monthly profit after all expenses. Formula: (Monthly Rent × (1 - Vacancy Rate)) - Mortgage - Property Tax - Insurance - HOA - Maintenance - Management Fee.">
+                            <span class="info-icon" data-tooltip="Monthly profit after all expenses. Formula: Monthly Rent - Mortgage - Property Tax - Insurance - HOA - Maintenance - Management Fee - Vacancy.">
                                 <i class="fas fa-info-circle"></i>
                             </span>
                         </th>
@@ -2526,7 +2526,7 @@
                 { label: 'HOA', key: 'hoa', format: 'currency' },
                 { label: 'Maintenance', key: 'maintenance', format: 'currency' },
                 { label: 'Management Fee', key: 'managementFees', format: 'currency' },
-                { label: 'Vacancy Rate', key: 'vacancyRate', format: 'percentage' },
+                { label: 'Vacancy', key: 'vacancy', format: 'currency' },
                 { label: 'Beds/Baths', key: 'beds', format: 'bedsBaths' },
                 { label: 'Square Feet', key: 'sqft', format: 'number' },
                 { label: 'Property Type', key: 'propertyType', format: 'text' }
@@ -2636,7 +2636,7 @@
                         hoa: Number(prop.hoa) || 0,
                         maintenance: Number(prop.maintenance) || 0,
                         managementFees: Number(prop.managementFees) || 0,
-                        vacancyRate: Number(prop.vacancyRate) || 9,
+                        vacancy: Number(prop.vacancy) || 0,
                         beds: prop.beds,
                         baths: prop.baths,
                         sqft: prop.sqft,
@@ -2762,9 +2762,9 @@
             input.min = '0';
 
             // Set appropriate step based on field type
-            if (field === 'vacancyRate') {
-                input.step = '0.1';
-                input.max = '100';
+            if (field === 'vacancy') {
+                input.step = '1';
+                input.min = '0';
             } else if (field === 'monthlyRent') {
                 input.step = '50';
             } else if (field === 'downPayment' || field === 'purchasePrice') {
@@ -2802,15 +2802,15 @@
                         // Update the property
                         propertyToUpdate[field] = newValue;
 
-                        // If editing management fees, property tax, or vacancy rate, mark as custom (user-edited)
+                        // If editing management fees, property tax, or vacancy, mark as custom (user-edited)
                         if (field === 'managementFees') {
                             propertyToUpdate._managementFeesCustom = true;
                         }
                         if (field === 'propertyTax') {
                             propertyToUpdate._propertyTaxCustom = true;
                         }
-                        if (field === 'vacancyRate') {
-                            propertyToUpdate._vacancyRateCustom = true;
+                        if (field === 'vacancy') {
+                            propertyToUpdate._vacancyCustom = true;
                         }
 
                         // Recalculate metrics
@@ -2837,9 +2837,9 @@
                                          field === 'maintenance' ? 'Maintenance' :
                                          field === 'managementFees' ? 'Management Fee' :
                                          field === 'mortgage' ? 'Mortgage' :
-                                         field === 'vacancyRate' ? 'Vacancy Rate' : field;
+                                         field === 'vacancy' ? 'Vacancy' : field;
 
-                        const displayValue = field === 'vacancyRate' ? `${newValue.toFixed(1)}%` : formatCurrency(newValue);
+                        const displayValue = formatCurrency(newValue);
                         showNotification(`${fieldName} updated to ${displayValue}`, 'success');
                     }
                 } else {
@@ -3416,8 +3416,8 @@
                 'pmfee': 'managementFees',
                 'propertymanagement': 'managementFees',
 
-                'vacancyrate': 'vacancyRate',
-                'vacancy': 'vacancyRate',
+                'vacancyrate': 'vacancy',
+                'vacancy': 'vacancy',
 
                 // Financial - Returns
                 'cashflow': 'monthlyCashFlow',
@@ -3517,7 +3517,7 @@
                                     // Check if it's a numeric field
                                     const numericFields = ['purchasePrice', 'estimatedValue', 'monthlyRent', 'rentEstimate',
                                         'mortgage', 'propertyTax', 'insurance', 'hoa', 'maintenance', 'managementFees',
-                                        'vacancyRate', 'monthlyCashFlow', 'annualCashFlow', 'cashOnCashReturn',
+                                        'vacancy', 'monthlyCashFlow', 'annualCashFlow', 'cashOnCashReturn',
                                         'capRate', 'downPayment', 'beds', 'baths', 'sqft'];
 
                                     if (numericFields.includes(fieldName)) {
@@ -3602,7 +3602,7 @@
                                     // Check if it's a numeric field
                                     const numericFields = ['purchasePrice', 'estimatedValue', 'monthlyRent', 'rentEstimate',
                                         'mortgage', 'propertyTax', 'insurance', 'hoa', 'maintenance', 'managementFees',
-                                        'vacancyRate', 'monthlyCashFlow', 'annualCashFlow', 'cashOnCashReturn',
+                                        'vacancy', 'monthlyCashFlow', 'annualCashFlow', 'cashOnCashReturn',
                                         'capRate', 'downPayment', 'beds', 'baths', 'sqft'];
 
                                     if (numericFields.includes(fieldName)) {
@@ -3824,7 +3824,7 @@
                         hoa: importedProperty.hoa || null,
                         maintenance: importedProperty.maintenance || null,
                         managementFees: importedProperty.managementFees || null,
-                        vacancyRate: importedProperty.vacancyRate || 9,
+                        vacancy: importedProperty.vacancy || null,
                         downPayment: importedProperty.downPayment || null,
                         estimatedValue: importedProperty.estimatedValue || null,
                         rentEstimate: importedProperty.rentEstimate || null,
@@ -3962,7 +3962,7 @@
                                         if (property.insurance !== null && property.insurance !== undefined) updatedProperty.insurance = property.insurance;
                                         if (property.hoa !== null && property.hoa !== undefined) updatedProperty.hoa = property.hoa;
                                         if (property.managementFees !== null && property.managementFees !== undefined) updatedProperty.managementFees = property.managementFees;
-                                        if (property.vacancyRate !== null && property.vacancyRate !== undefined) updatedProperty.vacancyRate = property.vacancyRate;
+                                        if (property.vacancy !== null && property.vacancy !== undefined) updatedProperty.vacancy = property.vacancy;
                                         if (property.downPayment !== null && property.downPayment !== undefined) updatedProperty.downPayment = property.downPayment;
                                         if (property.beds !== null && property.beds !== undefined) updatedProperty.beds = property.beds;
                                         if (property.baths !== null && property.baths !== undefined) updatedProperty.baths = property.baths;
@@ -4371,7 +4371,7 @@
                                 insurance: p.insurance || 0,
                                 hoa: p.hoa || 0,
                                 maintenance: p.maintenance || 0,
-                                vacancyRate: p.vacancyRate || p.vacancy_rate || 9,
+                                vacancy: p.vacancy || 0,
                                 cashFlow: p.cashFlow || p.cash_flow,
                                 monthlyCashFlow: p.cashFlow || p.cash_flow,
                                 cocReturn: p.cocReturn || p.coc_return,
@@ -4515,7 +4515,7 @@
                 'monthlyRent': 'monthly_rent',
                 'propertyTax': 'property_tax',
                 'managementFees': 'management_fees',
-                'vacancyRate': 'vacancy_rate',
+                'vacancy': 'vacancy',
                 // Expense fields (already in database format, explicit for clarity)
                 'mortgage': 'mortgage',
                 'insurance': 'insurance',
@@ -4551,7 +4551,9 @@
                 '_isTemporary': null,
                 '_managementFeesCustom': null, // UI flag to track if user manually edited management fees
                 '_propertyTaxCustom': null, // UI flag to track if user manually edited property tax
-                '_vacancyRateCustom': null, // UI flag to track if user manually edited vacancy rate
+                '_vacancyCustom': null, // UI flag to track if user manually edited vacancy
+                'vacancyRate': null, // Legacy field, replaced by vacancy dollar amount
+                '_vacancyRateCustom': null, // Legacy flag
                 'created_at': null, // Don't send this, let database handle it
                 'updated_at': null  // Don't send this, let database handle it
             };
@@ -5053,10 +5055,10 @@
                     </span>
                 </td>
                 <td style="min-width: 80px; text-align: right;">
-                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'vacancyRate', ${property.vacancyRate !== undefined ? Number(property.vacancyRate) : 9})"
+                    <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'vacancy', ${property.vacancy !== undefined ? Number(property.vacancy) : 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
-                          title="Auto-calculated: 9% vacancy rate for properties with rental income. Click to edit and override.">
-                        ${Number(property.vacancyRate !== undefined ? property.vacancyRate : 9).toFixed(1)}%
+                          title="Auto-calculated: 9% of monthly rent (${formatCurrency(Number(property.monthlyRent || 0) * 0.09)}). Click to edit and override.">
+                        ${formatCurrency(Number(property.vacancy) || 0)}
                     </span>
                 </td>
                 <td class="${cashFlowClass}" style="min-width: 100px; text-align: right; font-weight: 500;">
@@ -6871,22 +6873,22 @@
         // Assumptions:
         // - Mortgage: 30-year fixed at 6.5% interest rate
         // - Down Payment: 20% of purchase price (or custom)
-        // - Vacancy Rate: 9% when rental income exists (or custom)
+        // - Vacancy: 9% of monthly rent (or custom)
         function calculatePropertyMetrics(property) {
             const purchasePrice = Number(property.purchasePrice || property.estimatedValue || 0) || 0;
             const monthlyRent = Number(property.monthlyRent || property.rentEstimate || 0) || 0;
             const downPayment = Number(property.downPayment || (purchasePrice * 0.2)) || 0;
             const loanAmount = Math.max(0, purchasePrice - downPayment);
 
-            // Vacancy Rate: ALWAYS calculate as 9% of rental income UNLESS user has manually edited it
-            // Uses _vacancyRateCustom flag to track if user has set a custom value
-            let vacancyRate;
-            if (property._vacancyRateCustom && property.vacancyRate !== undefined && !isNaN(property.vacancyRate)) {
+            // Vacancy: ALWAYS calculate as 9% of monthly rent UNLESS user has manually edited it
+            // Uses _vacancyCustom flag to track if user has set a custom value
+            let vacancy;
+            if (property._vacancyCustom && property.vacancy !== undefined && !isNaN(property.vacancy)) {
                 // User has manually set a custom value, use it
-                vacancyRate = Number(property.vacancyRate);
+                vacancy = Number(property.vacancy);
             } else {
-                // Auto-calculate as 9% when there's rental income
-                vacancyRate = monthlyRent > 0 ? 9.00 : 0;
+                // Auto-calculate as 9% of monthly rent
+                vacancy = monthlyRent > 0 ? (monthlyRent * 0.09) : 0;
             }
 
             // Calculate or use stored mortgage
@@ -6898,17 +6900,18 @@
                 property.mortgage = monthlyMortgage || 0;
             }
 
-            // ALWAYS update vacancy rate (will be auto-calculated unless user has custom value)
-            property.vacancyRate = vacancyRate;
+            // ALWAYS update vacancy (will be auto-calculated unless user has custom value)
+            property.vacancy = vacancy;
 
             const totalExpenses = calculateTotalExpenses(property);
-            const effectiveRent = monthlyRent * (1 - vacancyRate / 100);
+            const effectiveRent = monthlyRent; // No vacancy rate reduction since vacancy is now an expense
 
             property.monthlyCashFlow = effectiveRent - monthlyMortgage - totalExpenses;
             property.annualCashFlow = property.monthlyCashFlow * 12;
             property.cashOnCashReturn = downPayment > 0 ? (property.annualCashFlow / downPayment) * 100 : 0;
 
-            const noi = (monthlyRent * 12 * (1 - vacancyRate / 100)) - (totalExpenses * 12);
+            // NOI = Annual Gross Income - Operating Expenses (excluding mortgage, since vacancy is now in totalExpenses)
+            const noi = (monthlyRent * 12) - (totalExpenses * 12);
             property.capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
 
             // Ensure no NaN values
@@ -6974,7 +6977,10 @@
             // ALWAYS update management fees (will be auto-calculated unless user has custom value)
             property.managementFees = managementFees || 0;
 
-            const total = propertyTax + insurance + hoa + maintenance + managementFees;
+            // Get vacancy from property (calculated in calculatePropertyMetrics)
+            const vacancy = Number(property.vacancy) || 0;
+
+            const total = propertyTax + insurance + hoa + maintenance + managementFees + vacancy;
             return isNaN(total) ? 0 : total;
         }
 
