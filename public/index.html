@@ -6920,6 +6920,9 @@
             // ALWAYS update vacancy (will be auto-calculated unless user has custom value)
             property.vacancy = vacancy;
 
+            // ALWAYS update down payment (will be auto-calculated unless user has custom value)
+            property.downPayment = downPayment || 0;
+
             const totalExpenses = calculateTotalExpenses(property);
             const effectiveRent = monthlyRent; // No vacancy rate reduction since vacancy is now an expense
 
@@ -6998,9 +7001,6 @@
 
             // ALWAYS update insurance (will be auto-calculated unless user has custom value)
             property.insurance = insurance || 0;
-
-            // ALWAYS update down payment (will be auto-calculated unless user has custom value)
-            property.downPayment = downPayment || 0;
 
             // ALWAYS store the auto-calculated maintenance value
             property.maintenance = maintenance || 0;
