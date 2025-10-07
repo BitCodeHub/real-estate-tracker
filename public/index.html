@@ -2802,12 +2802,15 @@
                         // Update the property
                         propertyToUpdate[field] = newValue;
 
-                        // If editing management fees, property tax, or vacancy, mark as custom (user-edited)
+                        // If editing management fees, property tax, insurance, or vacancy, mark as custom (user-edited)
                         if (field === 'managementFees') {
                             propertyToUpdate._managementFeesCustom = true;
                         }
                         if (field === 'propertyTax') {
                             propertyToUpdate._propertyTaxCustom = true;
+                        }
+                        if (field === 'insurance') {
+                            propertyToUpdate._insuranceCustom = true;
                         }
                         if (field === 'vacancy') {
                             propertyToUpdate._vacancyCustom = true;
@@ -5030,7 +5033,7 @@
                 <td style="min-width: 100px; text-align: right;">
                     <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'insurance', ${Number(property.insurance) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
-                          title="Click to edit">
+                          title="Auto-calculated: 0.4% of purchase price annually (${formatCurrency(Number(property.purchasePrice || property.estimatedValue || 0) * 0.004)} per year). Click to edit and override.">
                         ${formatCurrency(Number(property.insurance) || 0)}
                     </span>
                 </td>
@@ -6944,8 +6947,17 @@
                 propertyTax = purchasePrice > 0 ? (purchasePrice * 0.012) / 12 : 0;
             }
 
-            const insurance = property.insurance !== undefined && !isNaN(property.insurance) ?
-                Number(property.insurance) : (purchasePrice * 0.004) / 12;
+            // Insurance: ALWAYS calculate as 0.4% of purchase price annually UNLESS user has manually edited it
+            // Uses _insuranceCustom flag to track if user has set a custom value
+            let insurance;
+            if (property._insuranceCustom && property.insurance !== undefined && !isNaN(property.insurance)) {
+                // User has manually set a custom value, use it
+                insurance = Number(property.insurance);
+            } else {
+                // Auto-calculate as 0.4% of purchase price annually (monthly = annual / 12)
+                insurance = purchasePrice > 0 ? (purchasePrice * 0.004) / 12 : 0;
+            }
+
             const hoa = property.hoa !== undefined && !isNaN(property.hoa) ?
                 Number(property.hoa) : 0;
 
@@ -6965,11 +6977,13 @@
             }
 
             // Store calculated values back to property if not already set (ensure no NaN)
-            if (property.insurance === undefined || isNaN(property.insurance)) property.insurance = insurance || 0;
             if (property.hoa === undefined || isNaN(property.hoa)) property.hoa = hoa || 0;
 
             // ALWAYS update property tax (will be auto-calculated unless user has custom value)
             property.propertyTax = propertyTax || 0;
+
+            // ALWAYS update insurance (will be auto-calculated unless user has custom value)
+            property.insurance = insurance || 0;
 
             // ALWAYS store the auto-calculated maintenance value
             property.maintenance = maintenance || 0;
