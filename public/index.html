@@ -2802,7 +2802,7 @@
                         // Update the property
                         propertyToUpdate[field] = newValue;
 
-                        // If editing management fees, property tax, insurance, or vacancy, mark as custom (user-edited)
+                        // If editing management fees, property tax, insurance, down payment, or vacancy, mark as custom (user-edited)
                         if (field === 'managementFees') {
                             propertyToUpdate._managementFeesCustom = true;
                         }
@@ -2811,6 +2811,9 @@
                         }
                         if (field === 'insurance') {
                             propertyToUpdate._insuranceCustom = true;
+                        }
+                        if (field === 'downPayment') {
+                            propertyToUpdate._downPaymentCustom = true;
                         }
                         if (field === 'vacancy') {
                             propertyToUpdate._vacancyCustom = true;
@@ -5079,7 +5082,7 @@
                 <td style="min-width: 120px; text-align: right;">
                     <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'downPayment', ${downPayment})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
-                          title="Click to edit">
+                          title="Auto-calculated: 20% of purchase price (${formatCurrency(Number(property.purchasePrice || property.estimatedValue || 0) * 0.2)}). Click to edit and override.">
                         ${formatCurrency(downPayment)}
                     </span>
                 </td>
@@ -5257,7 +5260,7 @@
                             <div class="metric-value editable-field"
                                  onclick="event.stopPropagation(); editField(${propertyIndex}, 'downPayment', ${downPayment}, true)"
                                  style="cursor: pointer; border-bottom: 2px dashed var(--border-light);"
-                                 title="Click to edit">
+                                 title="Auto-calculated: 20% of purchase price. Click to edit and override.">
                                 ${formatCurrency(downPayment)}
                             </div>
                         </div>
@@ -6880,7 +6883,18 @@
         function calculatePropertyMetrics(property) {
             const purchasePrice = Number(property.purchasePrice || property.estimatedValue || 0) || 0;
             const monthlyRent = Number(property.monthlyRent || property.rentEstimate || 0) || 0;
-            const downPayment = Number(property.downPayment || (purchasePrice * 0.2)) || 0;
+
+            // Down Payment: ALWAYS calculate as 20% of purchase price UNLESS user has manually edited it
+            // Uses _downPaymentCustom flag to track if user has set a custom value
+            let downPayment;
+            if (property._downPaymentCustom && property.downPayment !== undefined && !isNaN(property.downPayment)) {
+                // User has manually set a custom value, use it
+                downPayment = Number(property.downPayment);
+            } else {
+                // Auto-calculate as 20% of purchase price
+                downPayment = purchasePrice > 0 ? (purchasePrice * 0.2) : 0;
+            }
+
             const loanAmount = Math.max(0, purchasePrice - downPayment);
 
             // Vacancy: ALWAYS calculate as 9% of monthly rent UNLESS user has manually edited it
@@ -6984,6 +6998,9 @@
 
             // ALWAYS update insurance (will be auto-calculated unless user has custom value)
             property.insurance = insurance || 0;
+
+            // ALWAYS update down payment (will be auto-calculated unless user has custom value)
+            property.downPayment = downPayment || 0;
 
             // ALWAYS store the auto-calculated maintenance value
             property.maintenance = maintenance || 0;
