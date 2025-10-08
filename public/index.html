@@ -5108,8 +5108,12 @@
                 </td>
             `;
 
-                // Apply row color based on cash flow (must be done after innerHTML is set)
+                // Apply row color based on cash flow to all td elements (must be done after innerHTML is set)
                 row.style.setProperty('color', rowColor, 'important');
+                const cells = row.querySelectorAll('td');
+                cells.forEach(cell => {
+                    cell.style.setProperty('color', rowColor, 'important');
+                });
 
                 console.log('✅ Row created successfully for:', property.address);
                 return row;
