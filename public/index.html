@@ -4961,9 +4961,8 @@
                 const cashFlowClass = (property.monthlyCashFlow || 0) >= 0 ? 'positive' : 'negative';
                 const annualCashFlowClass = (property.annualCashFlow || 0) >= 0 ? 'positive' : 'negative';
 
-                // Set row text color based on cash flow
+                // Determine row color based on cash flow
                 const rowColor = (property.monthlyCashFlow || 0) >= 0 ? '#10b981' : '#ef4444'; // green for positive, red for negative
-                row.style.color = rowColor;
 
                 // Calculate DSCR (Debt Service Coverage Ratio)
                 const purchasePrice = Number(property.purchasePrice || property.estimatedValue || 0);
@@ -5108,6 +5107,9 @@
                     </div>
                 </td>
             `;
+
+                // Apply row color based on cash flow (must be done after innerHTML is set)
+                row.style.setProperty('color', rowColor, 'important');
 
                 console.log('✅ Row created successfully for:', property.address);
                 return row;
