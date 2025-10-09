@@ -2946,17 +2946,21 @@
         
         // Create mobile property card HTML
         function createMobilePropertyCard(property, index) {
+            // 🔴 Apply strikethrough styling if property is sold
+            const soldStyle = property.status === 'sold' ?
+                'text-decoration: line-through !important; opacity: 0.6 !important;' : '';
+
             const cardHtml = `
-                <div class="mobile-property-card" onclick="showPropertyDetails(${index})">
-                    <div class="mobile-card-header">
+                <div class="mobile-property-card" onclick="showPropertyDetails(${index})" style="${soldStyle}">
+                    <div class="mobile-card-header" style="${soldStyle}">
                         <div>
-                            <div class="mobile-card-address">${property.address}</div>
-                            <div class="mobile-card-location">${property.city}, ${property.state} ${property.zip}</div>
+                            <div class="mobile-card-address" style="${soldStyle}">${property.address}${property.status === 'sold' ? ' <span style="color: var(--accent-danger); font-weight: bold;">SOLD</span>' : ''}</div>
+                            <div class="mobile-card-location" style="${soldStyle}">${property.city}, ${property.state} ${property.zip}</div>
                         </div>
                         ${property.realTimeData ? '<span style="color: var(--accent-success);"><i class="fas fa-check-circle"></i></span>' : ''}
                     </div>
-                    
-                    <div class="mobile-card-stats">
+
+                    <div class="mobile-card-stats" style="${soldStyle}">
                         <div class="mobile-card-stat">
                             <div class="mobile-card-stat-label">Purchase Price</div>
                             <div class="mobile-card-stat-value">${formatCurrency(property.purchasePrice || 0)}</div>
@@ -2974,7 +2978,7 @@
                             <div class="mobile-card-stat-value ${property.cocReturn >= 8 ? 'positive' : 'warning'}">${property.cocReturn ? property.cocReturn.toFixed(1) + '%' : 'N/A'}</div>
                         </div>
                     </div>
-                    
+
                     <div class="mobile-card-actions">
                         <button class="mobile-card-btn primary" onclick="event.stopPropagation(); showPropertyDetails(${index})">
                             <i class="fas fa-eye"></i> Details
@@ -5115,6 +5119,16 @@
                     cell.style.setProperty('color', rowColor, 'important');
                 });
 
+                // 🔴 Apply strikethrough styling if property is sold
+                if (property.status === 'sold') {
+                    console.log('🔴 Applying sold styling (strikethrough) to property:', property.address);
+                    row.style.setProperty('text-decoration', 'line-through', 'important');
+                    row.style.setProperty('opacity', '0.6', 'important');
+                    cells.forEach(cell => {
+                        cell.style.setProperty('text-decoration', 'line-through', 'important');
+                    });
+                }
+
                 console.log('✅ Row created successfully for:', property.address);
                 return row;
             } catch (error) {
@@ -5672,12 +5686,42 @@
                     
                     // Recalculate financial metrics
                     calculatePropertyMetrics(property);
-                    
+
+                    // 🏷️ CHECK IF PROPERTY HAS BEEN SOLD
+                    // A property is considered sold if:
+                    // 1. lastSaleDate exists and is recent (within last 365 days)
+                    // 2. lastSalePrice is significantly different from listing/purchase price
+                    if (property.lastSaleDate) {
+                        const saleDate = new Date(property.lastSaleDate);
+                        const daysSinceSale = (Date.now() - saleDate.getTime()) / (1000 * 60 * 60 * 24);
+
+                        console.log('🏷️ Checking sale status:', {
+                            lastSaleDate: property.lastSaleDate,
+                            daysSinceSale: Math.round(daysSinceSale),
+                            lastSalePrice: property.lastSalePrice
+                        });
+
+                        // Mark as sold if sale was within last 365 days
+                        if (daysSinceSale <= 365 && daysSinceSale >= 0) {
+                            console.log('🔴 PROPERTY SOLD RECENTLY - Marking as sold');
+                            property.status = 'sold';
+                            property.soldDate = property.lastSaleDate;
+                            property.soldPrice = property.lastSalePrice;
+                        } else if (property.status === 'sold' && daysSinceSale > 365) {
+                            // Reset sold status if sale was over a year ago
+                            console.log('✅ Sale was over a year ago - Resetting sold status');
+                            property.status = 'available';
+                            delete property.soldDate;
+                            delete property.soldPrice;
+                        }
+                    }
+
                     // Log what changed
                     console.log('📈 Property updated:', {
                         rentChange: `${originalRent} → ${property.monthlyRent || property.rentEstimate}`,
                         valueChange: `${originalValue} → ${property.currentValue || property.estimatedValue}`,
-                        hasMarketStats: !!property.marketStats
+                        hasMarketStats: !!property.marketStats,
+                        soldStatus: property.status === 'sold' ? `SOLD on ${property.soldDate} for ${formatCurrency(property.soldPrice)}` : 'Not sold'
                     });
                     
                     // IMPORTANT: Force save to database with updated RentCast data
