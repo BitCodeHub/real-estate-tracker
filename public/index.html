@@ -2802,7 +2802,7 @@
                         // Update the property
                         propertyToUpdate[field] = newValue;
 
-                        // If editing management fees, property tax, insurance, down payment, or vacancy, mark as custom (user-edited)
+                        // If editing management fees, property tax, insurance, down payment, vacancy, or mortgage, mark as custom (user-edited)
                         if (field === 'managementFees') {
                             propertyToUpdate._managementFeesCustom = true;
                         }
@@ -2817,6 +2817,9 @@
                         }
                         if (field === 'vacancy') {
                             propertyToUpdate._vacancyCustom = true;
+                        }
+                        if (field === 'mortgage') {
+                            propertyToUpdate._mortgageCustom = true;
                         }
 
                         // Recalculate metrics
@@ -5029,7 +5032,7 @@
                 <td style="min-width: 100px; text-align: right;">
                     <span class="editable-field" onclick="event.stopPropagation(); editField(${index}, 'mortgage', ${Number(property.mortgage) || 0})"
                           style="cursor: pointer; border-bottom: 1px dashed var(--border-light); padding: 2px 4px;"
-                          title="Click to edit">
+                          title="Auto-calculated: Loan amount (${formatCurrency(Number(property.purchasePrice || property.estimatedValue || 0) - downPayment)}) at 6.5% interest for 30 years = ${formatCurrency(calculateMortgagePayment(Math.max(0, Number(property.purchasePrice || property.estimatedValue || 0) - downPayment), 0.065, 30))} per month. Click to edit and override.">
                         ${formatCurrency(Number(property.mortgage) || 0)}
                     </span>
                 </td>
@@ -6962,14 +6965,19 @@
                 vacancy = monthlyRent > 0 ? (monthlyRent * 0.09) : 0;
             }
 
-            // Calculate or use stored mortgage
-            const monthlyMortgage = property.mortgage !== undefined && !isNaN(property.mortgage) ?
-                Number(property.mortgage) : calculateMortgagePayment(loanAmount, 0.065, 30);
-
-            // Store calculated mortgage back to property if not already set (ensure no NaN)
-            if (property.mortgage === undefined || isNaN(property.mortgage)) {
-                property.mortgage = monthlyMortgage || 0;
+            // Mortgage: ALWAYS calculate based on loan amount, 6.5% interest, 30 years UNLESS user has manually edited it
+            // Uses _mortgageCustom flag to track if user has set a custom value
+            let monthlyMortgage;
+            if (property._mortgageCustom && property.mortgage !== undefined && !isNaN(property.mortgage)) {
+                // User has manually set a custom value, use it
+                monthlyMortgage = Number(property.mortgage);
+            } else {
+                // Auto-calculate: (Purchase Price - Down Payment) at 6.5% for 30 years
+                monthlyMortgage = loanAmount > 0 ? calculateMortgagePayment(loanAmount, 0.065, 30) : 0;
             }
+
+            // ALWAYS update mortgage (will be auto-calculated unless user has custom value)
+            property.mortgage = monthlyMortgage || 0;
 
             // ALWAYS update vacancy (will be auto-calculated unless user has custom value)
             property.vacancy = vacancy;
